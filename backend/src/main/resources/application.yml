@@ -18,12 +18,17 @@ spring:
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
+    from: ${MAIL_FROM:${MAIL_USERNAME:}}
+    default-encoding: UTF-8
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
 jwt:
   secret-key: ${JWT_SECRET_KEY}
