@@ -79,7 +79,7 @@ public class CommunityPost {
         this.category = category;
     }
 
-    public void deletePost() {
-        this.status = PostStatus.DELETED;
-    }
+    public void deletePost() { this.status = PostStatus.DELETED; }
+
+    public void increaseViewCount() { this.viewCount++; }
 }

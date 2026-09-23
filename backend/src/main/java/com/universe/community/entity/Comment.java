@@ -64,7 +64,7 @@ public class Comment {
         this.status = PostStatus.ACTIVE;
     }
 
-    public void deleteComment() {
-        this.status = PostStatus.DELETED;
-    }
+    public void updateContent(String content, Boolean isAnonymous) { this.content = content; this.isAnonymous = isAnonymous; }
+
+    public void deleteComment() { this.status = PostStatus.DELETED; }
 }

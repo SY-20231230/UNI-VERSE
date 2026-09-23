@@ -1,0 +1,1 @@
+package com.universe.community.dto.response; import lombok.AllArgsConstructor; import lombok.Getter; @Getter @AllArgsConstructor public class CommunityPostResponse { private Long postId; private String category; private String title; private String content; private boolean anonymous; private Long authorId; private Long schoolId; }

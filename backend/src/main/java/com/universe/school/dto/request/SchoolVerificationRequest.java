@@ -1,0 +1,1 @@
+package com.universe.school.dto.request; import jakarta.validation.constraints.*; import lombok.Getter; @Getter public class SchoolVerificationRequest { @NotNull private Long schoolId; @NotBlank @Email private String schoolEmail; }
