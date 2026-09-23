@@ -1,6 +1,9 @@
 package com.universe.admin.service;
 
 import com.universe.admin.dto.request.*;
+import com.universe.admin.repository.AdminReportRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import com.universe.admin.dto.response.*;
 import com.universe.report.dto.response.*;
 import com.universe.report.entity.*;
@@ -19,12 +22,19 @@ import static com.universe.report.service.ModerationException.Code.*;
 @Transactional(readOnly = true)
 public class AdminReportService {
     private final ModerationAccessService access;
+    private final AdminReportRepository searchReports;
     private final ReportRepository reports;
     private final ReportEvidenceRepository evidences;
     private final ModerationUserRepository users;
     private final TrustScoreService trust;
     private final AdminSanctionService sanctions;
     private final ReportSuspensionPolicy suspensionPolicy;
+
+    public Page<AdminReportListResponse> search(Long authenticatedAdminId,
+            AdminReportSearchCondition condition, Pageable pageable) {
+        access.requireAdmin(authenticatedAdminId);
+        return searchReports.search(condition, pageable);
+    }
 
     public AdminReportDetailResponse getDetail(Long authenticatedAdminId, Long reportId) {
         access.requireAdmin(authenticatedAdminId);

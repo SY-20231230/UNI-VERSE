@@ -40,7 +40,7 @@ export function normalizePage(data, requestedPage = 0) {
   return { ...data, page };
 }
 
-export function createReportApi({ baseUrl = '/api/v1', getAccessToken = () => null, fetchImpl = globalThis.fetch } = {}) {
+export function createReportTransport({ baseUrl = '/api/v1', getAccessToken = () => null, fetchImpl = globalThis.fetch } = {}) {
   const root = baseUrl.replace(/\/$/, '');
 
   async function request(path, { method = 'GET', body, signal, query } = {}) {
@@ -71,6 +71,12 @@ export function createReportApi({ baseUrl = '/api/v1', getAccessToken = () => nu
     if (!Object.hasOwn(envelope, 'data')) throw new ReportApiError('서버 응답 형식이 올바르지 않습니다.', 'INVALID_RESPONSE');
     return envelope.data;
   }
+
+  return request;
+}
+
+export function createReportApi(options = {}) {
+  const request = createReportTransport(options);
 
   async function list(path, query = {}, options = {}) {
     const pageQuery = { page: 0, size: 20, ...query };
