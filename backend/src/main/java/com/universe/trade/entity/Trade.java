@@ -95,4 +95,12 @@ public class Trade {
     public void setFinalPrice(Long finalPrice) {
         this.finalPrice = finalPrice;
     }
+    
+    public void cancelTrade() {
+        if (this.status == TradeStatus.COMPLETED) {
+            throw new IllegalStateException("Already completed trade cannot be cancelled");
+        }
+        this.status = TradeStatus.CANCELLED;
+        this.completedAt = LocalDateTime.now();
+    }
 }
