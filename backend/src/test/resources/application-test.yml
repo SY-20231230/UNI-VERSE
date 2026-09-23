@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:universe;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  mail:
+    host: localhost
+    port: 2525
+    username: test@example.com
+    password: test-password
+  sql:
+    init:
+      mode: never
+
+jwt:
+  secret-key: test-secret-key-that-is-at-least-32-characters-long
+
+ai:
+  server-url: http://localhost:8000
+
+app:
+  mail:
+    from: test@example.com
