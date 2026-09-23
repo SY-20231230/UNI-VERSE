@@ -29,7 +29,9 @@ public enum ErrorCode {
     LIKE_NOT_FOUND(HttpStatus.NOT_FOUND, "LIKE_NOT_FOUND", "좋아요를 찾을 수 없습니다."),
     PARENT_COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "PARENT_COMMENT_NOT_FOUND", "부모 댓글을 찾을 수 없습니다."),
     CROSS_SCHOOL_ACCESS(HttpStatus.FORBIDDEN, "CROSS_SCHOOL_ACCESS", "같은 학교의 사용자만 접근할 수 있습니다."),
-    MAIL_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "MAIL_NOT_CONFIGURED", "학교 인증 메일 서비스가 설정되지 않았습니다.");
+    MAIL_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "MAIL_NOT_CONFIGURED", "학교 인증 메일 서비스가 설정되지 않았습니다."),
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."),
+    ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND", "상품을 찾을 수 없습니다.");
 
     private final HttpStatus status; private final String code; private final String message;
 }
