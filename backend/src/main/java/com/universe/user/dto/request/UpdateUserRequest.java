@@ -1,0 +1,1 @@
+package com.universe.user.dto.request; import jakarta.validation.constraints.Size; import lombok.Getter; @Getter public class UpdateUserRequest { @Size(max=50) private String nickname; @Size(min=8,max=100) private String password; }
