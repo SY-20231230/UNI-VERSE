@@ -58,7 +58,8 @@
 ### Frontend
 
 - React
-- TypeScript
+- JavaScript (JSX)
+- Vite
 
 ### Database
 

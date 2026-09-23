@@ -23,7 +23,9 @@ public class CommunityPostRepositoryImpl implements CommunityPostRepositoryCusto
         BooleanBuilder b=new BooleanBuilder().and(communityPost.school.id.eq(schoolId)).and(communityPost.status.eq(PostStatus.ACTIVE));
         if(category!=null&&!category.isBlank()) b.and(communityPost.category.stringValue().equalsIgnoreCase(category));
         if(keyword!=null&&!keyword.isBlank()) b.and(communityPost.title.containsIgnoreCase(keyword).or(communityPost.content.containsIgnoreCase(keyword)));
-        var query=queryFactory.selectDistinct(communityPost).from(communityPost);
+        var query=queryFactory.selectDistinct(communityPost).from(communityPost)
+            .join(communityPost.user).fetchJoin()
+            .join(communityPost.school).fetchJoin();
         if(hashtagName!=null&&!hashtagName.isBlank()) query.join(postHashtag).on(postHashtag.post.eq(communityPost)).join(postHashtag.hashtag,hashtag).where(b.and(hashtag.name.eq(hashtagName)));
         else query.where(b);
         if("popular".equalsIgnoreCase(sort)) query.leftJoin(postLike).on(postLike.post.eq(communityPost));
