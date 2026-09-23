@@ -1,0 +1,17 @@
+.admin-reports{padding:24px;min-width:0;}
+.admin-report-filters{margin:20px 0;}
+.admin-report-filters fieldset{border:0;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.admin-report-filters .field,.admin-report-decision .field{font-size:13px;font-weight:600;}
+.admin-report-filters .input{min-width:0;box-sizing:border-box;}
+.admin-report-pagination{margin:20px 0;gap:10px;}
+.admin-report-detail{border-top:2px solid var(--border-soft);margin-top:24px;padding-top:24px;overflow-wrap:anywhere;}
+.admin-report-detail h4{font-size:14px;margin:20px 0 8px;}
+.admin-report-facts{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;margin:20px 0;font-size:13px;}
+.admin-report-facts dt{color:var(--ink-soft);}
+.admin-report-facts dd{margin:0;}
+.admin-report-text{white-space:pre-wrap;line-height:1.7;}
+.admin-report-decision{display:grid;gap:16px;margin-top:24px;}
+.admin-report-confirm{background:var(--surface-sunken);border-radius:12px;padding:16px;line-height:1.7;}
+.admin-reports button:disabled{opacity:.55;cursor:not-allowed;}
+.admin-reports [role=alert]{color:var(--ink);background:var(--surface-sunken);padding:12px;border-radius:10px;}
+@media(max-width:540px){.admin-reports{padding:16px;}.admin-report-filters fieldset{grid-template-columns:1fr;}.admin-report-facts{grid-template-columns:90px minmax(0,1fr);}}

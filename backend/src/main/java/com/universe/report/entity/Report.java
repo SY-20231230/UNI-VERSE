@@ -83,7 +83,19 @@ public class Report {
         this.status = ReportStatus.PENDING;
     }
 
+    public void approve(User admin, String adminNote) {
+        processReport(admin, adminNote, ReportStatus.PROCESSED);
+    }
+
+    public void dismiss(User admin, String adminNote) {
+        processReport(admin, adminNote, ReportStatus.REJECTED);
+    }
+
     public void processReport(User admin, String adminNote, ReportStatus status) {
+        if (this.status != ReportStatus.PENDING || status == null || status == ReportStatus.PENDING) {
+            throw new IllegalStateException("Only a pending report can be approved or dismissed");
+        }
+        java.util.Objects.requireNonNull(admin, "admin");
         this.admin = admin;
         this.adminNote = adminNote;
         this.status = status;

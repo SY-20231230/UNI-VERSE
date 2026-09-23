@@ -1,50 +1,54 @@
+import { useRef, useState } from 'react';
 import Icon from '../lib/icons';
-import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
+import useReportApi from '../lib/useReportApi';
+import { REPORT_TYPES } from '../lib/reportLabels';
 
-const REASONS = [
-  { label: '외부 메신저 유도', icon: 'chat' },
-  { label: '선입금 요구', icon: 'alert' },
-  { label: '택배거래만 요구', icon: 'box' },
-  { label: '허위 매물/스팸', icon: 'tag' },
-  { label: '기타', icon: 'star' },
-];
-
-export default function ReportModal({ onClose, targetUserId, listingId, chatId }) {
-  const { report } = useApp();
+export default function ReportModal({ onClose, targetUserId, listingId, tradeId, postId }) {
+  const api = useReportApi();
   const { toast } = useUI();
+  const [reportType, setReportType] = useState('');
+  const [description, setDescription] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
 
-  function confirm(reason) {
-    report({ reason, targetUserId, listingId, chatId });
-    onClose();
-    setTimeout(() => toast('신고가 접수되었습니다. 검토 후 조치할게요'), 150);
+  async function submit(event) {
+    event.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      await api.createReport({ targetUserId, itemId: listingId, tradeId, postId, reportType, description });
+      onClose();
+      toast('신고가 접수되었습니다. 검토 후 처리됩니다.');
+    } catch (failure) {
+      setError(failure.message);
+    } finally {
+      submitting.current = false;
+      setBusy(false);
+    }
   }
 
   return (
-    <div>
-      <div className="empty-icon" style={{ width: 56, height: 56, borderRadius: 18, background: 'var(--danger-soft)', color: 'var(--danger)', margin: '0 auto 14px' }}>
-        <Icon name="flag" size={24} />
-      </div>
-      <div className="h3" style={{ textAlign: 'center' }}>
-        신고하기
-      </div>
-      <div className="muted" style={{ textAlign: 'center', fontSize: 12.5, marginTop: 6 }}>
-        신고 사유를 선택해주세요
-      </div>
-      <div className="stack g8" style={{ marginTop: 18 }}>
-        {REASONS.map((r) => (
-          <button key={r.label} className="report-reason" onClick={() => confirm(r.label)}>
-            <span className="report-reason-icon">
-              <Icon name={r.icon} size={16} />
-            </span>
-            <span style={{ flex: 1 }}>{r.label}</span>
-            <Icon name="chev" size={14} />
-          </button>
-        ))}
-      </div>
-      <button className="btn btn-outline btn-full" style={{ marginTop: 16 }} onClick={onClose}>
-        취소
-      </button>
-    </div>
+    <form onSubmit={submit} className="stack g16">
+      <div className="row g8"><Icon name="flag" size={20} /><h2 className="h3">신고하기</h2></div>
+      <p className="muted">신고 유형과 내용을 입력해주세요. 접수만으로 상대방의 점수가 차감되지는 않습니다.</p>
+      <label className="field">
+        <span>신고 유형</span>
+        <select className="input" value={reportType} onChange={(event) => setReportType(event.target.value)} required disabled={busy}>
+          <option value="">유형 선택</option>
+          {Object.entries(REPORT_TYPES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+      </label>
+      <label className="field">
+        <span>신고 내용</span>
+        <textarea className="input" rows={5} maxLength={10000} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="어떤 일이 있었는지 구체적으로 적어주세요." required disabled={busy} />
+      </label>
+      {error && <p className="muted" role="alert">{error}</p>}
+      <button className="btn btn-primary btn-full" type="submit" disabled={busy || !reportType || !description.trim()}>{busy ? '접수 중…' : '신고 접수'}</button>
+      <button className="btn btn-outline btn-full" type="button" onClick={onClose} disabled={busy}>취소</button>
+    </form>
   );
 }

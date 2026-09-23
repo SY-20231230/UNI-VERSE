@@ -1,11 +1,11 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../lib/icons';
 import Avatar from '../components/Avatar';
-import { useApp, REPORT_ACTIONS } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
-import { timeAgo, formatDate } from '../lib/format';
+import { formatDate } from '../lib/format';
 
+<<<<<<< HEAD
 const STATUS_VARIANT = {
   대기중: 'warn',
   처리완료: 'success',
@@ -17,20 +17,28 @@ function isToday(ts) {
   const now = new Date();
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
 }
+=======
+import AdminReportPanel from '../components/admin/AdminReportPanel';
+import useAdminReportApi from '../lib/useAdminReportApi';
+>>>>>>> baek
 
 export default function AdminPage() {
-  const { state, userOf, resolveReport, liftSuspension } = useApp();
+  const { state, liftSuspension } = useApp();
   const { toast } = useUI();
-  const [actionDrafts, setActionDrafts] = useState({});
+  const reportApi = useAdminReportApi();
 
+<<<<<<< HEAD
   const records = [...(state.reportRecords || [])].sort((a, b) => b.time - a.time);
   const pendingCount = records.filter((r) => r.status === '대기중').length;
   const resolvedCount = records.filter((r) => r.status === '처리완료').length;
   const todayCount = records.filter((r) => isToday(r.time)).length;
+=======
+>>>>>>> baek
   const suspendedUsers = Object.values(state.users).filter(
     (u) => u.suspendedPermanently || (u.suspendedUntil && u.suspendedUntil > Date.now())
   );
 
+<<<<<<< HEAD
   const reasonCounts = records.reduce((acc, r) => {
     acc[r.reason] = (acc[r.reason] || 0) + 1;
     return acc;
@@ -46,6 +54,8 @@ export default function AdminPage() {
     toast(REPORT_ACTIONS[action].label + ' 처리했습니다');
   }
 
+=======
+>>>>>>> baek
   function unsuspend(u) {
     liftSuspension(u.id);
     toast(u.name + '님의 정지를 해제했습니다');
@@ -56,6 +66,7 @@ export default function AdminPage() {
       <h1 className="h1">관리자 대시보드</h1>
       <p className="write-sub" style={{ marginTop: 8 }}>신고 처리와 회원 제재를 관리해요.</p>
 
+<<<<<<< HEAD
       <div className="admin-kpi-row" style={{ marginTop: 22 }}>
         <div className="admin-kpi-card highlight">
           <div className="admin-kpi-label">처리 대기 신고</div>
@@ -176,6 +187,10 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+=======
+      <div className="admin-layout" style={{ marginTop: 26 }}>
+        <AdminReportPanel api={reportApi} onNotice={toast} />
+>>>>>>> baek
 
         <div className="wf-col g20" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div className="card" style={{ padding: 24 }}>
