@@ -37,5 +37,6 @@ public class JwtTokenProvider {
     }
     public Long getUserId(String token){ try{return Long.valueOf(parse(token).getSubject());}catch(NumberFormatException e){throw new BusinessException(ErrorCode.INVALID_TOKEN);} }
     public boolean isRefresh(String token){ return "REFRESH".equals(parse(token).get("type",String.class)); }
-    public Instant getIssuedAt(String token){ return parse(token).getIssuedAt().toInstant(); }
+    public boolean isAccess(String token){ return "ACCESS".equals(parse(token).get("type",String.class)); }
+    public Instant getIssuedAt(String token){ try{return parse(token).getIssuedAt().toInstant();}catch(Exception e){throw new BusinessException(ErrorCode.INVALID_TOKEN);} }
 }

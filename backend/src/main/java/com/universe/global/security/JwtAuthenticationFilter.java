@@ -24,8 +24,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain)throws ServletException,IOException{
         String h=req.getHeader("Authorization");
         if(h!=null && h.startsWith("Bearer ")){
-            try{ String token=h.substring(7); Claims c=jwt.parse(token); Long id=Long.valueOf(c.getSubject());
-                if(!jwt.isRefresh(token) && !sessions.isInvalid(id,c.getIssuedAt().toInstant())){
+            try{ String token=h.substring(7); Claims c=jwt.parse(token); Long id=jwt.getUserId(token);
+                if(jwt.isAccess(token) && !sessions.isInvalid(id,jwt.getIssuedAt(token))){
                     User u=users.findById(id).orElse(null);
                     if(u!=null && u.getAccountStatus().name().equals("ACTIVE")){
                         var auth=new UsernamePasswordAuthenticationToken(id,null,List.of(new SimpleGrantedAuthority("ROLE_"+u.getRole().name())));
