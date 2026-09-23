@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import { seed } from '../lib/seed';
 import { uid } from '../lib/format';
 
-const LS_KEY = 'universe_state_v7';
+const LS_KEY = 'universe_state_v8';
 const AppContext = createContext(null);
 
 export const REPORT_ACTIONS = {

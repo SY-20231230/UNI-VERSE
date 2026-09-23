@@ -8,11 +8,13 @@ import Avatar from '../components/Avatar';
 import VerifiedChip from '../components/VerifiedChip';
 import { useMouseGlow } from '../lib/useMouseGlow';
 import { POST_CATEGORY_META } from '../lib/category';
-import { won } from '../lib/format';
 
 const HOME_BOARD_CATS = ['자유', '수업/학점', '학교생활', '시설/환경', '기숙사', '취업/진로', '기타'];
-const LIBRARY_BUSY = 72;
-const CAFETERIA_MENU = { name: '제육덮밥', price: 5500 };
+const CAMPUS_NOTICES = [
+  { tag: '공지', variant: 'accent', text: '2학기 수강 정정 기간 안내 (~9/26)' },
+  { tag: '행사', variant: 'success', text: '가을 축제 부스 신청 접수 시작' },
+  { tag: '학식', variant: 'warn', text: '오늘의 학생식당 메뉴: 제육불고기' },
+];
 
 export default function Home() {
   const { state, userOf, setCommunityFilter } = useApp();
@@ -21,7 +23,6 @@ export default function Home() {
   const heroRef = useMouseGlow();
   const topPosts = [...state.posts].sort((a, b) => b.likes - a.likes).slice(0, 4);
   const freshListings = state.listings.filter((l) => l.status === '판매중').slice(0, 4);
-  const onSaleCount = state.listings.filter((l) => l.status === '판매중').length;
   const todayLabel = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 
   const myActivity = [
@@ -50,7 +51,7 @@ export default function Home() {
               <span style={{ fontSize: 13, color: 'rgba(255,255,255,.82)' }}>
                 {me.dept} · {me.year}
               </span>
-              <VerifiedChip level={me.verified} light />
+              <VerifiedChip level={me.verified} score={me.trustScore} light />
             </div>
             <div className="row g8" style={{ marginTop: 24 }}>
               <Link className="chip" style={{ background: 'rgba(255,255,255,.16)', color: '#fff', border: '1px solid rgba(255,255,255,.4)' }} to="/market/write">
@@ -92,51 +93,18 @@ export default function Home() {
           <div>
             <div className="card side-card">
               <div className="row between">
-                <div className="h3">오늘의 캠퍼스</div>
+                <div className="row g6">
+                  <span className="h3">오늘의 캠퍼스</span>
+                </div>
                 <span className="faint" style={{ fontSize: 11, fontWeight: 700 }}>{todayLabel}</span>
               </div>
-              <div style={{ marginTop: 4 }}>
-                <div className="campus-row">
-                  <div className="campus-row-icon">
-                    <Icon name="sun" size={16} />
+              <div className="stack g10" style={{ marginTop: 12 }}>
+                {CAMPUS_NOTICES.map((n) => (
+                  <div className="row g10" key={n.text}>
+                    <span className={'chip ' + n.variant} style={{ flex: 'none' }}>{n.tag}</span>
+                    <span style={{ fontSize: 12.5 }}>{n.text}</span>
                   </div>
-                  <div>
-                    <div className="campus-row-label">날씨 · 서울</div>
-                    <div className="campus-row-value">맑음 23°</div>
-                  </div>
-                </div>
-                <div className="campus-row">
-                  <div className="campus-row-icon">
-                    <Icon name="book" size={16} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div className="campus-row-label">도서관 혼잡도</div>
-                    <div className="campus-row-value">현재 {LIBRARY_BUSY}% 혼잡</div>
-                    <div className="mini-bar">
-                      <div className="mini-bar-fill" style={{ width: `${LIBRARY_BUSY}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-                <div className="campus-row">
-                  <div className="campus-row-icon">
-                    <Icon name="bowl" size={16} />
-                  </div>
-                  <div>
-                    <div className="campus-row-label">학생식당 오늘의 메뉴</div>
-                    <div className="campus-row-value">
-                      {CAFETERIA_MENU.name} · {won(CAFETERIA_MENU.price)}
-                    </div>
-                  </div>
-                </div>
-                <div className="campus-row">
-                  <div className="campus-row-icon">
-                    <Icon name="tag" size={16} />
-                  </div>
-                  <div>
-                    <div className="campus-row-label">중고거래</div>
-                    <div className="campus-row-value">판매중인 매물 {onSaleCount}개</div>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
             <div className="card side-card">
