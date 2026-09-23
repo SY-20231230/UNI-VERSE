@@ -31,7 +31,8 @@ public enum ErrorCode {
     CROSS_SCHOOL_ACCESS(HttpStatus.FORBIDDEN, "CROSS_SCHOOL_ACCESS", "같은 학교의 사용자만 접근할 수 있습니다."),
     MAIL_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "MAIL_NOT_CONFIGURED", "학교 인증 메일 서비스가 설정되지 않았습니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."),
-    ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND", "상품을 찾을 수 없습니다.");
+    ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND", "상품을 찾을 수 없습니다."),
+    FRAUD_SUSPECTED(HttpStatus.BAD_REQUEST, "FRAUD_SUSPECTED", "사기가 의심되는 게시글입니다.");
 
     private final HttpStatus status; private final String code; private final String message;
 }
