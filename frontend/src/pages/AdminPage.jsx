@@ -12,13 +12,11 @@ const STATUS_VARIANT = {
   반려됨: 'outline',
 };
 
-const ACTION_VARIANT = {
-  reject: 'outline',
-  warn: 'outline',
-  suspend_3: 'warn',
-  suspend_7: 'warn',
-  ban: 'danger',
-};
+function isToday(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
 
 export default function AdminPage() {
   const { state, userOf, resolveReport, liftSuspension } = useApp();
@@ -27,9 +25,20 @@ export default function AdminPage() {
 
   const records = [...(state.reportRecords || [])].sort((a, b) => b.time - a.time);
   const pendingCount = records.filter((r) => r.status === '대기중').length;
+  const resolvedCount = records.filter((r) => r.status === '처리완료').length;
+  const todayCount = records.filter((r) => isToday(r.time)).length;
   const suspendedUsers = Object.values(state.users).filter(
     (u) => u.suspendedPermanently || (u.suspendedUntil && u.suspendedUntil > Date.now())
   );
+
+  const reasonCounts = records.reduce((acc, r) => {
+    acc[r.reason] = (acc[r.reason] || 0) + 1;
+    return acc;
+  }, {});
+  const maxReasonCount = Math.max(1, ...Object.values(reasonCounts));
+  const reasonStats = Object.entries(reasonCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([reason, count]) => ({ reason, count, pct: Math.round((count / maxReasonCount) * 100) }));
 
   function resolve(id) {
     const action = actionDrafts[id] || 'warn';
@@ -44,10 +53,29 @@ export default function AdminPage() {
 
   return (
     <div className="container fade-enter">
-      <h1 className="h1">관리자</h1>
-      <p className="write-sub" style={{ marginTop: 8 }}>신고 처리와 커뮤니티 운영 현황을 확인하는 공간이에요.</p>
+      <h1 className="h1">관리자 대시보드</h1>
+      <p className="write-sub" style={{ marginTop: 8 }}>신고 처리와 회원 제재를 관리해요.</p>
 
-      <div className="admin-layout" style={{ marginTop: 26 }}>
+      <div className="admin-kpi-row" style={{ marginTop: 22 }}>
+        <div className="admin-kpi-card highlight">
+          <div className="admin-kpi-label">처리 대기 신고</div>
+          <div className="admin-kpi-value">{pendingCount}건</div>
+        </div>
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-label">오늘 접수</div>
+          <div className="admin-kpi-value">{todayCount}건</div>
+        </div>
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-label">정지 회원</div>
+          <div className="admin-kpi-value">{suspendedUsers.length}명</div>
+        </div>
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-label">누적 처리완료</div>
+          <div className="admin-kpi-value">{resolvedCount}건</div>
+        </div>
+      </div>
+
+      <div className="admin-layout" style={{ marginTop: 20 }}>
         <div className="card" style={{ padding: 24 }}>
           <div className="row between">
             <div className="h3">신고 처리 관리</div>
@@ -119,11 +147,12 @@ export default function AdminPage() {
                             <button
                               key={k}
                               type="button"
-                              className={'chip ' + (ACTION_VARIANT[k] || 'outline')}
-                              style={{
-                                border: '1.5px solid ' + (selectedAction === k ? 'var(--accent)' : 'transparent'),
-                                fontWeight: selectedAction === k ? 800 : 600,
-                              }}
+                              className="chip outline"
+                              style={
+                                selectedAction === k
+                                  ? { background: 'var(--accent-soft)', color: 'var(--accent-soft-ink)', borderColor: 'var(--accent)', fontWeight: 800 }
+                                  : { fontWeight: 600 }
+                              }
                               onClick={() => setActionDrafts((d) => ({ ...d, [r.id]: k }))}
                             >
                               {a.label}
@@ -148,52 +177,68 @@ export default function AdminPage() {
           )}
         </div>
 
-        <div className="card" style={{ padding: 24 }}>
-          <div className="row between">
-            <div className="h3">정지된 회원 관리</div>
-            {suspendedUsers.length > 0 && <span className="chip danger">{suspendedUsers.length}명</span>}
+        <div className="wf-col g20" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div className="card" style={{ padding: 24 }}>
+            <div className="row between">
+              <div className="h3">정지된 회원 관리</div>
+              {suspendedUsers.length > 0 && <span className="chip danger">{suspendedUsers.length}명</span>}
+            </div>
+
+            {suspendedUsers.length === 0 ? (
+              <div className="empty" style={{ padding: '30px 16px' }}>
+                <div className="empty-icon">
+                  <Icon name="shield" size={22} />
+                </div>
+                <div className="h2" style={{ fontSize: 13.5, marginTop: 8 }}>
+                  정지된 회원이 없어요
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginTop: 6 }}>
+                {suspendedUsers.map((u) => (
+                  <div className="admin-report-row" key={u.id}>
+                    <Link className="admin-report-user" to={`/users/${u.id}?from=admin`}>
+                      <Avatar user={u} size={28} />
+                      <span>{u.name}</span>
+                    </Link>
+                    <div className="row g6 wrap" style={{ marginTop: 8 }}>
+                      <span className={'chip ' + (u.suspendedPermanently ? 'danger' : 'warn')}>
+                        {u.suspendedPermanently ? '영구정지' : `${formatDate(u.suspendedUntil)}까지`}
+                      </span>
+                      {u.dept && <span className="faint" style={{ fontSize: 11.5 }}>{u.dept}</span>}
+                    </div>
+                    <button className="btn btn-outline btn-sm btn-full" style={{ marginTop: 10 }} onClick={() => unsuspend(u)}>
+                      정지 해제
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {suspendedUsers.length === 0 ? (
-            <div className="empty" style={{ padding: '30px 16px' }}>
-              <div className="empty-icon">
-                <Icon name="shield" size={22} />
-              </div>
-              <div className="h2" style={{ fontSize: 13.5, marginTop: 8 }}>
-                정지된 회원이 없어요
-              </div>
+          <div className="card admin-stats-note">
+            <div className="row g8">
+              <Icon name="trend" size={14} />
+              <span>신고 유형별 통계</span>
             </div>
-          ) : (
-            <div style={{ marginTop: 6 }}>
-              {suspendedUsers.map((u) => (
-                <div className="admin-report-row" key={u.id}>
-                  <Link className="admin-report-user" to={`/users/${u.id}?from=admin`}>
-                    <Avatar user={u} size={28} />
-                    <span>{u.name}</span>
-                  </Link>
-                  <div className="row g6 wrap" style={{ marginTop: 8 }}>
-                    <span className={'chip ' + (u.suspendedPermanently ? 'danger' : 'warn')}>
-                      {u.suspendedPermanently ? '영구정지' : `${formatDate(u.suspendedUntil)}까지`}
-                    </span>
-                    {u.dept && <span className="faint" style={{ fontSize: 11.5 }}>{u.dept}</span>}
+            {reasonStats.length ? (
+              <div className="admin-stat-bars">
+                {reasonStats.map((s) => (
+                  <div className="admin-stat-bar-row" key={s.reason}>
+                    <span className="admin-stat-bar-label">{s.reason}</span>
+                    <div className="admin-stat-bar-track">
+                      <div className="admin-stat-bar-fill" style={{ width: `${s.pct}%` }}></div>
+                    </div>
+                    <span className="admin-stat-bar-count">{s.count}</span>
                   </div>
-                  <button className="btn btn-outline btn-sm btn-full" style={{ marginTop: 10 }} onClick={() => unsuspend(u)}>
-                    정지 해제
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="card admin-stats-note" style={{ marginTop: 20 }}>
-        <div className="row g8">
-          <Icon name="trend" size={14} />
-          <span>불만 통계</span>
-        </div>
-        <div className="faint" style={{ fontSize: 12, marginTop: 8, lineHeight: 1.6 }}>
-          신고 유형별 통계와 추이는 추후 제공될 예정이에요.
+                ))}
+              </div>
+            ) : (
+              <div className="faint" style={{ fontSize: 12, marginTop: 8, lineHeight: 1.6 }}>
+                아직 접수된 신고가 없어요.
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

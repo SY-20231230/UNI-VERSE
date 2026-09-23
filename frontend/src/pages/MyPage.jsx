@@ -1,11 +1,13 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useRef } from 'react';
 import Icon from '../lib/icons';
 import Avatar from '../components/Avatar';
-import VerifiedChip from '../components/VerifiedChip';
-import PostCard from '../components/PostCard';
 import ListingGridCard from '../components/ListingGridCard';
+import ConfirmModal from '../components/ConfirmModal';
 import { useApp } from '../context/AppContext';
+import { useUI } from '../context/UIContext';
+import { POST_CATEGORY_META } from '../lib/category';
+import { formatDate } from '../lib/format';
 
 const TABS = [
   { k: 'posts', label: '내가 쓴 글' },
@@ -14,7 +16,8 @@ const TABS = [
 ];
 
 export default function MyPage() {
-  const { state, userOf, logout, updateProfilePhoto, removeProfilePhoto } = useApp();
+  const { state, userOf, logout, updateProfilePhoto, removeProfilePhoto, deleteCommunityPost } = useApp();
+  const { openModal, closeOverlay, toast } = useUI();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const fileRef = useRef(null);
@@ -48,6 +51,24 @@ export default function MyPage() {
     reader.readAsDataURL(file);
   }
 
+  function editPost(id) {
+    navigate(`/community/${id}/edit`);
+  }
+
+  function askDeletePost(id) {
+    openModal(
+      <ConfirmModal
+        title="게시글을 삭제할까요?"
+        desc="삭제한 게시글은 복구할 수 없어요."
+        onClose={closeOverlay}
+        onConfirm={() => {
+          deleteCommunityPost(id);
+          toast('게시글이 삭제되었습니다');
+        }}
+      />
+    );
+  }
+
   return (
     <div className="container fade-enter">
       <div className="card profile-card">
@@ -69,7 +90,6 @@ export default function MyPage() {
           <div style={{ flex: 1, minWidth: 200 }}>
             <div className="row g8">
               <span className="h2">{me.name}</span>
-              <VerifiedChip level={me.verified} />
             </div>
             <div className="faint" style={{ fontSize: 12.5, marginTop: 5 }}>
               {me.dept} · {me.studentNo} · {me.joined} 가입
@@ -81,38 +101,27 @@ export default function MyPage() {
             )}
           </div>
         </div>
-        <div className="profile-stats-row">
-          <div className="profile-stat">
-            <div className="profile-stat-icon" style={{ background: 'var(--success-soft)', color: 'var(--success)' }}>
-              <Icon name="check" size={17} />
-            </div>
-            <div>
-              <b className="tnum">{done}</b>
-              <span>거래완료</span>
-            </div>
+        <div className="stat-row-plain">
+          <div className="stat-plain">
+            <b className="tnum" style={{ color: 'var(--accent)' }}>{me.trustScore ?? 0}점</b>
+            <span>신뢰점수</span>
           </div>
-          <div className="profile-stat">
-            <div className="profile-stat-icon" style={{ background: 'var(--accent-soft)', color: 'var(--accent-soft-ink)' }}>
-              <Icon name="box" size={17} />
-            </div>
-            <div>
-              <b className="tnum">{going}</b>
-              <span>진행중</span>
-            </div>
+          <div className="stat-plain">
+            <b className="tnum">{done}</b>
+            <span>거래완료</span>
           </div>
-          <div className="profile-stat">
-            <div className="profile-stat-icon" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
-              <Icon name="flag" size={17} />
-            </div>
-            <div>
-              <b className="tnum">{state.reports || 0}</b>
-              <span>신고</span>
-            </div>
+          <div className="stat-plain">
+            <b className="tnum">{going}</b>
+            <span>진행중</span>
+          </div>
+          <div className="stat-plain">
+            <b className="tnum">{state.reports || 0}</b>
+            <span>내 신고</span>
           </div>
         </div>
       </div>
 
-      <div className="segmented" style={{ marginTop: 26, maxWidth: 440 }}>
+      <div className="tab-row-plain" style={{ marginTop: 26 }}>
         {TABS.map((t) => (
           <button key={t.k} className={tab === t.k ? 'on' : ''} onClick={() => setTab(t.k)}>
             {t.label} ({tabCounts[t.k]})
@@ -120,11 +129,34 @@ export default function MyPage() {
         ))}
       </div>
 
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 4 }}>
         {tab === 'posts' && (
           <div style={{ maxWidth: 760 }}>
             {myPosts.length ? (
-              myPosts.map((p) => <PostCard key={p.id} post={p} compact />)
+              myPosts.map((p) => {
+                const meta = POST_CATEGORY_META[p.category] || POST_CATEGORY_META['기타'];
+                return (
+                  <div className="mypage-post-row" key={p.id}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="row g6">
+                        <span className={'chip ' + meta.variant}>{p.category}</span>
+                        {p.anonymous && <span className="chip outline">익명</span>}
+                      </div>
+                      <Link className="title" to={`/community/${p.id}`}>
+                        {p.title}
+                      </Link>
+                      <div className="meta">
+                        {formatDate(p.time)} · <Icon name="heart" size={11} /> {p.likes} · <Icon name="chat" size={11} /> {p.comments.length}
+                      </div>
+                    </div>
+                    <div className="mypage-post-row-actions">
+                      <button onClick={() => editPost(p.id)}>수정</button>
+                      <span>·</span>
+                      <button onClick={() => askDeletePost(p.id)}>삭제</button>
+                    </div>
+                  </div>
+                );
+              })
             ) : (
               <div className="empty">
                 <div className="empty-icon">
