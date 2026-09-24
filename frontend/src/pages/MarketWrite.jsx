@@ -198,7 +198,14 @@ export default function MarketWrite() {
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
         />
-        <div className="write-helper">상태와 사용감을 정확하게 적어주세요. 선입금·택배거래 요구 표현이 감지되면 등록이 제한돼요.</div>
+        <div className="write-helper">상태와 사용감을 정확하게 적어주세요.</div>
+        <div className="safety-banner write-risk-notice">
+          <Icon name="alert" size={16} />
+          <div>
+            <b>등록 제한 안내</b>
+            선입금·택배거래 요구 표현이 감지되면 등록이 제한돼요.
+          </div>
+        </div>
       </div>
 
       <div className="write-bottom-bar" style={{ justifyContent: 'flex-end' }}>
