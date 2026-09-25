@@ -29,7 +29,7 @@ public class AdminReportController {
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
             @RequestParam(defaultValue = "createdAt,desc") @Pattern(regexp = "createdAt,(asc|desc)") String sort) {
         var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(sort.split(",")[1]), "createdAt"));
-        return ApiResponse.success(PageResponse.from(reports.search(currentUser.requireId(authentication), condition, pageable)));
+        return ApiResponse.success(new PageResponse<>(reports.search(currentUser.requireId(authentication), condition, pageable)));
     }
 
     @GetMapping("/{reportId}")

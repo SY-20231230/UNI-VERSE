@@ -38,7 +38,7 @@ public class ReportController {
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        return ApiResponse.success(PageResponse.from(reports.findMine(currentUser.requireId(authentication), status,
+        return ApiResponse.success(new PageResponse<>(reports.findMine(currentUser.requireId(authentication), status,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id")))));
     }
 

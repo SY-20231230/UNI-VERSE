@@ -1,7 +1,10 @@
 package com.universe.report.service;
 
-/** Domain failures; the shared exception handler must map these before REST integration. */
-public class ModerationException extends RuntimeException {
+import com.universe.global.exception.BusinessException;
+import com.universe.global.exception.ErrorCode;
+
+/** Domain failure mapped to the existing shared exception contract. */
+public class ModerationException extends BusinessException {
     public enum Code {
         USER_NOT_FOUND, REPORT_NOT_FOUND, REFERENCE_NOT_FOUND, FORBIDDEN,
         INVALID_REPORT_TARGET, REPORT_ALREADY_PROCESSED, INVALID_SANCTION,
@@ -12,8 +15,17 @@ public class ModerationException extends RuntimeException {
     private final Code code;
 
     public ModerationException(Code code) {
-        super(code.name());
+        super(sharedCode(code));
         this.code = code;
+    }
+
+    private static ErrorCode sharedCode(Code code) {
+        return switch (code) {
+            case USER_NOT_FOUND -> ErrorCode.USER_NOT_FOUND;
+            case REPORT_NOT_FOUND, REFERENCE_NOT_FOUND -> ErrorCode.NOT_FOUND;
+            case FORBIDDEN -> ErrorCode.FORBIDDEN;
+            default -> ErrorCode.INVALID_INPUT;
+        };
     }
 
     public Code getCode() { return code; }

@@ -1,89 +1,89 @@
 # 담당 기능 연동 안내
 
-## 범위와 미완료 사항
+## 범위
 
-report/admin/trust, user의 마이페이지 전용 코드만 추가했다. User 및 다른 담당 도메인,
-공통 global 운영 코드, 애플리케이션 설정, build.gradle은 수정하지 않았다. 프론트는 신고 전용 파일만 변경했다.
-현재 공유 ApiResponse/PageResponse, JWT principal, 공통 오류 코드/처리기, QueryDSL 의존성이 없다.
-사용자 지시에 따라 팀 공통 기능이 있다고 가정한 ReportController를 추가했다. 공통 기능은 테스트 대역으로만 검증한다.
-다른 도메인의 HTTP Controller와 공통 운영 코드는 추가하지 않았다. 상세 계약/실행 제약은 REPORT_JWT_CONTRACT.md 참고.
+report/admin/trust 및 user의 마이페이지 전용 코드만 담당한다.
+공통 global, 회원·인증, school/community/market/chat/trade/ai, 프론트, build.gradle, 애플리케이션 설정은 이번 변경에서 수정하지 않았다.
 
-## CSV 연결표
+## 기준 문서와 API
 
-| 번호 | 담당 Controller | Service | 상태 |
-|---|---|---|---|
-| 54~56 | ReportController | ReportService.create/findMine/getMine | Controller 구현, 실제 JWT/공통 계약 합류 대기 |
-| 57~60 | MyPageController | MyPageService.getSummary/findPosts/findItems/findTrustHistory | 서비스 구현, HTTP 연결 대기 |
-| 61 | AdminReportController | 동적 검색 | QueryDSL 기반 구현 대기 |
-| 62~64 | AdminReportController | AdminReportService.getDetail/dismiss/approve | 서비스 구현, HTTP 연결 대기 |
-| 65 | AdminUserController | 동적 검색 | QueryDSL 기반 구현 대기 |
-| 66 | AdminUserController | AdminUserService.getDetail | 최근 거래/신고/제재 각 20개와 전체 건수 |
-| 67 | AdminUserController | AdminSanctionService.create | 서비스 구현, HTTP 연결 대기 |
-| 68~69 | AdminUserController | AdminUserService.updateStatus/findSanctions | 서비스 구현, HTTP 연결 대기 |
+UNI_VERSE_백엔드_개발_규칙_v1.0.md 및 UNI_VERSE_REST_API_찜기능추가_1-69.csv를 대조했다.
+CSV 54~69의 URL, HTTP Method, 파라미터 의미, 담당 Controller를 유지한다.
 
-Controller 연결 시 CSV Endpoint/Method를 그대로 유지하고 @Valid를 적용한다.
-현재 사용자 ID는 오직 JWT/SecurityContext에서 전달한다. 서비스의 authenticatedUserId 인자는
-요청 DTO 필드가 아니며, 클라이언트에서 받은 ID를 전달하면 안 된다.
-DTO는 엔티티를 반환하지 않는다. 서비스 Page<T>는 공통 PageResponse로 변환해야 한다.
-ModerationException은 내부 실패 코드만 담고 HTTP 형식을 정하지 않는다.
-공통 GlobalExceptionHandler/BusinessException 규약이 도착하면 거기에 통합한다.
-서비스는 직접 HTTP 상태나 응답을 구성하지 않는다.
+| CSV | Controller | 현재 구현 |
+|---|---|---|
+| 54~56 | ReportController | 신고 등록, 본인 목록, 본인 상세 |
+| 57~60 | MyPageController | 요약, 본인 게시글, 판매글, 신뢰점수 이력 |
+| 61~64 | AdminReportController | QueryDSL 검색, 상세, 기각, 승인 |
+| 65~69 | AdminUserController | QueryDSL 회원 검색, 상세, 제재 등록, 상태 변경, 제재 이력 |
 
-## 팀원에게 필요한 연결 지점
+현재 로그인 ID는 ReportCurrentUser가 검증된 SecurityContext Authentication에서 추출한다.
+클라이언트의 userId/adminId/reporterId는 현재 사용자 ID로 사용하지 않는다.
+관리자 접근과 소유권 검증은 서비스가 수행한다.
+회원 검색은 이메일·이름·닉네임 키워드, accountStatus, schoolId를 조합하고 createdAt/id 내림차순으로 페이징한다.
+학교가 없는 회원도 목록에 포함한다. 비밀번호나 Entity를 반환하지 않는다.
+마이페이지 상품 응답은 purchasePrice를 포함하지 않는다.
 
-1. 회원가입 트랜잭션에서 저장 후 TrustScoreService.initializeNewUser(userId)를 호출한다.
-   현재 User 생성자는 0점을 설정한다. 이 파일은 수정하지 않았다.
-   이 메서드를 기존 회원 데이터의 무조건적인 보정 작업으로 사용하지 않는다.
-2. 거래 완료 트랜잭션에서 Trade 완료 후 TrustScoreService.recordCompletedTrade(tradeId)를 호출한다.
-   completed_at, 양쪽 confirmed, COMPLETED 상태를 모두 검증한다.
-   별도 비동기 재생 방식이 아닌 같은 트랜잭션 호출이 전제다.
-   거래 잠금 후 두 사용자를 ID 오름차순으로 잠그고, 같은 거래의 중복 적립을 막는다.
-3. 정지 해제는 AdminUserService.updateStatus(..., ACTIVE)에서 종료일을 검증한 뒤 50점으로 재설정한다.
-   SuspensionExpiryJob도 기본 60초마다 만료 회원 최대 100명을 조회해 개별 트랜잭션으로 해제한다.
-   admin.suspension.expiry-enabled=false로 자동 처리를 끄거나 expiry-delay-ms로 간격을 변경할 수 있다.
-   로그인/기존 JWT/다른 도메인에서도 BANNED/SUSPENDED/DELETED를 거부해야 한다.
-   이 코드만으로 시스템 전체의 차단이 완료된 것은 아니다.
-4. 커뮤니티/상품 담당자가 목록 DTO를 제공하면 마이페이지 전용 프로젝션과 맞춘다.
-   새로 추가한 user.dto.response의 목록 DTO는 마이페이지용이며 다른 담당 파일을 대신 구현하지 않는다.
+## 실제 공통 코드에 맞춘 연결
 
-## 설정과 제재 정책
+- PageResponse에는 정적 from 메서드가 없으므로 생성자를 사용한다.
+- ModerationException은 BusinessException을 상속하여 기존 GlobalExceptionHandler에서 처리된다.
+  내부 Code는 유지하며 회원 없음은 USER_NOT_FOUND, 다른 대상 없음은 NOT_FOUND,
+  접근 거부는 FORBIDDEN, 나머지 도메인 거부는 기존 INVALID_INPUT에 매핑한다.
+- REPORT_ALREADY_PROCESSED 등 상세 도메인 오류를 별도 409/운영 오류 코드로 공개하려면 공통 ErrorCode 담당자의 확장이 필요하다.
+  현재 실제 응답은 INVALID_INPUT/400이다.
+- 잘못된 인증 principal은 BusinessException(UNAUTHORIZED)로 처리한다.
 
-- report.evidence.base-url: HTTPS S3 또는 S3 배포 도메인의 신고 증빙 경로.
-  미설정 시 증빙 없는 신고는 가능하고, URL을 받는 신고는 거부한다.
-  URL 경로 검증은 업로드/객체 소유권 검증을 대신하지 않는다. 공유 저장소 서비스 연동이 필요하다.
-- admin.report.suspension-days: 신고 승인 요청에 SUSPENSION이 포함될 때 사용할 운영 기간.
-  CSV에는 endAt이 없으므로 DTO에 임의 추가하지 않았다. 미설정이면 해당 승인을 거부한다.
-  독립 제재 등록 API의 SUSPENSION에는 유효한 미래 endAt을 요구한다.
-- 신고 승인과 연결된 WARNING은 점수를 다시 깎지 않는다.
-- 계정 상태 PATCH만으로 이유/기간 없는 정지/영구정지를 만들지 않는다.
-  먼저 제재 생성으로 기록한다. BAN/DELETED의 재활성화는 허용하지 않는다.
-- 기존 SanctionType에는 거래제한 유형이 없다. 정책/거래 담당 합의 없이 새 제한 로직을 추가하지 않았다.
+## 공통 담당자에게 전달할 충돌/누락
 
-## DB 변경 없이 회복 상태 관리
+1. 개발규칙 14절은 success/data/error 구조를 제시하나 실제 공통 ApiResponse는 success/code/message/data이다.
+   도메인별로 다른 구조를 만들지 않고 기존 공통 타입을 재사용했다. 최종 계약은 공통 담당자와 확인해야 한다.
+2. 현재 GlobalExceptionHandler는 메서드 파라미터 검증, 타입 변환, 읽을 수 없는 JSON 등 별도 처리가 없다.
+   @Valid 요청 본문 검증 외 일부 잘못된 쿼리/경로/JSON 입력이 catch-all에 의해 500으로 처리될 수 있다.
+   담당 Controller에는 제약을 적용했으며 공통 처리기는 수정하지 않았다.
+3. 예전 신고/관리자 신고 MVC 테스트는 일부 테스트 전용 예외 처리기를 사용한다.
+   새 마이페이지/관리자 회원 MVC 테스트는 실제 GlobalExceptionHandler와 공통 DTO를 사용한다.
+   테스트 보안 필터는 인증 이후 동작을 검증하며 실제 JWT 발급/갱신의 종단 검증을 대신하지 않는다.
 
-trust_histories.reason에 INITIALIZED, SAFE_TRADE:<적립순번>, REPORT_CONFIRMED, REPORT_RECOVERED,
-WARNING:<sanctionId>, SUSPENSION_RELEASED:<sanctionId>를 기록한다.
-점수 변화 0인 안전거래도 이력에 남겨 중복 처리 방지와 회복 횟수 계산에 사용한다.
-기준 이력 이후의 최신 SAFE_TRADE 적립순번으로 계산한다. 신고 회복 10회째는 REPORT_RECOVERED 기준 이력이 된다.
-사용자 최초 잠금 시 refresh로 이미 조회된 엔티티의 오래된 점수를 갱신한다.
-이력 판정도 잠금 조회로 처리해 MySQL REPEATABLE READ에서 과거 스냅샷을 사용하지 않도록 한다.
-현재 점수에 경고 차감이 반영돼도 횟수 기준 보너스는 중복 지급하지 않는다.
-새 테이블/컬럼/인덱스 및 DB 마이그레이션을 추가하지 않았다.
-기존 점수 이력을 임의 수정/삭제하면 안 되며, 기존 데이터 전환 정책은 별도로 필요하다.
+## 팀원 연결 지점
 
-## 테스트 실행
+- 회원가입 트랜잭션에서 저장 후 TrustScoreService.initializeNewUser(userId)를 호출해야 한다.
+  현재 회원 생성과 DB 기본 점수는 0이다. 기존 담당 정책은 초기화 호출 후 50이며 이번에 변경하지 않았다.
+  회원가입 코드에서 호출이 발견되지 않았다. 기존 회원 전체를 임의로 50점으로 덮어쓰면 안 된다.
+- 양쪽 완료 확인 및 completed_at 저장 후 같은 거래 트랜잭션에서 TrustScoreService.recordCompletedTrade(tradeId)를 호출해야 한다.
+  현재 거래 서비스의 호출은 발견되지 않았다. 점수 서비스는 양쪽 확인, COMPLETED 상태, 완료시각, 중복 적립을 검증한다.
+- 사용자 잠금은 ID 오름차순이며 같은 트랜잭션 안의 변경을 보존한다.
+  MySQL REPEATABLE READ를 고려해 점수와 적립 이력을 잠금 조회한다.
+- 정지 만료 해제는 SuspensionExpiryJob 및 AdminUserService가 담당한다.
+  BANNED/SUSPENDED/DELETED의 전체 서비스 접근 제한은 인증/다른 도메인 담당자가 연결해야 한다.
+- S3 실제 업로드와 객체 소유권 검증은 공유 저장소 담당자 연동이 필요하다.
+  report.evidence.base-url 검사는 업로드/소유권 검증을 대신하지 않는다.
 
-공통 build.gradle을 바꾸지 않고 H2를 테스트 실행에만 추가하는 담당 전용 init script를 제공한다.
-backend 디렉터리에서 실행한다:
+## 유지한 정책과 설정
 
-```powershell
-.\gradlew.bat -I src/test/resources/baek/h2.init.gradle -I src/test/resources/baek/report-contract.init.gradle test --tests 'com.universe.report.*' --tests 'com.universe.trust.*' --tests 'com.universe.admin.*' --tests 'com.universe.user.service.MyPageServiceTest' --console=plain
-```
+- 신고 접수 시 점수를 차감하지 않는다. 승인 시 기존 정책에 따라 30점으로 설정하며 이력을 남긴다.
+- 연결된 WARNING은 중복 감점하지 않는다. 독립 WARNING은 기존 정책대로 -10이다.
+- report.evidence.base-url 미설정 시 증빙 없는 신고는 가능하고 URL을 포함한 신고는 거부한다.
+- admin.report.suspension-days는 신고 승인 SUSPENSION의 기간이다. 미설정이면 해당 처리를 거부한다.
+- 독립 SUSPENSION은 유효한 미래 endAt이 필요하다. 이유/기간 없는 정지를 상태 PATCH로 만들지 않는다.
+- 만료 정지는 50점으로 복구하며 BAN/DELETED 재활성화는 허용하지 않는다.
+- CSV는 거래제한을 언급하지만 SanctionType은 WARNING/SUSPENSION/BAN이다.
+  거래제한의 의미·기간·효과가 확정되지 않아 다른 담당자 코드를 바꾸거나 새 유형을 임의로 추가하지 않았다.
+- trust_histories.reason의 INITIALIZED, SAFE_TRADE:<순번>, REPORT_CONFIRMED, REPORT_RECOVERED,
+  WARNING:<sanctionId>, SUSPENSION_RELEASED:<sanctionId>를 통해 기존 회복 규칙을 유지한다.
+- DB 테이블/컬럼/인덱스 변경과 trust_grade 추가는 없다.
 
-테스트는 H2로 데이터소스를 교체하고 각 테스트 트랜잭션을 롤백한다. 운영 DB를 사용하지 않는다.
-기존 UniverseApplicationTests와 전체 API 실행 검증은 이 범위에 포함하지 않는다.
-실제 MySQL 잠금/동시성 및 JWT/HTTP 응답 검증은 공통 기능 연결 후 추가 검증이 필요하다.
+## 검증
 
-검증 기록: 2026-09-23, 위 명령으로 63개 테스트 통과. 컴파일 성공.
+일반 Gradle 테스트로 실제 공통 코드를 컴파일한다. 예전 report-contract.init.gradle은 사용하지 않는다.
+담당 테스트 선택:
 
-2026-09-23 추가 검증: 신고 범위 58개 통과 (Controller 11개 + 인증 연결 13개 포함). 위 63개 기록은 이전 서비스 검증 기록이다.
+gradlew.bat test --tests 'com.universe.report.*' --tests 'com.universe.trust.*' --tests 'com.universe.admin.*' --tests 'com.universe.user.controller.MyPageControllerTest' --tests 'com.universe.user.service.MyPageServiceTest' --console=plain
+
+H2 테스트는 운영 DB를 사용하지 않는다. 실제 MySQL 잠금/동시성, S3, JWT 종단 연동은 별도 검증 대상이다.
+2026-09-25 검증: 담당 소스의 PageResponse.from 호출 오류를 수정했다.
+정상 Gradle 빌드는 Windows 샌드박스의 JAR 실제 경로 확인 단계에서 AccessDeniedException으로 실패했다.
+캐시/빌드 경로 분리, ASCII 경로의 소스 복사본, 사용자 폴더 읽기 권한으로 재시도했지만 해소되지 않았다.
+테스트 컴파일에서도 main 클래스 참조 오류가 발생했고 테스트는 실행되지 않았다. 컴파일/테스트 통과를 주장하지 않는다.
+일반 사용자 터미널에서 위 명령으로 재검증해야 한다. 새 Controller 테스트는 10개, 회원 검색 서비스/Repository 테스트는 6개 추가했다.
+소스 복사본을 통한 재시도는 프로젝트 설정 변경 없이 검증 경로만 분리했다.
