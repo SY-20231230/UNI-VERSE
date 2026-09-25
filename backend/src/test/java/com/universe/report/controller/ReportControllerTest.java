@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import com.universe.global.exception.BusinessException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
@@ -65,11 +65,11 @@ class ReportControllerTest {
                 case REPORT_NOT_FOUND, USER_NOT_FOUND, REFERENCE_NOT_FOUND -> HttpStatus.NOT_FOUND;
                 default -> HttpStatus.BAD_REQUEST;
             };
-            return ResponseEntity.status(status).body(ApiResponse.failure(exception.getCode().name(), "Request rejected"));
+            return ResponseEntity.status(status).body(ApiResponse.error(exception.getCode().name(), "Request rejected"));
         }
-        @ExceptionHandler(AuthenticationCredentialsNotFoundException.class)
+        @ExceptionHandler(BusinessException.class)
         ResponseEntity<ApiResponse<Void>> authentication() {
-            return ResponseEntity.status(401).body(ApiResponse.failure("UNAUTHORIZED", "Authentication required"));
+            return ResponseEntity.status(401).body(ApiResponse.error("UNAUTHORIZED", "Authentication required"));
         }
     }
 
@@ -161,7 +161,7 @@ class ReportControllerTest {
         when(reports.getMine(42L, 7L)).thenThrow(new ModerationException(ModerationException.Code.FORBIDDEN));
         mvc.perform(get("/api/v1/reports/7").with(user("42")))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
     @Test void propagatesMissingReportToCommonExceptionContract() throws Exception {

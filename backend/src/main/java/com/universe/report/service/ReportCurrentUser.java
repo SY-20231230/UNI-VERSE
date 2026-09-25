@@ -1,6 +1,7 @@
 package com.universe.report.service;
 
-import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import com.universe.global.exception.BusinessException;
+import com.universe.global.exception.ErrorCode;
 import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
@@ -23,7 +24,7 @@ public class ReportCurrentUser {
         }
     }
 
-    private AuthenticationCredentialsNotFoundException unauthenticated() {
-        return new AuthenticationCredentialsNotFoundException("Authenticated user ID is required");
+    private BusinessException unauthenticated() {
+        return new BusinessException(ErrorCode.UNAUTHORIZED);
     }
 }

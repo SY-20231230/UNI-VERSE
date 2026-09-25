@@ -49,7 +49,7 @@ class AdminReportControllerTest {
         @ExceptionHandler(ModerationException.class)
         ResponseEntity<ApiResponse<Void>> handle(ModerationException exception) {
             int status = exception.getCode() == ModerationException.Code.FORBIDDEN ? 403 : 409;
-            return ResponseEntity.status(status).body(ApiResponse.failure(exception.getCode().name(), "Request rejected"));
+            return ResponseEntity.status(status).body(ApiResponse.error(exception.getCode().name(), "Request rejected"));
         }
     }
     @Test void bindsAllSearchFiltersAndUsesSecurityIdentity() throws Exception {

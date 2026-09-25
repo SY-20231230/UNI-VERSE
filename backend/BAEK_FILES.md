@@ -18,3 +18,14 @@ global 운영 코드, build.gradle, application 설정, 신고 외 프론트, �
 신고 Controller 3개 API를 팀 공통 기능이 있다고 가정하여 추가했다. 계약과 검증 한계는 REPORT_JWT_CONTRACT.md에 기록했다.
 테스트 전용 공통 응답 대역은 src/test/contracts/java에 있으며 운영 공통 코드가 아니다.
 프론트 변경은 ReportModal 및 reportApi/useReportApi/reportLabels와 해당 테스트·문서이다.
+
+## 2026-09-25 보완
+
+- 신규: user/controller/MyPageController, admin/controller/AdminUserController
+- 신규: admin/dto/response/AdminUserListResponse, admin/repository/AdminUserRepository·Custom·Impl
+- 수정: AdminUserService 검색 연결, ReportController/AdminReportController 페이징 응답 생성
+- 수정: ModerationException 및 ReportCurrentUser의 실제 공통 예외 연결
+- 신규: 담당 마이페이지/관리자 회원 Controller, 관리자 회원 검색 Service/Repository 테스트
+- 수정: 기존 신고/관리자 신고 테스트의 공통 응답 메서드 호환
+- 수정: 이 문서, BAEK_INTEGRATION.md, baek_work.md
+- 다른 담당자 소스, 공통 global, build.gradle, application 설정, 프론트 수정 없음
