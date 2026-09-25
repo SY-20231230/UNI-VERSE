@@ -1,6 +1,8 @@
 package com.universe.admin.service;
 
 import com.universe.admin.dto.request.UserStatusUpdateRequest;
+import com.universe.admin.dto.request.AdminUserSearchCondition;
+import com.universe.admin.repository.AdminUserRepository;
 import com.universe.admin.dto.response.*;
 import com.universe.admin.repository.AdminActivityRepository;
 import com.universe.report.dto.response.ReportResponse;
@@ -22,11 +24,17 @@ import static com.universe.report.service.ModerationException.Code.*;
 @Transactional(readOnly = true)
 public class AdminUserService {
     private final ModerationAccessService access;
+    private final AdminUserRepository searchUsers;
     private final ModerationUserRepository users;
     private final UserSanctionRepository sanctions;
     private final ReportRepository reports;
     private final AdminActivityRepository activities;
     private final SuspensionReleaseService release;
+
+    public Page<AdminUserListResponse> search(Long authenticatedAdminId, AdminUserSearchCondition condition, Pageable pageable) {
+        access.requireAdmin(authenticatedAdminId);
+        return searchUsers.search(condition, pageable);
+    }
 
     public AdminUserDetailResponse getDetail(Long authenticatedAdminId, Long userId) {
         access.requireAdmin(authenticatedAdminId);

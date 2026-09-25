@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import com.universe.global.exception.BusinessException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import static org.assertj.core.api.Assertions.*;
@@ -25,20 +25,20 @@ class ReportCurrentUserTest {
 
     @Test void rejectsMissingAuthentication() {
         assertThatThrownBy(() -> currentUser.requireId(null))
-                .isInstanceOf(AuthenticationCredentialsNotFoundException.class);
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test void rejectsUnverifiedIdentity() {
         var authentication = UsernamePasswordAuthenticationToken.unauthenticated("42", null);
         assertThatThrownBy(() -> currentUser.requireId(authentication))
-                .isInstanceOf(AuthenticationCredentialsNotFoundException.class);
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test void rejectsAnonymousEvenWithNumericName() {
         var authentication = new AnonymousAuthenticationToken("test", "42",
                 List.of(new SimpleGrantedAuthority("ROLE_ANONYMOUS")));
         assertThatThrownBy(() -> currentUser.requireId(authentication))
-                .isInstanceOf(AuthenticationCredentialsNotFoundException.class);
+                .isInstanceOf(BusinessException.class);
     }
 
     @ParameterizedTest
@@ -46,6 +46,6 @@ class ReportCurrentUserTest {
     void rejectsUnsupportedPrincipalNames(String name) {
         var authentication = UsernamePasswordAuthenticationToken.authenticated(name, null, List.of());
         assertThatThrownBy(() -> currentUser.requireId(authentication))
-                .isInstanceOf(AuthenticationCredentialsNotFoundException.class);
+                .isInstanceOf(BusinessException.class);
     }
 }

@@ -43,9 +43,9 @@
 - [x] 관리자 권한 검증, 신고 상세/승인/기각 서비스
 - [x] 회원 종합 상세, 제재 생성/조회, 계정 상태 변경 서비스
 - [x] 종료일 전 정지 해제 및 영구정지 재활성화 방지
-- [ ] QueryDSL 공통 의존성/설정 후 신고/회원 복합 검색 구현
+- [x] QueryDSL 신고/회원 복합 검색 구현
 - [x] 정지 만료 자동 해제 및 50점 복구 작업 (기본 60초 간격, 회당 최대 100명)
-- [ ] 공통 인증/응답/예외 연결 후 관리자 Controller 노출
+- [x] CSV 61~69 관리자 Controller 노출 및 기존 BusinessException 연결
 - [ ] 거래제한 제재 유형 및 제한 효과 협의 (기존 enum은 WARNING/SUSPENSION/BAN)
 
 ### 마이페이지
@@ -53,7 +53,7 @@
 - [x] 본인 게시글/판매상품/신뢰점수 이력 페이징 조회
 - [x] 상품 응답에서 purchasePrice 제외 (마이페이지 포함)
 - [ ] 커뮤니티/상품 담당자의 공용 목록 DTO와 연동
-- [ ] 공통 인증/응답/예외 연결 후 MyPageController 노출
+- [x] CSV 57~60 MyPageController 노출 및 실제 공통 DTO 연결
 
 ## 검증
 
@@ -80,3 +80,15 @@
 - 테스트 전용 공통 응답 대역 및 MVC 인증/권한/Validation 테스트 추가.
 - 신고 관련 58개 테스트 통과. 실제 JWT 및 공통 코드 합류 전 일반 빌드/서버 실행은 대기.
 - 자세한 연결 계약: backend/REPORT_JWT_CONTRACT.md.
+
+## 2026-09-25 기존 코드 보완
+
+- CSV 54~69 대조 후 마이페이지 4개, 관리자 회원 5개 API 연결을 추가했다.
+- 담당 신고/관리자 신고 Controller의 PageResponse.from 컴파일 문제를 실제 생성자에 맞췄다.
+- ModerationException을 기존 BusinessException에 연결하고 내부 오류 코드는 유지했다.
+- 인증/토큰, User, 공통 global, 다른 도메인, 프론트, 빌드/환경 설정은 수정하지 않았다.
+- 기존 점수·회복 정책과 DB 구조는 유지했다.
+- 공통 응답 문서와 구현 차이, 잘못된 쿼리/JSON의 공통 예외 처리, 회원가입/거래 적립 호출, S3 소유권 검증, 거래제한 정책은 담당자 연결 사항이다.
+- 상세 내용과 검증 범위는 backend/BAEK_INTEGRATION.md 참고.
+
+검증 상태(2026-09-25): Windows 샌드박스 JAR 경로 AccessDeniedException으로 Gradle 검증이 완료되지 않았다. 새 테스트 포함 통과 여부는 미확인이다. 이전 날짜의 통과 기록과 구분한다.
