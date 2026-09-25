@@ -5,21 +5,28 @@ import lombok.Getter;
 @Getter
 public class ApiResponse<T> {
     private final boolean success;
-    private final String code;
-    private final String message;
     private final T data;
+    private final ErrorResponse error;
 
-    private ApiResponse(boolean success, String code, String message, T data) {
-        this.success = success; this.code = code; this.message = message; this.data = data;
+    private ApiResponse(boolean success, T data, ErrorResponse error) {
+        this.success = success;
+        this.data = data;
+        this.error = error;
     }
 
+    public record ErrorResponse(String code, String message) {}
+
     public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(true, "SUCCESS", "요청이 성공했습니다.", data);
+        return new ApiResponse<>(true, data, null);
     }
 
     public static ApiResponse<Void> success() { return success(null); }
 
     public static <T> ApiResponse<T> error(String code, String message) {
-        return new ApiResponse<>(false, code, message, null);
+        return new ApiResponse<>(false, null, new ErrorResponse(code, message));
+    }
+
+    public static <T> ApiResponse<T> failure(String code, String message) {
+        return error(code, message);
     }
 }
