@@ -1,6 +1,7 @@
 package com.universe.global.security;
 
 import com.universe.user.entity.UserRole;
+import com.universe.global.exception.ErrorCode;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,7 +20,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    private final JwtTokenProvider jwt; private final TokenSessionService sessions;
+    private final JwtTokenProvider jwt; private final TokenSessionService sessions; private final ApiErrorResponseWriter errorResponseWriter;
     @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain)throws ServletException,IOException{
         String h=req.getHeader("Authorization");
         if(h!=null && h.startsWith("Bearer ")){
@@ -46,8 +47,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private void reject(HttpServletResponse response) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write("{\"success\":false,\"code\":\"INVALID_TOKEN\",\"message\":\"유효하지 않은 인증 토큰입니다.\",\"data\":null}");
+        errorResponseWriter.write(response, ErrorCode.INVALID_TOKEN);
     }
 }

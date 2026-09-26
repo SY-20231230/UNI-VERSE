@@ -2,18 +2,19 @@ import { Link } from 'react-router-dom';
 import Icon from '../lib/icons';
 import { timeAgo } from '../lib/format';
 import { useApp } from '../context/AppContext';
-import { POST_CATEGORY_META } from '../lib/category';
+import { POST_CATEGORY_META, postCategoryFromApi } from '../lib/category';
 
 export default function PostCard({ post, compact }) {
   const { userOf } = useApp();
   const author = post.anonymous ? '익명' : userOf(post.authorId).name;
-  const meta = POST_CATEGORY_META[post.category] || POST_CATEGORY_META['기타'];
+  const category = postCategoryFromApi(post.category);
+  const meta = POST_CATEGORY_META[category] || POST_CATEGORY_META['기타'];
   return (
     <Link className="post-card" to={`/community/${post.id}`}>
       <div className="row g8">
         <span className={'chip ' + meta.variant}>
           <Icon name={meta.icon} size={11} />
-          {post.category}
+          {category}
         </span>
         {post.anonymous && <span className="chip outline">익명</span>}
       </div>
