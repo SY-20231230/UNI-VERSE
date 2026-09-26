@@ -71,7 +71,7 @@ class NotificationControllerTest {
     @Test void otherUsersNotificationIsNotFound() throws Exception {
         when(service.markAsRead(42L, 5L)).thenThrow(new BusinessException(ErrorCode.NOTIFICATION_NOT_FOUND));
         mvc.perform(patch("/api/v1/notifications/5/read").with(user("42")))
-                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOTIFICATION_NOT_FOUND"));
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.error.code").value("NOTIFICATION_NOT_FOUND"));
     }
 
     @Test void anonymousRequestIsRejected() throws Exception {

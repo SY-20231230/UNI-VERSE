@@ -161,7 +161,7 @@ class ReportControllerTest {
         when(reports.getMine(42L, 7L)).thenThrow(new ModerationException(ModerationException.Code.FORBIDDEN));
         mvc.perform(get("/api/v1/reports/7").with(user("42")))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+                .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
     }
 
     @Test void propagatesMissingReportToCommonExceptionContract() throws Exception {

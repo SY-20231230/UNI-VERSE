@@ -70,7 +70,7 @@ class AdminUserControllerTest {
     }
     @Test void invalidBodiesAreRejectedByRealSharedHandler() throws Exception {
         mvc.perform(post("/api/v1/admin/users/7/sanctions").with(user("42")).with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"reason\":\" \"}")).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+                .content("{\"reason\":\" \"}")).andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
         mvc.perform(patch("/api/v1/admin/users/7/status").with(user("42")).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{}")).andExpect(status().isBadRequest());
         verifyNoInteractions(users, sanctions);
@@ -78,7 +78,7 @@ class AdminUserControllerTest {
     @Test void sharedHandlerMapsDomainFailuresInsteadOfInternalServerError() throws Exception {
         when(users.getDetail(42L, 7L)).thenThrow(new ModerationException(ModerationException.Code.USER_NOT_FOUND));
         mvc.perform(get("/api/v1/admin/users/7").with(user("42"))).andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"));
+                .andExpect(jsonPath("$.error.code").value("USER_NOT_FOUND"));
         when(users.search(eq(42L), any(), any())).thenThrow(new ModerationException(ModerationException.Code.FORBIDDEN));
         mvc.perform(get("/api/v1/admin/users").with(user("42"))).andExpect(status().isForbidden());
     }

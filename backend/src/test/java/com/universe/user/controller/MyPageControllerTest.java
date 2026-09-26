@@ -44,7 +44,7 @@ class MyPageControllerTest {
         when(service.getSummary(42L)).thenReturn(new MyPageResponse(42L, "a@test.example", "name", "nick", null, null, false, 50, 1, 2, 3));
         mvc.perform(get("/api/v1/mypage").with(user("42")).param("userId", "999"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.userId").value(42))
-                .andExpect(jsonPath("$.data.trustScore").value(50)).andExpect(jsonPath("$.code").value("SUCCESS"));
+                .andExpect(jsonPath("$.data.trustScore").value(50)).andExpect(jsonPath("$.success").value(true));
         verify(service).getSummary(42L);
     }
     @Test void pagedReadsUseCsvPathsAndBoundedDefaults() throws Exception {
@@ -60,14 +60,14 @@ class MyPageControllerTest {
     @Test void sharedHandlerReturnsForbiddenForInactiveUser() throws Exception {
         when(service.getSummary(42L)).thenThrow(new ModerationException(ModerationException.Code.FORBIDDEN));
         mvc.perform(get("/api/v1/mypage").with(user("42"))).andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.success").value(false)).andExpect(jsonPath("$.code").value("FORBIDDEN"));
+                .andExpect(jsonPath("$.success").value(false)).andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
     }
     @Test void anonymousAndInvalidPrincipalCannotReachService() throws Exception {
         for (String path : new String[]{"", "/posts", "/market-items", "/trust-history"}) {
             mvc.perform(get("/api/v1/mypage" + path)).andExpect(status().isUnauthorized());
         }
         mvc.perform(get("/api/v1/mypage").with(user("not-an-id"))).andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
         verifyNoInteractions(service);
     }
 }
