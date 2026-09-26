@@ -2,6 +2,7 @@ package com.universe.admin.service;
 
 import com.universe.admin.dto.request.UserSanctionCreateRequest;
 import com.universe.admin.dto.response.UserSanctionResponse;
+import com.universe.notification.event.SanctionImposedEvent;
 import com.universe.report.entity.*;
 import com.universe.report.repository.*;
 import com.universe.report.service.*;
@@ -10,6 +11,7 @@ import com.universe.user.entity.*;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import static com.universe.report.service.ModerationException.Code.*;
@@ -23,6 +25,7 @@ public class AdminSanctionService {
     private final UserSanctionRepository sanctions;
     private final ReportRepository reports;
     private final TrustScoreService trust;
+    private final ApplicationEventPublisher events;
 
     public UserSanctionResponse create(Long authenticatedAdminId, Long targetUserId, UserSanctionCreateRequest request) {
         User admin = access.requireAdmin(authenticatedAdminId);
@@ -56,6 +59,7 @@ public class AdminSanctionService {
             case SUSPENSION -> user.updateAccountStatus(AccountStatus.SUSPENDED);
             case BAN -> user.updateAccountStatus(AccountStatus.BANNED);
         }
+        events.publishEvent(new SanctionImposedEvent(sanction.getId(), user.getId(), type, endAt));
         return sanction;
     }
 }

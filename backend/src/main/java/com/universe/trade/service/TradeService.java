@@ -5,6 +5,7 @@ import com.universe.global.exception.ErrorCode;
 import com.universe.market.entity.MarketItem;
 import com.universe.market.entity.TradeStatus;
 import com.universe.market.repository.MarketItemRepository;
+import com.universe.notification.event.MarketItemStatusChangedEvent;
 import com.universe.trade.dto.TradeCreateRequest;
 import com.universe.trade.dto.TradeResponse;
 import com.universe.trade.entity.Trade;
@@ -12,6 +13,7 @@ import com.universe.trade.repository.TradeRepository;
 import com.universe.user.entity.User;
 import com.universe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,7 @@ public class TradeService {
     private final TradeRepository tradeRepository;
     private final MarketItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Long proposeTrade(Long buyerId, TradeCreateRequest request) {
@@ -48,8 +51,9 @@ public class TradeService {
                 .build();
 
         item.changeTradeStatus(TradeStatus.TRADING);
-        
+
         Trade saved = tradeRepository.save(trade);
+        publishItemStatus(item, buyerId);
         return saved.getId();
     }
 
@@ -88,6 +92,7 @@ public class TradeService {
 
         if (trade.getStatus() == TradeStatus.COMPLETED) {
             trade.getItem().changeTradeStatus(TradeStatus.COMPLETED);
+            publishItemStatus(trade.getItem(), trade.getBuyer().getId());
         }
     }
 
@@ -106,5 +111,11 @@ public class TradeService {
 
         trade.cancelTrade();
         trade.getItem().changeTradeStatus(TradeStatus.SELLING);
+        publishItemStatus(trade.getItem(), trade.getBuyer().getId());
+    }
+
+    // 찜한 사용자 알림용. 거래 당사자인 구매자는 알림 대상에서 제외한다.
+    private void publishItemStatus(MarketItem item, Long buyerId) {
+        eventPublisher.publishEvent(new MarketItemStatusChangedEvent(item.getId(), item.getTitle(), item.getTradeStatus(), buyerId));
     }
 }

@@ -419,6 +419,23 @@ CREATE TABLE user_sanctions (
         ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- 22. notifications
+CREATE TABLE notifications (
+    notification_id BIGINT NOT NULL AUTO_INCREMENT,
+    receiver_id BIGINT NOT NULL,
+    notification_type VARCHAR(30) NOT NULL,
+    content VARCHAR(255) NOT NULL,
+    target_id BIGINT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    read_at DATETIME NULL,
+    PRIMARY KEY (notification_id),
+    KEY idx_notifications_receiver_created (receiver_id, created_at),
+    KEY idx_notifications_receiver_read (receiver_id, is_read),
+    CONSTRAINT fk_notifications_receiver FOREIGN KEY (receiver_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 SHOW TABLES;

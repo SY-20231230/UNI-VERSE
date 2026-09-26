@@ -9,14 +9,18 @@ import com.universe.market.dto.MarketItemListResponse;
 import com.universe.market.dto.MarketItemUpdateRequest;
 import com.universe.market.entity.MarketItem;
 import com.universe.market.repository.MarketItemRepository;
+import com.universe.notification.event.MarketItemPriceChangedEvent;
 import com.universe.school.entity.School;
 import com.universe.user.entity.User;
 import com.universe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +30,7 @@ public class MarketItemService {
     private final MarketItemRepository itemRepository;
     private final UserRepository userRepository;
     private final AiRiskService aiRiskService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public Page<MarketItemListResponse> searchItems(Long schoolId, String category, String keyword, String sort, Pageable pageable) {
         return itemRepository.searchItems(schoolId, category, keyword, sort, pageable)
@@ -78,7 +83,8 @@ public class MarketItemService {
         if (!item.isSeller(userId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
-        
+
+        Long oldListedPrice = item.getListedPrice();
         item.updateContent(
             request.getTitle(),
             request.getDescription(),
@@ -90,6 +96,11 @@ public class MarketItemService {
         
         // Re-analyze on update
         aiRiskService.analyzeMarketItem(item);
+
+        if (!Objects.equals(oldListedPrice, item.getListedPrice())) {
+            eventPublisher.publishEvent(new MarketItemPriceChangedEvent(item.getId(), item.getTitle(),
+                    oldListedPrice, item.getListedPrice(), userId));
+        }
     }
 
     @Transactional
