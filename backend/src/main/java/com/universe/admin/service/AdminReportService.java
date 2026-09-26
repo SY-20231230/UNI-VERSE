@@ -5,6 +5,7 @@ import com.universe.admin.repository.AdminReportRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.universe.admin.dto.response.*;
+import com.universe.notification.event.ReportProcessedEvent;
 import com.universe.report.dto.response.*;
 import com.universe.report.entity.*;
 import com.universe.report.repository.*;
@@ -12,6 +13,7 @@ import com.universe.report.service.*;
 import com.universe.trust.service.TrustScoreService;
 import com.universe.user.entity.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Objects;
@@ -29,6 +31,7 @@ public class AdminReportService {
     private final TrustScoreService trust;
     private final AdminSanctionService sanctions;
     private final ReportSuspensionPolicy suspensionPolicy;
+    private final ApplicationEventPublisher events;
 
     public Page<AdminReportListResponse> search(Long authenticatedAdminId,
             AdminReportSearchCondition condition, Pageable pageable) {
@@ -51,6 +54,7 @@ public class AdminReportService {
         Report report = pendingReport(reportId);
         requireIndependentAdmin(admin, report);
         report.dismiss(admin, request.adminNote());
+        events.publishEvent(new ReportProcessedEvent(report.getId(), report.getReporter().getId(), false));
         return ReportResponse.from(report);
     }
 
@@ -68,6 +72,7 @@ public class AdminReportService {
         trust.confirmReport(report);
         UserSanction sanction = request.sanctionType() == null ? null : sanctions.impose(admin, target, report,
                 request.sanctionType(), request.adminNote(), endAt);
+        events.publishEvent(new ReportProcessedEvent(report.getId(), report.getReporter().getId(), true));
         return new ReportProcessResponse(ReportResponse.from(report), target.getTrustScore(),
                 sanction == null ? null : UserSanctionResponse.from(sanction));
     }
