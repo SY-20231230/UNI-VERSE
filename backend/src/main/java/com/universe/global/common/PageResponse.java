@@ -12,8 +12,6 @@ public class PageResponse<T> {
     private final int size;
     private final long totalElements;
     private final int totalPages;
-    private final boolean first;
-    private final boolean last;
 
     public PageResponse(Page<T> pageData) {
         this.content = pageData.getContent();
@@ -21,7 +19,9 @@ public class PageResponse<T> {
         this.size = pageData.getSize();
         this.totalElements = pageData.getTotalElements();
         this.totalPages = pageData.getTotalPages();
-        this.first = pageData.isFirst();
-        this.last = pageData.isLast();
+    }
+
+    public static <T> PageResponse<T> from(Page<T> pageData) {
+        return new PageResponse<>(pageData);
     }
 }
