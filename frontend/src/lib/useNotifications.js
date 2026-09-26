@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { createNotificationApi, NOTIFICATION_POLL_MS } from './notificationApi';
+import { sessionApiOptions } from './session';
 
 /**
  * 서버 알림 상태. 로그인 토큰이 있을 때만 동작하며(enabled),
@@ -10,10 +11,7 @@ export default function useNotifications() {
   const { state } = useApp();
   const token = state.accessToken;
   const enabled = typeof token === 'string' && token.trim() !== '';
-  const api = useMemo(() => createNotificationApi({
-    baseUrl: import.meta.env.VITE_API_BASE_URL || '/api/v1',
-    getAccessToken: () => token,
-  }), [token]);
+  const api = useMemo(() => createNotificationApi(sessionApiOptions), [token]);
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [items, setItems] = useState([]);

@@ -1,6 +1,10 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { seed } from '../lib/seed';
 import { uid } from '../lib/format';
+import { session, sessionApiOptions } from '../lib/session';
+import { createAuthApi } from '../lib/authApi';
+
+const authApi = createAuthApi(sessionApiOptions);
 
 const LS_KEY = 'universe_state_v8';
 const AppContext = createContext(null);
@@ -18,7 +22,11 @@ function load() {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.users) return parsed;
+      if (parsed && parsed.users) {
+        // 서버 로그인 상태였는데 토큰이 사라졌다면 로그아웃 상태로 시작한다.
+        if (parsed.authMode === 'server' && !session.isActive()) return { ...parsed, user: null, isAdmin: false, authMode: null };
+        return parsed;
+      }
     }
   } catch (e) {
     /* ignore corrupt storage */
@@ -37,17 +45,77 @@ export function AppProvider({ children }) {
     }
   }, [state]);
 
-  const login = useCallback(() => {
-    setState((s) => ({ ...s, user: 'me', isAdmin: false }));
+  const [accessToken, setAccessToken] = useState(() => session.getAccessToken());
+  const [me, setMe] = useState(null);
+
+  // 서버 회원 정보를 목업 화면이 쓰는 users.me 에도 반영해 기존 화면이 그대로 동작하게 한다.
+  const applyMe = useCallback((profile) => {
+    setMe(profile);
+    setState((s) => ({
+      ...s,
+      user: 'me',
+      isAdmin: profile.role === 'ADMIN',
+      authMode: 'server',
+      users: { ...s.users, me: { ...s.users.me, name: profile.nickname, trustScore: profile.trustScore } },
+    }));
   }, []);
 
-  const loginAsAdmin = useCallback(() => {
-    setState((s) => ({ ...s, user: 'me', isAdmin: true }));
+  const endSession = useCallback(() => {
+    setMe(null);
+    setState((s) => ({ ...s, user: null, isAdmin: false, authMode: null }));
   }, []);
 
-  const logout = useCallback(() => {
-    setState((s) => ({ ...s, user: null, isAdmin: false }));
+  useEffect(() => session.subscribe((current) => {
+    setAccessToken(current?.accessToken ?? null);
+    if (!current) {
+      setMe(null);
+      // 재발급 실패 등으로 세션이 끊기면 서버 로그인 사용자만 로그아웃시킨다 (데모 모드는 유지).
+      setState((s) => (s.authMode === 'server' ? { ...s, user: null, isAdmin: false, authMode: null } : s));
+    }
+  }), []);
+
+  // 새로고침 후에도 저장된 토큰으로 회원 정보를 다시 확인한다.
+  useEffect(() => {
+    if (!session.isActive()) return;
+    authApi.me().then(applyMe).catch(() => {
+      /* 토큰이 만료돼 재발급까지 실패하면 session 구독이 로그아웃 처리한다 */
+    });
+  }, [applyMe]);
+
+  const login = useCallback(async (credentials) => {
+    session.set(await authApi.login(credentials));
+    try {
+      const profile = await authApi.me();
+      applyMe(profile);
+      return profile;
+    } catch (error) {
+      session.clear();
+      throw error;
+    }
+  }, [applyMe]);
+
+  const signup = useCallback(async (input) => {
+    await authApi.signup(input);
+    return login({ email: input.email, password: input.password });
+  }, [login]);
+
+  const loginDemo = useCallback(() => {
+    setState((s) => ({ ...s, user: 'me', isAdmin: false, authMode: 'demo' }));
   }, []);
+
+  const loginDemoAdmin = useCallback(() => {
+    setState((s) => ({ ...s, user: 'me', isAdmin: true, authMode: 'demo' }));
+  }, []);
+
+  const logout = useCallback(async () => {
+    if (session.isActive()) {
+      await authApi.logout().catch(() => {
+        /* 서버 세션 무효화 실패와 관계없이 이 기기에서는 로그아웃한다 */
+      });
+      session.clear();
+    }
+    endSession();
+  }, [endSession]);
 
   const updateProfilePhoto = useCallback((dataUrl) => {
     setState((s) => ({ ...s, users: { ...s.users, me: { ...s.users.me, avatarUrl: dataUrl } } }));
@@ -340,11 +408,15 @@ export function AppProvider({ children }) {
 
   const userOf = useCallback((id) => state.users[id] || state.users.me, [state.users]);
 
+  const exposedState = useMemo(() => ({ ...state, accessToken, me }), [state, accessToken, me]);
+
   const value = {
-    state,
+    state: exposedState,
     userOf,
     login,
-    loginAsAdmin,
+    signup,
+    loginDemo,
+    loginDemoAdmin,
     logout,
     updateProfilePhoto,
     removeProfilePhoto,

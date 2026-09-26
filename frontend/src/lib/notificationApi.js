@@ -1,4 +1,4 @@
-import { createReportTransport, normalizePage, requireId } from './reportApi.js';
+import { createTransport, normalizePage, requireId } from './api.js';
 
 export const NOTIFICATION_POLL_MS = 30000;
 
@@ -24,7 +24,7 @@ export function notificationMeta(notification) {
 }
 
 export function createNotificationApi(options = {}) {
-  const request = createReportTransport(options);
+  const request = createTransport(options);
 
   return {
     async list(query = {}, options = {}) {
