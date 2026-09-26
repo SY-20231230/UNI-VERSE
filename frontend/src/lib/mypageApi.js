@@ -1,12 +1,7 @@
 import { createTransport, normalizePage } from './api.js';
+import { POST_CATEGORY_LABELS } from './category.js';
 
-/** 백엔드 enum → 화면 표시. 커뮤니티/중고거래 화면 연동 시 함께 맞춘다. */
-export const POST_CATEGORY_LABELS = {
-  FREE: { label: '자유', variant: 'accent' },
-  QNA: { label: '질문', variant: 'verified' },
-  INFO: { label: '정보', variant: 'success' },
-  MARKET_REVIEW: { label: '거래후기', variant: 'warn' },
-};
+export { POST_CATEGORY_LABELS };
 
 export const TRADE_STATUS_LABELS = {
   SELLING: { label: '판매중', variant: 'success' },

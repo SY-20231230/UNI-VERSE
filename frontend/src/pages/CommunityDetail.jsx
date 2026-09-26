@@ -8,6 +8,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
 import { timeAgo } from '../lib/format';
+import { postCategoryFromApi } from '../lib/category';
 
 export default function CommunityDetail() {
   const { id } = useParams();
@@ -77,7 +78,7 @@ export default function CommunityDetail() {
       <div className="card" style={{ padding: '30px 30px 6px' }}>
         <div className="row between">
           <div className="row g8">
-            <span className="chip accent">{post.category}</span>
+            <span className="chip accent">{postCategoryFromApi(post.category)}</span>
             {post.anonymous && <span className="chip outline">익명</span>}
           </div>
           {isMine && (
@@ -236,7 +237,7 @@ export default function CommunityDetail() {
                 <Link key={p.id} className="mini-post-row" to={`/community/${p.id}`}>
                   <div className="title">{p.title}</div>
                   <div className="meta">
-                    {p.category} · 좋아요 {p.likes}
+                    {postCategoryFromApi(p.category)} · 좋아요 {p.likes}
                   </div>
                 </Link>
               ))}
