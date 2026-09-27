@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Icon from '../lib/icons';
 import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
-import { scanRisk } from '../lib/risk';
+import { marketApi } from '../lib/marketApi';
 import { MARKET_CATEGORY_META } from '../lib/category';
 
 const CATS = ['전공책', '전자기기', '생활용품', '의류', '기타'];
@@ -25,63 +25,63 @@ export default function MarketWrite() {
   const [originalPrice, setOriginalPrice] = useState(existing?.originalPrice ? String(existing.originalPrice) : '');
   const [desc, setDesc] = useState(existing?.desc || '');
 
-  function submit() {
+  async function submit() {
     const t = title.trim();
     const d = desc.trim();
     if (!t || !cat || !cond || !price.trim() || !d) {
       toast('모든 필수 항목을 입력해주세요');
       return;
     }
-    const hits = scanRisk(t + ' ' + d);
-    if (hits.length) {
-      openModal(
-        <div>
-          <div className="risk-bot">
-            <Icon name="bot" size={30} />
-          </div>
-          <div className="h2" style={{ textAlign: 'center', fontSize: 17 }}>
-            게시글을 등록할 수 없습니다
-          </div>
-          <div className="muted" style={{ textAlign: 'center', fontSize: 12.5, marginTop: 6 }}>
-            다음과 같은 위험한 표현이 감지되었습니다
-          </div>
-          <div style={{ marginTop: 16 }}>
-            {hits.map((h) => (
-              <div className="risk-item" key={h.cat}>
-                <Icon name="alert" size={16} />
-                <div>
-                  <b>{h.cat}</b>
-                  <div className="snippet">"{h.snippet}"</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="muted" style={{ fontSize: 12, marginTop: 14, lineHeight: 1.6 }}>
-            저희 서비스는 교내 직거래를 원칙으로 합니다. 해당 내용을 수정 후 다시 시도해주세요.
-          </div>
-          <button className="btn btn-dark btn-full" style={{ marginTop: 18 }} onClick={closeOverlay}>
-            확인
-          </button>
-        </div>
-      );
-      return;
-    }
+
     const payload = {
       category: cat,
       title: t,
       price: Number(price.replace(/\D/g, '')) || 0,
       originalPrice: Number(originalPrice.replace(/\D/g, '')) || 0,
       condition: cond,
-      desc: d,
+      description: d, // 백엔드는 description을 받을 수도 있으니 맞춤
+      desc: d, // 기존 프론트엔드 모의 데이터용
     };
-    if (isEdit) {
-      updateMarketListing(id, payload);
-      navigate(`/market/${id}`);
-      toast('AI 검사를 통과하여 수정되었습니다');
-    } else {
-      const newId = submitMarketListing(payload);
-      navigate(`/market/${newId}`);
-      toast('AI 검사를 통과하여 등록되었습니다');
+
+    try {
+      if (isEdit) {
+        await marketApi.updateItem(id, payload);
+        updateMarketListing(id, payload);
+        navigate(`/market/${id}`);
+        toast('AI 검사를 통과하여 수정되었습니다');
+      } else {
+        const response = await marketApi.createItem(payload);
+        const newId = submitMarketListing({ ...payload, id: response?.id });
+        navigate(`/market/${newId}`);
+        toast('AI 검사를 통과하여 등록되었습니다');
+      }
+    } catch (error) {
+      if (error.code === 'FRAUD_SUSPECTED') {
+        openModal(
+          <div>
+            <div className="risk-bot">
+              <Icon name="bot" size={30} />
+            </div>
+            <div className="h2" style={{ textAlign: 'center', fontSize: 17 }}>
+              게시글을 등록할 수 없습니다
+            </div>
+            <div className="muted" style={{ textAlign: 'center', fontSize: 12.5, marginTop: 6 }}>
+              AI 모델 검사 결과, 다음과 같은 위험이 감지되었습니다.
+            </div>
+            <div style={{ marginTop: 16, background: '#fee2e2', padding: 12, borderRadius: 8, color: '#991b1b', fontSize: 14 }}>
+              <b>사유:</b> {error.message}
+            </div>
+            <div className="muted" style={{ fontSize: 12, marginTop: 14, lineHeight: 1.6 }}>
+              저희 서비스는 교내 직거래를 원칙으로 합니다. 해당 내용을 수정 후 다시 시도해주세요.
+            </div>
+            <button className="btn btn-dark btn-full" style={{ marginTop: 18 }} onClick={closeOverlay}>
+              확인
+            </button>
+          </div>
+        );
+      } else {
+        toast(error.message || '게시글 등록에 실패했습니다.');
+      }
     }
   }
 

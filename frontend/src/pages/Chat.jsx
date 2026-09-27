@@ -7,6 +7,9 @@ import ReportModal from '../components/ReportModal';
 import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
 import { timeAgo, won, hm, formatDate } from '../lib/format';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+import { session } from '../lib/session';
 
 function dateLabel(ts) {
   const d = new Date(ts);
@@ -131,10 +134,60 @@ export default function Chat() {
     }
   }, [activeId, activeChat?.messages.length]);
 
+  const stompClientRef = useRef(null);
+
+  useEffect(() => {
+    if (!activeId) return;
+
+    const token = session.getAccessToken();
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS('http://127.0.0.1:8080/ws-stomp'),
+      connectHeaders: {
+        Authorization: token ? `Bearer ${token}` : '',
+      },
+      debug: function (str) {
+        // console.log(str);
+      },
+      onConnect: () => {
+        console.log('STOMP WebSocket 연결 성공!');
+        client.subscribe(`/sub/chat/room/${activeId}`, (msg) => {
+          // 백엔드에서 전송한 실시간 메시지 처리 (데모 연동시 활용)
+          const data = JSON.parse(msg.body);
+          console.log('Received:', data);
+        });
+      },
+      onStompError: (frame) => {
+        console.error('Broker reported error: ' + frame.headers['message']);
+        console.error('Additional details: ' + frame.body);
+      },
+    });
+
+    client.activate();
+    stompClientRef.current = client;
+
+    return () => {
+      client.deactivate();
+      stompClientRef.current = null;
+    };
+  }, [activeId]);
+
   function send() {
     const text = input.trim();
     if (!text || !activeId) return;
-    sendChatMessage(activeId, text);
+
+    // 백엔드로 STOMP 메시지 전송
+    if (stompClientRef.current && stompClientRef.current.connected) {
+      stompClientRef.current.publish({
+        destination: '/pub/chat/message',
+        body: JSON.stringify({
+          roomId: activeId,
+          content: text,
+        }),
+      });
+    }
+
+    sendChatMessage(activeId, text); // 기존 프론트엔드 모의 UI 업데이트
     setInput('');
   }
 
