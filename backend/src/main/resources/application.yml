@@ -35,7 +35,8 @@ jwt:
   secret-key: ${JWT_SECRET_KEY}
 
 ai:
-  server-url: ${AI_SERVER_URL}
+  server:
+    base-url: ${AI_SERVER_BASE_URL:http://127.0.0.1:8000}
 
 app:
   mail:
