@@ -53,6 +53,13 @@ public class MarketItemService {
             throw new BusinessException(ErrorCode.SCHOOL_NOT_FOUND);
         }
         
+        // AI Risk Analysis (Before creating MarketItem, item is null)
+        com.universe.ai.dto.response.AiRiskResponse riskResponse = aiRiskService.analyzeAndSave(request.getTitle(), request.getDescription(), user, null);
+        if (riskResponse.getResult() == com.universe.ai.entity.AiAnalysisResult.FRAUD_SUSPECTED) {
+            String msg = riskResponse.getMessage() != null ? riskResponse.getMessage() : "위험문구가 포함되어 있습니다.";
+            throw new BusinessException(ErrorCode.FRAUD_SUSPECTED, msg);
+        }
+
         MarketItem item = MarketItem.builder()
                 .seller(user)
                 .school(school)
@@ -64,13 +71,10 @@ public class MarketItemService {
                 .listedPrice(request.getListedPrice())
                 .build();
                 
-        // Save first or analyze? If we analyze, item needs to be not null, but ID might not be assigned yet. 
-        // AiRiskService expects MarketItem to be saved if it has a foreign key in AiRiskAnalysis. 
-        // So we should save it first to generate ID.
+        // Set safe status since it passed AI
+        item.updateAiStatus(com.universe.ai.entity.AiAnalysisResult.SAFE);
+
         MarketItem savedItem = itemRepository.save(item);
-        
-        // AI Risk Analysis
-        aiRiskService.analyzeMarketItem(savedItem);
         
         return savedItem.getId();
     }
@@ -84,6 +88,13 @@ public class MarketItemService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
+        // Re-analyze on update (using new title and description)
+        com.universe.ai.dto.response.AiRiskResponse riskResponse = aiRiskService.analyzeAndSave(request.getTitle(), request.getDescription(), item.getSeller(), item);
+        if (riskResponse.getResult() == com.universe.ai.entity.AiAnalysisResult.FRAUD_SUSPECTED) {
+            String msg = riskResponse.getMessage() != null ? riskResponse.getMessage() : "위험문구가 포함되어 있습니다.";
+            throw new BusinessException(ErrorCode.FRAUD_SUSPECTED, msg);
+        }
+
         Long oldListedPrice = item.getListedPrice();
         item.updateContent(
             request.getTitle(),
@@ -94,10 +105,9 @@ public class MarketItemService {
             request.getPurchasePrice()
         );
         
-        // Re-analyze on update
-        aiRiskService.analyzeMarketItem(item);
+        item.updateAiStatus(com.universe.ai.entity.AiAnalysisResult.SAFE);
 
-        if (!Objects.equals(oldListedPrice, item.getListedPrice())) {
+        if (!java.util.Objects.equals(oldListedPrice, item.getListedPrice())) {
             eventPublisher.publishEvent(new MarketItemPriceChangedEvent(item.getId(), item.getTitle(),
                     oldListedPrice, item.getListedPrice(), userId));
         }

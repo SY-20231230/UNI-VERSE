@@ -8,7 +8,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WebClientConfig {
 
-    @Value("${ai.server.url:http://localhost:8000}")
+    @Value("${ai.server.base-url:http://127.0.0.1:8000}")
     private String aiServerUrl;
 
     @Bean
