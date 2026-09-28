@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': { target: env.VITE_PROXY_TARGET || 'http://localhost:8080', changeOrigin: true },
         '/uploads': { target: env.VITE_PROXY_TARGET || 'http://localhost:8080', changeOrigin: true },
+        '/ws-stomp': { target: env.VITE_PROXY_TARGET || 'http://localhost:8080', changeOrigin: true, ws: true },
       },
     },
   }

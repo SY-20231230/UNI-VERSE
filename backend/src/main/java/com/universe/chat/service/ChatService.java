@@ -108,4 +108,27 @@ public class ChatService {
                 .build();
         return new ChatMessageResponse(messageRepository.save(message));
     }
+
+    @Transactional
+    public void deleteRoom(Long roomId, Long userId) {
+        ChatRoom room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        // Verify user is member of room
+        List<ChatMember> members = chatMemberRepository.findByRoomId(roomId);
+        boolean isMember = members.stream().anyMatch(m -> m.getUser().getId().equals(userId));
+        if (!isMember) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        // Delete all messages
+        messageRepository.deleteByRoomId(roomId);
+        // Delete all members
+        chatMemberRepository.deleteByRoomId(roomId);
+        // Delete room
+        chatRoomRepository.delete(room);
+        // Delete chat request if exists
+        if (room.getRequest() != null) {
+            chatRequestRepository.delete(room.getRequest());
+        }
+    }
 }

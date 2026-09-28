@@ -1,5 +1,6 @@
 package com.universe.trade.controller;
 
+import com.universe.global.common.ApiResponse;
 import com.universe.global.util.SecurityUtil;
 import com.universe.trade.dto.TradeCreateRequest;
 import com.universe.trade.dto.TradeResponse;
@@ -12,36 +13,49 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/api/trades")
+@RequestMapping("/api/v1/trades")
 @RequiredArgsConstructor
 public class TradeController {
 
     private final TradeService tradeService;
 
     @PostMapping
-    public ResponseEntity<Void> proposeTrade(@Valid @RequestBody TradeCreateRequest request) {
+    public ResponseEntity<ApiResponse<Long>> proposeTrade(@Valid @RequestBody TradeCreateRequest request) {
         Long userId = SecurityUtil.getCurrentUserId();
         Long tradeId = tradeService.proposeTrade(userId, request);
-        return ResponseEntity.created(URI.create("/api/trades/" + tradeId)).build();
+        return ResponseEntity.created(URI.create("/api/v1/trades/" + tradeId)).body(ApiResponse.success(tradeId));
     }
 
     @GetMapping("/{tradeId}")
-    public ResponseEntity<TradeResponse> getTradeDetail(@PathVariable Long tradeId) {
+    public ApiResponse<TradeResponse> getTradeDetail(@PathVariable Long tradeId) {
         Long userId = SecurityUtil.getCurrentUserId();
-        return ResponseEntity.ok(tradeService.getTradeDetail(userId, tradeId));
+        return ApiResponse.success(tradeService.getTradeDetail(userId, tradeId));
+    }
+
+    @GetMapping("/item/{itemId}")
+    public ApiResponse<TradeResponse> getTradeByItem(@PathVariable Long itemId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        return ApiResponse.success(tradeService.getTradeByItem(userId, itemId));
+    }
+
+    @PostMapping("/{tradeId}/accept")
+    public ApiResponse<Void> acceptTrade(@PathVariable Long tradeId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        tradeService.acceptTrade(userId, tradeId);
+        return ApiResponse.success();
     }
 
     @PostMapping("/{tradeId}/confirm")
-    public ResponseEntity<Void> confirmTrade(@PathVariable Long tradeId) {
+    public ApiResponse<Void> confirmTrade(@PathVariable Long tradeId) {
         Long userId = SecurityUtil.getCurrentUserId();
         tradeService.confirmTrade(userId, tradeId);
-        return ResponseEntity.ok().build();
+        return ApiResponse.success();
     }
 
     @PostMapping("/{tradeId}/cancel")
-    public ResponseEntity<Void> cancelTrade(@PathVariable Long tradeId) {
+    public ApiResponse<Void> cancelTrade(@PathVariable Long tradeId) {
         Long userId = SecurityUtil.getCurrentUserId();
         tradeService.cancelTrade(userId, tradeId);
-        return ResponseEntity.ok().build();
+        return ApiResponse.success();
     }
 }

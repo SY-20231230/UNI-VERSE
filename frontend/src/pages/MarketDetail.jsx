@@ -314,9 +314,10 @@ export default function MarketDetail() {
                   className="btn btn-primary"
                   style={{ flex: 1 }}
                   onClick={() => openSheet(<ChatRequestSheet listing={listing} onSend={handleSend} />)}
+                  disabled={statusLabel === '거래완료'}
                 >
                   <Icon name="chat" size={17} />
-                  1:1 대화 요청
+                  {statusLabel === '거래완료' ? '거래가 완료된 상품입니다' : '1:1 대화 요청'}
                 </button>
               )}
             </div>

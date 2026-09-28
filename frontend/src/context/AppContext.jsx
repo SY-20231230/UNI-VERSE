@@ -4,6 +4,7 @@ import { uid } from '../lib/format';
 import { session, sessionApiOptions } from '../lib/session';
 import { createAuthApi } from '../lib/authApi';
 import { createChatApi } from '../lib/chatApi';
+import { useGlobalChatSocket } from '../lib/useChatSocket';
 
 const authApi = createAuthApi(sessionApiOptions);
 const chatApi = createChatApi(sessionApiOptions);
@@ -402,6 +403,9 @@ export function AppProvider({ children }) {
     });
   }, []);
 
+  const allChatIds = useMemo(() => Object.keys(state.chats), [state.chats]);
+  const { connected: stompConnected, sendMessage: publishMessage } = useGlobalChatSocket(allChatIds, receiveChatMessage);
+
   const acceptChatRequest = useCallback((chatId) => {
     setState((s) => ({
       ...s,
@@ -415,6 +419,20 @@ export function AppProvider({ children }) {
       delete chats[chatId];
       return { ...s, chats };
     });
+  }, []);
+
+  const deleteChatRoom = useCallback(async (chatId) => {
+    try {
+      await chatApi.deleteRoom(chatId);
+      setState((s) => {
+        const chats = { ...s.chats };
+        delete chats[chatId];
+        return { ...s, chats };
+      });
+    } catch (e) {
+      console.error('Failed to delete chat room', e);
+      throw e;
+    }
   }, []);
 
   const dismissSafety = useCallback((chatId) => {
@@ -524,10 +542,13 @@ export function AppProvider({ children }) {
     receiveChatMessage,
     acceptChatRequest,
     declineChatRequest,
+    deleteChatRoom,
     dismissSafety,
     report,
     resolveReport,
     liftSuspension,
+    stompConnected,
+    publishMessage,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
