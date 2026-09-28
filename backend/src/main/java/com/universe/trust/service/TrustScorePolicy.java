@@ -15,8 +15,7 @@ public class TrustScorePolicy {
             if (completedCount > 10) throw new IllegalArgumentException("Report recovery must reset after ten trades");
             return completedCount == 10 ? DEFAULT_SCORE : currentScore;
         }
-        long firstBonus = mode == Mode.NORMAL ? 5 : 6;
-        int delta = completedCount < firstBonus ? 0 : completedCount < firstBonus + 4 ? 10 : 1;
+        int delta = 1; // Increase by 1 point per completed trade
         return Math.min(100, currentScore + delta);
     }
 
