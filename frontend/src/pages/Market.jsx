@@ -8,7 +8,7 @@ import { marketApi } from '../lib/marketApi';
 import useDebounce from '../hooks/useDebounce';
 
 const CATS = ['전체', '전공책', '전자기기', '생활용품', '의류', '기타'];
-const STATUSES = ['전체', '판매중', '거래완료'];
+const STATUSES = ['전체', '판매중', '거래중', '거래완료'];
 const SORTS = [
   { k: 'latest', label: '최신순' },
   { k: 'popular', label: '인기순' },
@@ -29,7 +29,8 @@ export default function Market() {
       try {
         const catParam = state.marketFilter === '전체' ? undefined : marketCategoryToApi(state.marketFilter);
         const statusParam = state.marketStatusFilter === '전체' ? undefined : 
-                            (state.marketStatusFilter === '판매중' ? 'SELLING' : 'COMPLETED');
+                            (state.marketStatusFilter === '판매중' ? 'SELLING' : 
+                             state.marketStatusFilter === '거래완료' ? 'COMPLETED' : 'TRADING'); // backend might not support multiple statuses in param
         
         // Mapping sort
         let sortParam = 'createdAt,desc'; // default latest
@@ -50,8 +51,13 @@ export default function Market() {
         // Temporary client side filtering for status if backend doesn't support it yet
         let dataList = res.content || [];
         if (state.marketStatusFilter !== '전체') {
-           const targetStatus = state.marketStatusFilter === '판매중' ? 'SELLING' : 'COMPLETED';
-           dataList = dataList.filter(item => item.tradeStatus === targetStatus);
+           if (state.marketStatusFilter === '판매중') {
+             dataList = dataList.filter(item => item.tradeStatus === 'SELLING');
+           } else if (state.marketStatusFilter === '거래완료') {
+             dataList = dataList.filter(item => item.tradeStatus === 'COMPLETED');
+           } else if (state.marketStatusFilter === '거래중') {
+             dataList = dataList.filter(item => item.tradeStatus === 'REQUESTED' || item.tradeStatus === 'TRADING');
+           }
         }
         
         setList(dataList);
@@ -89,7 +95,7 @@ export default function Market() {
           <div className="side-filter-label">거래 상태</div>
           {STATUSES.map((s) => (
             <button key={s} className={state.marketStatusFilter === s ? 'on' : ''} onClick={() => setMarketStatusFilter(s)}>
-              <Icon name={s === '판매중' ? 'trend' : s === '거래완료' ? 'check' : 'tag'} size={15} />
+              <Icon name={s === '판매중' ? 'trend' : s === '거래완료' ? 'check' : s === '거래중' ? 'users' : 'tag'} size={15} />
               {s}
             </button>
           ))}

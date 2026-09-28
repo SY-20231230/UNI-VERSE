@@ -27,7 +27,13 @@ function dateLabel(ts) {
 
 export default function Chat() {
   const { id: activeId } = useParams();
-  const { state, userOf, sendChatMessage, receiveChatMessage, acceptChatRequest, declineChatRequest, deleteChatRoom, dismissSafety, stompConnected, publishMessage } = useApp();
+  const { state, userOf, sendChatMessage, receiveChatMessage, markChatRead, acceptChatRequest, declineChatRequest, deleteChatRoom, dismissSafety, stompConnected, publishMessage } = useApp();
+
+  useEffect(() => {
+    if (activeId && state.chats[activeId]?.unread) {
+      markChatRead(activeId);
+    }
+  }, [activeId, state.chats, markChatRead]);
   const { openModal, closeOverlay, toast } = useUI();
   const navigate = useNavigate();
   const [input, setInput] = useState('');
@@ -62,12 +68,24 @@ export default function Chat() {
     const l = state.listings.find((x) => x.id === c.listingId);
     const partner = c.anonymous ? { name: '익명 사용자', color: '#9195A6' } : userOf(c.partnerId, c.partnerName);
     const last = c.messages[c.messages.length - 1];
+    
+    // Check if the chat has an unread message
+    // If the last message is from 'them' and there's no read receipt logic, we'll assume it's unread if we haven't visited this chat
+    // For simplicity, we consider it unread if activeId !== cid and the last message is from 'them'
+    // Alternatively, we can check if `c.hasUnread` is true (needs to be managed in AppContext).
+    // I'll add a simple unread dot if it's from 'them' and activeId !== cid.
+    // Better yet: AppContext adds `unread: true` to the chat when receiving a message.
+    const isUnread = c.unread && cid !== activeId;
+
     return (
       <Link key={cid} className={'chat-row' + (cid === activeId ? ' active' : '')} to={`/chat/${cid}`}>
         <Avatar user={partner} size={44} />
         <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }} className="stack g4">
           <div className="row between">
-            <b style={{ fontSize: 14 }}>{partner.name}</b>
+            <b style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {partner.name}
+              {isUnread && <span style={{ width: 6, height: 6, borderRadius: 3, background: 'var(--accent)' }}></span>}
+            </b>
             <span className="faint" style={{ fontSize: 11 }}>
               {last ? timeAgo(last.time) : ''}
             </span>
@@ -141,23 +159,27 @@ export default function Chat() {
     }
   }, [activeId, activeChat?.messages.length]);
 
-  // 채팅방 변경시 거래 정보 로드, 이후 5초마다 상대방 쪽 변화(요청·수락·완료)를 확인한다.
-  const seenTrade = useRef(new Set());
+  // 채팅방 변경시 거래 정보 로드
+  const fetchTrade = useCallback(() => {
+    if (!activeId || !activeChat?.listingId || !session.isActive()) return;
+    tradeApi.getTradeByItem(activeChat.listingId).then(setTrade).catch(() => setTrade(null));
+  }, [activeId, activeChat?.listingId]);
+
   useEffect(() => {
     setTrade(null);
     setMenuOpen(false);
-    if (!activeId || !activeChat?.listingId || !session.isActive()) return undefined;
-    let alive = true;
-    let first = true;
-    const load = () => tradeApi.getTradeByItem(activeChat.listingId)
-      .then((t) => { if (!alive) return; setTrade(t); if (t) announceTrade(t, first ? 'initial' : 'poll'); first = false; })
-      .catch(() => { if (alive && first) setTrade(null); first = false; });
-    load();
-    const timer = setInterval(() => {
-      if (document.visibilityState === 'visible') load();
-    }, 5000);
-    return () => { alive = false; clearInterval(timer); };
-  }, [activeId]);
+    fetchTrade();
+  }, [fetchTrade]);
+
+  useEffect(() => {
+    function handleTradeUpdate(e) {
+      if (activeChat?.listingId && e.detail === activeChat.listingId) {
+        fetchTrade();
+      }
+    }
+    window.addEventListener('trade_update', handleTradeUpdate);
+    return () => window.removeEventListener('trade_update', handleTradeUpdate);
+  }, [activeChat?.listingId, fetchTrade]);
 
   /**
    * 거래 상태가 바뀌면 팝업으로 알린다. 같은 상태는 한 번만 띄운다.
@@ -236,8 +258,23 @@ export default function Chat() {
     }
   }
 
-  async function handleConfirmTrade(tradeId = trade?.tradeId) {
-    if (!tradeId) return;
+  async function handleRejectTrade() {
+    if (!trade?.tradeId) return;
+    setTradeLoading(true);
+    try {
+      await tradeApi.cancelTrade(trade.tradeId);
+      const t = await tradeApi.getTradeDetail(trade.tradeId);
+      setTrade(t);
+      toast('거래 요청을 거절했습니다.');
+    } catch (e) {
+      toast(e?.message || '거래 거절에 실패했어요.');
+    } finally {
+      setTradeLoading(false);
+    }
+  }
+
+  async function handleConfirmTrade() {
+    if (!trade?.tradeId) return;
     setTradeLoading(true);
     try {
       await tradeApi.confirmTrade(tradeId);
@@ -458,44 +495,20 @@ export default function Chat() {
                 )}
               </div>
             </div>
-            {/* 거래 상태 카드: 상태 배지 + 상품 + 할 일 버튼 / 진행 막대 / 양쪽 확인 여부 */}
-            {trade && (() => {
-              const steps = ['요청', '수락', '완료 확인', '거래 완료'];
-              const current = tradeStatus === 'REQUESTED' ? 0 : tradeStatus === 'TRADING' ? (trade.sellerConfirmed || trade.buyerConfirmed ? 2 : 1) : tradeStatus === 'COMPLETED' ? 4 : -1;
-              const badge = tradeStatus === 'COMPLETED' ? '거래 완료' : tradeStatus === 'CANCELLED' ? '거래 취소'
-                : tradeStatus === 'REQUESTED' ? (isSeller ? '요청 도착' : '수락 대기') : myConfirmed ? '상대 확인 대기' : '거래 진행 중';
-              const hint = tradeStatus === 'COMPLETED' ? '안전하게 거래해주셔서 감사해요'
-                : tradeStatus === 'CANCELLED' ? '이 거래는 취소됐어요'
-                : tradeStatus === 'REQUESTED' ? (isSeller ? '구매자가 거래를 요청했어요. 수락하면 거래가 시작돼요' : '판매자가 수락하면 알려드릴게요')
-                : myConfirmed ? '상대방이 완료를 확인하면 거래가 끝나요' : '물건을 주고받았다면 완료 확인을 눌러주세요';
-              const tone = tradeStatus === 'COMPLETED' ? 'done' : tradeStatus === 'CANCELLED' ? 'cancelled' : (tradeStatus === 'REQUESTED' && isSeller) || (tradeStatus === 'TRADING' && !myConfirmed) ? 'action' : '';
-              return (
-                <div className={'trade-card ' + tone}>
-                  <div className="trade-card-head">
-                    <div className="trade-card-info">
-                      <span className="trade-badge">{badge}</span>
-                      <div className="trade-card-item">
-                        <strong>{trade.itemTitle || '거래 상품'}</strong>
-                        {(trade.finalPrice ?? trade.listedPrice) != null && <span>{won(trade.finalPrice ?? trade.listedPrice)}</span>}
-                      </div>
-                      <div className="trade-card-hint">{hint}</div>
-                    </div>
-                    {tradeStatus === 'REQUESTED' && isSeller && (
-                      <button className="btn btn-primary btn-sm trade-card-cta" onClick={() => handleAcceptTrade()} disabled={tradeLoading}>요청 수락</button>
-                    )}
-                    {tradeStatus === 'TRADING' && !myConfirmed && (
-                      <button className="btn btn-primary btn-sm trade-card-cta" onClick={() => handleConfirmTrade()} disabled={tradeLoading}>완료 확인</button>
-                    )}
-                  </div>
-                  {current >= 0 && (
-                    <div className="trade-progress" aria-label={`거래 진행 ${Math.min(current + 1, 4)}/4단계`}>
-                      {steps.map((label, i) => (
-                        <div key={label} className={'trade-progress-step' + (i < current || current === 4 ? ' done' : i === current ? ' now' : '')}>
-                          <span className="trade-progress-bar" />
-                          <span className="trade-progress-label">{label}</span>
-                        </div>
-                      ))}
-                    </div>
+            {/* 거래 상태 배너 */}
+            {trade && (
+              <div style={{
+                padding: '10px 20px',
+                background: tradeStatus === 'COMPLETED' ? 'rgba(16,185,129,.1)' : 'rgba(109,40,217,.08)',
+                borderBottom: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontSize: 13
+              }}>
+                <span style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+                  {tradeStatus === 'COMPLETED' && '🎉 거래가 완료되었습니다'}
+                  {tradeStatus === 'REQUESTED' && (
+                    isSeller
+                      ? '🤝 상대방이 거래를 요청했습니다.'
+                      : '⏳ 상대방의 수락을 기다리는 중입니다.'
                   )}
                   {tradeStatus === 'TRADING' && (
                     <div className="trade-card-parties">
@@ -503,9 +516,50 @@ export default function Chat() {
                       <span className={trade.buyerConfirmed ? 'ok' : ''}>{trade.buyerConfirmed ? '✓' : '○'} 구매자 {trade.buyerNickname || ''}</span>
                     </div>
                   )}
-                </div>
-              );
-            })()}
+                  {tradeStatus === 'CANCELLED' && '❌ 거래가 취소되었습니다'}
+                </span>
+                {tradeStatus === 'CANCELLED' && !isSeller && (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    style={{ fontSize: 12, padding: '5px 12px' }}
+                    onClick={handleProposeTrade}
+                    disabled={tradeLoading}
+                  >
+                    다시 요청하기
+                  </button>
+                )}
+                {tradeStatus === 'REQUESTED' && isSeller && (
+                  <div className="row g8">
+                    <button
+                      className="btn btn-outline btn-sm"
+                      style={{ fontSize: 12, padding: '5px 12px' }}
+                      onClick={handleRejectTrade}
+                      disabled={tradeLoading}
+                    >
+                      거절
+                    </button>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: 12, padding: '5px 12px' }}
+                      onClick={handleAcceptTrade}
+                      disabled={tradeLoading}
+                    >
+                      요청 수락
+                    </button>
+                  </div>
+                )}
+                {tradeStatus === 'TRADING' && !myConfirmed && (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    style={{ fontSize: 12, padding: '5px 12px' }}
+                    onClick={handleConfirmTrade}
+                    disabled={tradeLoading}
+                  >
+                    거래 완료 확인
+                  </button>
+                )}
+              </div>
+            )}
             {activeChat.showSafety !== false && (
               <div style={{ padding: '12px 20px 0' }}>
                 <SafetyBanner onClose={() => dismissSafety(activeId)} />
