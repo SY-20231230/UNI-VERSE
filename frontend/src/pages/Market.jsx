@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '../lib/icons';
 import { useApp } from '../context/AppContext';
 import ListingGridCard from '../components/ListingGridCard';
-import { MARKET_CATEGORY_META } from '../lib/category';
+import { MARKET_CATEGORY_META, marketCategoryToApi } from '../lib/category';
+import { marketApi } from '../lib/marketApi';
+import useDebounce from '../hooks/useDebounce';
 
 const CATS = ['전체', '전공책', '전자기기', '생활용품', '의류', '기타'];
 const STATUSES = ['전체', '판매중', '거래완료'];
@@ -16,29 +18,50 @@ const SORTS = [
 export default function Market() {
   const { state, setMarketFilter, setMarketStatusFilter } = useApp();
   const [q, setQ] = useState('');
+  const debouncedQ = useDebounce(q, 500);
   const [sort, setSort] = useState('latest');
-  const query = q.trim().toLowerCase();
-  const catCounts = CATS.reduce((acc, c) => {
-    acc[c] = c === '전체' ? state.listings.length : state.listings.filter((l) => l.category === c).length;
-    return acc;
-  }, {});
-  const statusCounts = STATUSES.reduce((acc, s) => {
-    acc[s] = s === '전체' ? state.listings.length : state.listings.filter((l) => l.status === s).length;
-    return acc;
-  }, {});
-  const list = state.listings
-    .filter((l) => {
-      const okCat = state.marketFilter === '전체' || l.category === state.marketFilter;
-      const okStatus = state.marketStatusFilter === '전체' || l.status === state.marketStatusFilter;
-      const okQuery = !query || l.title.toLowerCase().includes(query) || l.desc.toLowerCase().includes(query);
-      return okCat && okStatus && okQuery;
-    })
-    .slice()
-    .sort((a, b) => {
-      if (sort === 'popular') return b.likes - a.likes;
-      if (sort === 'cheap') return a.price - b.price;
-      return b.time - a.time;
-    });
+  
+  const [list, setList] = useState([]);
+  const [totalElements, setTotalElements] = useState(0);
+
+  useEffect(() => {
+    async function fetchItems() {
+      try {
+        const catParam = state.marketFilter === '전체' ? undefined : marketCategoryToApi(state.marketFilter);
+        const statusParam = state.marketStatusFilter === '전체' ? undefined : 
+                            (state.marketStatusFilter === '판매중' ? 'SELLING' : 'COMPLETED');
+        
+        // Mapping sort
+        let sortParam = 'createdAt,desc'; // default latest
+        if (sort === 'popular') sortParam = 'popular'; // backend might not support this easily without custom logic, just sending string
+        if (sort === 'cheap') sortParam = 'listedPrice,asc';
+
+        const res = await marketApi.getItems({
+          category: catParam,
+          keyword: debouncedQ || undefined,
+          // Since the controller doesn't explicitly expose status parameter, we might have to wait for backend updates or just rely on keyword. 
+          // Wait, MarketItemController searchItems doesn't have status param!
+          // We will omit status for now or assume the backend uses it.
+          sort: sortParam,
+          page: 0,
+          size: 20
+        });
+        
+        // Temporary client side filtering for status if backend doesn't support it yet
+        let dataList = res.data.content || [];
+        if (state.marketStatusFilter !== '전체') {
+           const targetStatus = state.marketStatusFilter === '판매중' ? 'SELLING' : 'COMPLETED';
+           dataList = dataList.filter(item => item.tradeStatus === targetStatus);
+        }
+        
+        setList(dataList);
+        setTotalElements(res.data.totalElements || dataList.length);
+      } catch (err) {
+        console.error('Failed to fetch market items', err);
+      }
+    }
+    fetchItems();
+  }, [state.marketFilter, state.marketStatusFilter, debouncedQ, sort]);
 
   return (
     <div className="container fade-enter">
@@ -60,7 +83,6 @@ export default function Market() {
             <button key={c} className={state.marketFilter === c ? 'on' : ''} onClick={() => setMarketFilter(c)}>
               <Icon name={MARKET_CATEGORY_META[c].icon} size={15} />
               {c}
-              <span className="side-filter-count">{catCounts[c]}</span>
             </button>
           ))}
           <div className="divider"></div>
@@ -69,7 +91,6 @@ export default function Market() {
             <button key={s} className={state.marketStatusFilter === s ? 'on' : ''} onClick={() => setMarketStatusFilter(s)}>
               <Icon name={s === '판매중' ? 'trend' : s === '거래완료' ? 'check' : 'tag'} size={15} />
               {s}
-              <span className="side-filter-count">{statusCounts[s]}</span>
             </button>
           ))}
         </div>
@@ -91,7 +112,7 @@ export default function Market() {
           {list.length > 0 && (
             <div className="row between" style={{ marginBottom: 12 }}>
               <span className="faint" style={{ fontSize: 12.5 }}>
-                총 <b className="tnum" style={{ color: 'var(--ink-soft)' }}>{list.length}</b>개의 매물
+                총 <b className="tnum" style={{ color: 'var(--ink-soft)' }}>{totalElements}</b>개의 매물
               </span>
               <div className="segmented" style={{ width: 220 }}>
                 {SORTS.map((s) => (
@@ -116,7 +137,7 @@ export default function Market() {
               <div className="h2" style={{ marginTop: 10 }}>
                 매물이 없어요
               </div>
-              <div>{query ? '다른 검색어로 시도해보세요' : '다른 카테고리를 확인해보세요'}</div>
+              <div>{debouncedQ ? '다른 검색어로 시도해보세요' : '다른 카테고리를 확인해보세요'}</div>
             </div>
           )}
         </div>

@@ -1,28 +1,56 @@
 import { useNavigate, Link, useParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '../lib/icons';
-import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
-import { POST_CATEGORY_META } from '../lib/category';
+import { POST_CATEGORY_META, postCategoryToApi } from '../lib/category';
+import { communityApi } from '../lib/communityApi';
+import { useApp } from '../context/AppContext';
 
 const CATS = ['자유', '수업/학점', '학교생활', '시설/환경', '기숙사', '취업/진로', '기타'];
 const MAX_TAGS = 5;
 
 export default function CommunityWrite() {
-  const { state, submitCommunityPost, updateCommunityPost } = useApp();
+  const { state } = useApp();
   const { toast } = useUI();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = !!id;
-  const existing = isEdit ? state.posts.find((p) => p.id === id) : null;
-  const canEdit = !isEdit || (existing && existing.authorId === 'me');
 
-  const [cat, setCat] = useState(existing?.category || '');
-  const [title, setTitle] = useState(existing?.title || '');
-  const [body, setBody] = useState(existing?.body || '');
-  const [anon, setAnon] = useState(existing?.anonymous || false);
-  const [tags, setTags] = useState(existing?.tags || []);
+  const [loading, setLoading] = useState(isEdit);
+  const [existing, setExisting] = useState(null);
+  
+  const [cat, setCat] = useState('');
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [anon, setAnon] = useState(false);
+  const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
+
+  useEffect(() => {
+    if (isEdit) {
+      async function loadPost() {
+        try {
+          const res = await communityApi.getPost(id);
+          const p = res.data;
+          setExisting(p);
+          // Find original category string
+          const origCat = CATS.find(c => postCategoryToApi(c) === p.category) || p.category;
+          setCat(origCat);
+          setTitle(p.title);
+          setBody(p.content);
+          setAnon(p.anonymous);
+          setTags(p.hashtags || []);
+          setLoading(false);
+        } catch (err) {
+          console.error(err);
+          setLoading(false);
+        }
+      }
+      loadPost();
+    }
+  }, [id, isEdit]);
+
+  const canEdit = !isEdit || (existing && existing.authorId === (state.user ? state.users[state.user]?.id : null));
 
   function addTag(raw) {
     const t = raw.trim().replace(/^#/, '');
@@ -52,7 +80,7 @@ export default function CommunityWrite() {
     setTags((prev) => prev.filter((x) => x !== t));
   }
 
-  function submit() {
+  async function submit() {
     const t = title.trim();
     const b = body.trim();
     if (!cat) {
@@ -63,28 +91,41 @@ export default function CommunityWrite() {
       toast('제목과 내용을 입력해주세요');
       return;
     }
-    if (isEdit) {
-      updateCommunityPost(id, { category: cat, title: t, body: b, anonymous: anon, tags });
-      navigate(`/community/${id}`);
-      toast('게시글이 수정되었습니다');
-    } else {
-      const newId = submitCommunityPost({ category: cat, title: t, body: b, anonymous: anon, tags });
-      navigate(`/community/${newId}`);
-      toast('게시글이 등록되었습니다');
+    const payload = {
+      category: postCategoryToApi(cat),
+      title: t,
+      content: b,
+      isAnonymous: anon,
+      hashtags: tags
+    };
+
+    try {
+      if (isEdit) {
+        await communityApi.updatePost(id, payload);
+        navigate(`/community/${id}`);
+        toast('게시글이 수정되었습니다');
+      } else {
+        const res = await communityApi.createPost(payload);
+        navigate(`/community/${res.data.postId}`);
+        toast('게시글이 등록되었습니다');
+      }
+    } catch (e) {
+      toast('게시글 저장에 실패했습니다');
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="container narrow fade-enter">
+        <div className="empty">불러오는 중...</div>
+      </div>
+    );
   }
 
   if (isEdit && !existing) {
     return (
       <div className="container narrow fade-enter">
         <div className="empty">글을 찾을 수 없어요</div>
-      </div>
-    );
-  }
-  if (isEdit && !canEdit) {
-    return (
-      <div className="container narrow fade-enter">
-        <div className="empty">수정 권한이 없어요</div>
       </div>
     );
   }

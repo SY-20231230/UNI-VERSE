@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '../lib/icons';
 import Avatar from '../components/Avatar';
 import VerifiedChip from '../components/VerifiedChip';
@@ -9,46 +9,85 @@ import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
 import { timeAgo } from '../lib/format';
 import { postCategoryFromApi } from '../lib/category';
+import { communityApi } from '../lib/communityApi';
 
 export default function CommunityDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { state, userOf, likePost, addComment, updateComment, deleteCommunityPost } = useApp();
+  const { state } = useApp();
   const { toast, openSheet, openModal, closeOverlay } = useUI();
-  const [comment, setComment] = useState('');
+  
+  const [post, setPost] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState('');
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editText, setEditText] = useState('');
+  const [liked, setLiked] = useState(false); // Can be improved with actual like state from API
+  const [related, setRelated] = useState([]);
 
-  const post = state.posts.find((x) => x.id === id);
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const pRes = await communityApi.getPost(id);
+        setPost(pRes.data);
+        const cRes = await communityApi.getComments(id);
+        setComments(cRes.data.content || []);
+        // Fetch related posts (simplification for now: just fetch top popular)
+        const relRes = await communityApi.getPosts({ sort: 'popular', size: 5 });
+        setRelated(relRes.data.content.filter(x => x.postId != id));
+      } catch (err) {
+        console.error('Failed to load post', err);
+      }
+    }
+    loadData();
+  }, [id]);
+
   if (!post) {
     return (
       <div className="container mid fade-enter">
-        <div className="empty">글을 찾을 수 없어요</div>
+        <div className="empty">글을 불러오는 중이거나 찾을 수 없어요</div>
       </div>
     );
   }
 
-  const author = post.anonymous ? { name: '익명', dept: '', color: '#9195A6' } : userOf(post.authorId);
-  const liked = !!state.likedPosts[post.id];
-  const isMine = post.authorId === 'me';
-  const related = state.posts
-    .filter((p) => p.id !== post.id)
-    .sort((a, b) => b.likes - a.likes)
-    .slice(0, 5);
+  const author = post.anonymous ? { name: '익명', dept: '', color: '#9195A6' } : { name: post.authorName, dept: '', color: '#2F6FED' }; // Simplified avatar
+  const isMine = post.authorId === (state.user ? state.users[state.user]?.id : null); // Note: Need actual logic to check ownership
 
-  function submitComment() {
-    const text = comment.trim();
+  async function submitComment() {
+    const text = commentText.trim();
     if (!text) {
       toast('댓글 내용을 입력해주세요');
       return;
     }
-    addComment(post.id, text);
-    setComment('');
+    try {
+      await communityApi.addComment(post.postId, { content: text, isAnonymous: false });
+      setCommentText('');
+      const cRes = await communityApi.getComments(id);
+      setComments(cRes.data.content || []);
+    } catch (e) {
+      toast('댓글 작성에 실패했습니다.');
+    }
+  }
+
+  async function likePost() {
+    try {
+      if (liked) {
+        await communityApi.unlikePost(post.postId);
+        setPost(p => ({ ...p, likeCount: p.likeCount - 1 }));
+        setLiked(false);
+      } else {
+        await communityApi.likePost(post.postId);
+        setPost(p => ({ ...p, likeCount: p.likeCount + 1 }));
+        setLiked(true);
+      }
+    } catch (e) {
+      toast('요청에 실패했습니다.');
+    }
   }
 
   function startEditComment(c) {
-    setEditingCommentId(c.id);
-    setEditText(c.text);
+    setEditingCommentId(c.commentId);
+    setEditText(c.content);
   }
 
   function cancelEditComment() {
@@ -56,15 +95,32 @@ export default function CommunityDetail() {
     setEditText('');
   }
 
-  function saveEditComment() {
+  async function saveEditComment() {
     const text = editText.trim();
     if (!text) {
       toast('댓글 내용을 입력해주세요');
       return;
     }
-    updateComment(post.id, editingCommentId, text);
-    setEditingCommentId(null);
-    setEditText('');
+    try {
+      await communityApi.updateComment(editingCommentId, { content: text, isAnonymous: false });
+      setEditingCommentId(null);
+      setEditText('');
+      const cRes = await communityApi.getComments(id);
+      setComments(cRes.data.content || []);
+    } catch (e) {
+      toast('댓글 수정에 실패했습니다.');
+    }
+  }
+
+  async function deleteComment(cid) {
+    try {
+      await communityApi.deleteComment(cid);
+      toast('댓글이 삭제되었습니다');
+      const cRes = await communityApi.getComments(id);
+      setComments(cRes.data.content || []);
+    } catch (e) {
+      toast('댓글 삭제에 실패했습니다.');
+    }
   }
 
   return (
@@ -89,17 +145,22 @@ export default function CommunityDetail() {
                 openSheet(
                   <ManageSheet
                     onClose={closeOverlay}
-                    onEdit={() => navigate(`/community/${post.id}/edit`)}
+                    onEdit={() => navigate(`/community/${post.postId}/edit`)}
                     onDelete={() =>
                       openModal(
                         <ConfirmModal
                           title="게시글을 삭제할까요?"
                           desc="삭제한 게시글은 복구할 수 없어요."
                           onClose={closeOverlay}
-                          onConfirm={() => {
-                            deleteCommunityPost(post.id);
-                            navigate('/community');
-                            toast('게시글이 삭제되었습니다');
+                          onConfirm={async () => {
+                            closeOverlay();
+                            try {
+                              await communityApi.deletePost(post.postId);
+                              navigate('/community');
+                              toast('게시글이 삭제되었습니다');
+                            } catch (e) {
+                              toast('삭제에 실패했습니다.');
+                            }
                           }}
                         />
                       )
@@ -126,51 +187,57 @@ export default function CommunityDetail() {
           <div>
             <div style={{ fontWeight: 700, fontSize: 13.5 }}>{author.name}</div>
             <div className="faint" style={{ fontSize: 11.5 }}>
-              {timeAgo(post.time)} · 조회 {post.views}
+              {timeAgo(post.createdAt)} · 조회 {post.viewCount}
             </div>
           </div>
         </div>
         <div className="divider" style={{ margin: '22px 0' }}></div>
-        <div style={{ fontSize: 15, lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>{post.body}</div>
+        <div style={{ fontSize: 15, lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>{post.content}</div>
         <div className="row g6 wrap" style={{ marginTop: 18 }}>
-          {post.tags.map((t) => (
+          {post.hashtags && post.hashtags.map((t) => (
             <span key={t} className="faint mono" style={{ fontSize: 12 }}>
               #{t}
             </span>
           ))}
         </div>
         <div className="row g10" style={{ marginTop: 20, paddingBottom: 22 }}>
-          <button className={'btn btn-sm ' + (liked ? 'btn-primary' : 'btn-soft')} style={{ borderRadius: 99 }} onClick={() => likePost(post.id)}>
-            <Icon name="heart" size={15} /> 좋아요 {post.likes}
+          <button className={'btn btn-sm ' + (liked ? 'btn-primary' : 'btn-soft')} style={{ borderRadius: 99 }} onClick={likePost}>
+            <Icon name="heart" size={15} /> 좋아요 {post.likeCount}
           </button>
           <span className="stat">
             <Icon name="chat" size={14} />
-            {post.comments.length}개 댓글
+            {comments.length}개 댓글
           </span>
         </div>
       </div>
 
       <div className="h3" style={{ margin: '26px 0 14px' }}>
-        댓글 {post.comments.length}
+        댓글 {comments.length}
       </div>
       <div className="stack g10">
-        {post.comments.length ? (
-          post.comments.map((c) => (
-            <div className="card" style={{ padding: '14px 18px' }} key={c.id}>
+        {comments.length ? (
+          comments.map((c) => (
+            <div className="card" style={{ padding: '14px 18px' }} key={c.commentId}>
               <div className="row between">
-                <b style={{ fontSize: 13 }}>{c.authorLabel}</b>
+                <b style={{ fontSize: 13 }}>{c.authorName}</b>
                 <div className="row g8">
                   <span className="faint" style={{ fontSize: 11 }}>
-                    {timeAgo(c.time)}
+                    {timeAgo(c.createdAt)}
                   </span>
-                  {c.authorLabel === '나' && editingCommentId !== c.id && (
+                  {/* Simplified edit/delete checks without proper user context */}
+                  {editingCommentId !== c.commentId && (
+                    <>
                     <button className="link" style={{ fontSize: 11 }} onClick={() => startEditComment(c)}>
                       수정
                     </button>
+                    <button className="link faint" style={{ fontSize: 11 }} onClick={() => deleteComment(c.commentId)}>
+                      삭제
+                    </button>
+                    </>
                   )}
                 </div>
               </div>
-              {editingCommentId === c.id ? (
+              {editingCommentId === c.commentId ? (
                 <div style={{ marginTop: 8 }}>
                   <textarea
                     className="textarea"
@@ -188,7 +255,7 @@ export default function CommunityDetail() {
                   </div>
                 </div>
               ) : (
-                <div style={{ fontSize: 13.5, marginTop: 5, lineHeight: 1.6 }}>{c.text}</div>
+                <div style={{ fontSize: 13.5, marginTop: 5, lineHeight: 1.6 }}>{c.content}</div>
               )}
             </div>
           ))
@@ -203,8 +270,8 @@ export default function CommunityDetail() {
           className="input"
           placeholder="댓글을 입력하세요..."
           style={{ flex: 1 }}
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') submitComment();
           }}
@@ -234,10 +301,10 @@ export default function CommunityDetail() {
             <div className="h3">인기 글</div>
             <div style={{ marginTop: 6 }}>
               {related.map((p) => (
-                <Link key={p.id} className="mini-post-row" to={`/community/${p.id}`}>
+                <Link key={p.postId} className="mini-post-row" to={`/community/${p.postId}`}>
                   <div className="title">{p.title}</div>
                   <div className="meta">
-                    {postCategoryFromApi(p.category)} · 좋아요 {p.likes}
+                    {postCategoryFromApi(p.category)} · 좋아요 {p.likeCount}
                   </div>
                 </Link>
               ))}

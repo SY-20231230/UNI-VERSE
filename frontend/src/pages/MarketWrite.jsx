@@ -1,29 +1,72 @@
 import { useNavigate, Link, useParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '../lib/icons';
 import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
 import { marketApi } from '../lib/marketApi';
-import { MARKET_CATEGORY_META } from '../lib/category';
+import { MARKET_CATEGORY_META, marketCategoryToApi } from '../lib/category';
 
 const CATS = ['전공책', '전자기기', '생활용품', '의류', '기타'];
 const CONDS = ['새 상품', '거의 새것', '사용감 있음', '하자 있음'];
 
+function conditionToApi(c) {
+  if (c === '새 상품') return 'NEW';
+  if (c === '거의 새것') return 'LIKE_NEW';
+  if (c === '사용감 있음') return 'GOOD';
+  if (c === '하자 있음') return 'POOR';
+  return 'GOOD';
+}
+function apiToCondition(c) {
+  if (c === 'NEW') return '새 상품';
+  if (c === 'LIKE_NEW') return '거의 새것';
+  if (c === 'GOOD' || c === 'FAIR') return '사용감 있음';
+  if (c === 'POOR') return '하자 있음';
+  return '사용감 있음';
+}
+
 export default function MarketWrite() {
-  const { state, submitMarketListing, updateMarketListing } = useApp();
+  const { state } = useApp();
   const { toast, openModal, closeOverlay } = useUI();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = !!id;
-  const existing = isEdit ? state.listings.find((l) => l.id === id) : null;
-  const canEdit = !isEdit || (existing && existing.sellerId === 'me');
+  
+  const [loading, setLoading] = useState(isEdit);
+  const [existing, setExisting] = useState(null);
 
-  const [cat, setCat] = useState(existing?.category || '');
-  const [cond, setCond] = useState(existing?.condition || '');
-  const [title, setTitle] = useState(existing?.title || '');
-  const [price, setPrice] = useState(existing ? String(existing.price) : '');
-  const [originalPrice, setOriginalPrice] = useState(existing?.originalPrice ? String(existing.originalPrice) : '');
-  const [desc, setDesc] = useState(existing?.desc || '');
+  const [cat, setCat] = useState('');
+  const [cond, setCond] = useState('');
+  const [title, setTitle] = useState('');
+  const [price, setPrice] = useState('');
+  const [originalPrice, setOriginalPrice] = useState('');
+  const [desc, setDesc] = useState('');
+
+  useEffect(() => {
+    if (isEdit) {
+      async function load() {
+        try {
+          const res = await marketApi.getItem(id);
+          const p = res.data;
+          setExisting(p);
+          
+          const origCat = Object.keys(MARKET_CATEGORY_META).find(c => marketCategoryToApi(c) === p.category) || p.category;
+          setCat(CATS.includes(origCat) ? origCat : '기타');
+          setCond(apiToCondition(p.condition));
+          setTitle(p.title);
+          setPrice(String(p.listedPrice || ''));
+          setOriginalPrice(''); // backend doesn't return purchasePrice due to security rules
+          setDesc(p.description);
+          setLoading(false);
+        } catch (e) {
+          console.error(e);
+          setLoading(false);
+        }
+      }
+      load();
+    }
+  }, [id, isEdit]);
+
+  const canEdit = !isEdit || (existing && existing.sellerId === (state.user ? state.users[state.user]?.id : null));
 
   async function submit() {
     const t = title.trim();
@@ -34,29 +77,40 @@ export default function MarketWrite() {
     }
 
     const payload = {
-      category: cat,
+      category: marketCategoryToApi(cat),
       title: t,
-      price: Number(price.replace(/\D/g, '')) || 0,
-      originalPrice: Number(originalPrice.replace(/\D/g, '')) || 0,
-      condition: cond,
-      description: d, // 백엔드는 description을 받을 수도 있으니 맞춤
-      desc: d, // 기존 프론트엔드 모의 데이터용
+      listedPrice: Number(price.replace(/\D/g, '')) || 0,
+      purchasePrice: Number(originalPrice.replace(/\D/g, '')) || 0,
+      condition: conditionToApi(cond),
+      description: d, 
     };
 
     try {
       if (isEdit) {
         await marketApi.updateItem(id, payload);
-        updateMarketListing(id, payload);
         navigate(`/market/${id}`);
-        toast('AI 검사를 통과하여 수정되었습니다');
+        toast('게시글이 수정되었습니다');
       } else {
         const response = await marketApi.createItem(payload);
-        const newId = submitMarketListing({ ...payload, id: response?.id });
-        navigate(`/market/${newId}`);
-        toast('AI 검사를 통과하여 등록되었습니다');
+        // The backend returns 201 Created and the Location header has the ID.
+        // Wait, axios interceptor logic or we can try to extract ID from location header if returned,
+        // or if response.data.id exists. If neither, redirect to market.
+        // I will just redirect to market list because `marketApi.createItem` might not return a JSON body.
+        
+        let newId = null;
+        if (response.headers && response.headers.location) {
+          const parts = response.headers.location.split('/');
+          newId = parts[parts.length - 1];
+        }
+        
+        if (newId) navigate(`/market/${newId}`);
+        else navigate(`/market`);
+        
+        toast('상품이 등록되었습니다');
       }
     } catch (error) {
-      if (error.code === 'FRAUD_SUSPECTED') {
+      const err = error.response?.data || error;
+      if (err.code === 'FRAUD_SUSPECTED' || err.message?.includes('사기')) {
         openModal(
           <div>
             <div className="risk-bot">
@@ -69,7 +123,7 @@ export default function MarketWrite() {
               AI 모델 검사 결과, 다음과 같은 위험이 감지되었습니다.
             </div>
             <div style={{ marginTop: 16, background: '#fee2e2', padding: 12, borderRadius: 8, color: '#991b1b', fontSize: 14 }}>
-              <b>사유:</b> {error.message}
+              <b>사유:</b> {err.message}
             </div>
             <div className="muted" style={{ fontSize: 12, marginTop: 14, lineHeight: 1.6 }}>
               저희 서비스는 교내 직거래를 원칙으로 합니다. 해당 내용을 수정 후 다시 시도해주세요.
@@ -80,22 +134,23 @@ export default function MarketWrite() {
           </div>
         );
       } else {
-        toast(error.message || '게시글 등록에 실패했습니다.');
+        toast(err.message || '게시글 등록에 실패했습니다.');
       }
     }
+  }
+  
+  if (loading) {
+    return (
+      <div className="container narrow fade-enter">
+        <div className="empty">불러오는 중...</div>
+      </div>
+    );
   }
 
   if (isEdit && !existing) {
     return (
       <div className="container narrow fade-enter">
         <div className="empty">매물을 찾을 수 없어요</div>
-      </div>
-    );
-  }
-  if (isEdit && !canEdit) {
-    return (
-      <div className="container narrow fade-enter">
-        <div className="empty">수정 권한이 없어요</div>
       </div>
     );
   }

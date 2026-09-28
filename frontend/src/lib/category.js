@@ -48,6 +48,34 @@ export const MARKET_CATEGORY_META = {
   '기타': { variant: 'outline', icon: 'star' },
 };
 
+export const MARKET_CATEGORY_API_CODES = {
+  전공책: 'BOOKS',
+  전자기기: 'ELECTRONICS',
+  생활용품: 'ETC', // Map to ETC for now since ItemCategory lacks it
+  의류: 'CLOTHING',
+  기타: 'ETC',
+};
+
+export const MARKET_CATEGORY_LABELS = {
+  BOOKS: { label: '전공책', variant: 'verified', icon: 'grad' },
+  ELECTRONICS: { label: '전자기기', variant: 'accent', icon: 'box' },
+  CLOTHING: { label: '의류', variant: 'warn', icon: 'tag' },
+  TICKETS: { label: '티켓/교환권', variant: 'outline', icon: 'tag' },
+  ETC: { label: '기타', variant: 'outline', icon: 'star' },
+};
+
+export function marketCategoryToApi(category) {
+  return MARKET_CATEGORY_API_CODES[category] || category;
+}
+
+export function marketCategoryFromApi(category) {
+  return MARKET_CATEGORY_LABELS[category]?.label || category;
+}
+
+export function marketCategoryMetaFromApi(category) {
+  return MARKET_CATEGORY_LABELS[category] || MARKET_CATEGORY_META['기타'];
+}
+
 const VARIANT_TINT = {
   accent: { bg: 'var(--accent-soft)', ink: 'var(--accent-soft-ink)' },
   verified: { bg: 'var(--verified-soft)', ink: 'var(--verified)' },

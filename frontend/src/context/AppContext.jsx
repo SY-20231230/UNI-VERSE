@@ -6,7 +6,7 @@ import { createAuthApi } from '../lib/authApi';
 
 const authApi = createAuthApi(sessionApiOptions);
 
-const LS_KEY = 'universe_state_v8';
+const LS_KEY = 'universe_state_v10';
 const AppContext = createContext(null);
 
 export const REPORT_ACTIONS = {
