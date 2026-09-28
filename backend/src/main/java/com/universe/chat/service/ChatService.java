@@ -11,6 +11,8 @@ import com.universe.chat.repository.ChatRoomRepository;
 import com.universe.chat.repository.MessageRepository;
 import com.universe.global.exception.BusinessException;
 import com.universe.global.exception.ErrorCode;
+import com.universe.notification.entity.NotificationType;
+import com.universe.notification.service.NotificationService;
 import com.universe.market.entity.MarketItem;
 import com.universe.market.repository.MarketItemRepository;
 import com.universe.user.entity.User;
@@ -35,6 +37,7 @@ public class ChatService {
     private final UserRepository userRepository;
     private final MarketItemRepository itemRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationService notificationService;
 
     @Transactional
     public ChatRoomDto createRoom(Long requesterId, ChatRoomCreateRequest request) {
@@ -88,6 +91,10 @@ public class ChatService {
                 }
             }
         );
+
+        String title = item != null ? item.getTitle() : "상품";
+        notificationService.send(receiverId, NotificationType.CHAT_REQUEST,
+                "'" + title + "'에 대한 새로운 대화 요청이 도착했습니다.", room.getId());
 
         return new ChatRoomDto(room, receiver.getId(), receiver.getNickname());
     }

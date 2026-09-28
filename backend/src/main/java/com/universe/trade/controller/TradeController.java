@@ -45,6 +45,13 @@ public class TradeController {
         return ApiResponse.success();
     }
 
+    @PostMapping("/{tradeId}/promise")
+    public ApiResponse<Void> promiseTrade(@PathVariable Long tradeId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        tradeService.promiseTrade(userId, tradeId);
+        return ApiResponse.success();
+    }
+
     @PostMapping("/{tradeId}/confirm")
     public ApiResponse<Void> confirmTrade(@PathVariable Long tradeId) {
         Long userId = SecurityUtil.getCurrentUserId();

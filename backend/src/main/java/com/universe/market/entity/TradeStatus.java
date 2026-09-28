@@ -4,6 +4,7 @@ public enum TradeStatus {
     SELLING,
     REQUESTED,
     TRADING,
+    PROMISED,
     COMPLETED,
     CANCELLED
 }

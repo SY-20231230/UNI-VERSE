@@ -6,7 +6,7 @@ import { createAuthApi } from '../lib/authApi';
 import { createChatApi } from '../lib/chatApi';
 import { useGlobalChatSocket } from '../lib/useChatSocket';
 
-const authApi = createAuthApi(sessionApiOptions);
+export const authApi = createAuthApi(sessionApiOptions);
 const chatApi = createChatApi(sessionApiOptions);
 
 const LS_KEY = 'universe_state_v10';
@@ -440,7 +440,8 @@ export function AppProvider({ children }) {
   const myServerId = state.users?.me?.serverId ?? null;
 
   const handleNewRoom = useCallback(() => {
-    // When a new room is created, reload all chats from the backend
+    // When a new room is created, reload all chats from the backend and trigger notification check
+    window.dispatchEvent(new Event('notifications:refresh'));
     if (session.isActive()) {
       authApi.me().then(profile => {
         chatApi.getMyRooms().then(async rooms => {

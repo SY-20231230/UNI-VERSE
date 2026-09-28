@@ -102,11 +102,36 @@ public class TradeService {
     }
 
     @Transactional
-    public void confirmTrade(Long userId, Long tradeId) {
+    public void promiseTrade(Long userId, Long tradeId) {
         Trade trade = tradeRepository.findById(tradeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
 
         if (trade.getStatus() != TradeStatus.TRADING) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+
+        boolean isSeller = trade.getSeller().getId().equals(userId);
+        boolean isBuyer = trade.getBuyer().getId().equals(userId);
+
+        if (!isSeller && !isBuyer) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        if (isSeller) {
+            trade.promiseBySeller();
+        } else {
+            trade.promiseByBuyer();
+        }
+
+        sendTradeUpdateStomp(trade.getItem().getId(), trade.getSeller().getId(), trade.getBuyer().getId());
+    }
+
+    @Transactional
+    public void confirmTrade(Long userId, Long tradeId) {
+        Trade trade = tradeRepository.findById(tradeId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+
+        if (trade.getStatus() != TradeStatus.PROMISED && trade.getStatus() != TradeStatus.TRADING) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
 

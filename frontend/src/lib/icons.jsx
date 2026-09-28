@@ -6,6 +6,7 @@ const PATHS = {
   user: '<circle cx="12" cy="8.2" r="3.6"/><path d="M4.5 20c0-4 3.5-6.4 7.5-6.4s7.5 2.4 7.5 6.4"/>',
   back: '<path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/>',
   heart: '<path d="M12 20.6s-7-4.3-9.3-8.6A4.8 4.8 0 0 1 12 6.4 4.8 4.8 0 0 1 21.3 12c-2.3 4.3-9.3 8.6-9.3 8.6z"/>',
+  'heart-fill': '<path d="M12 20.6s-7-4.3-9.3-8.6A4.8 4.8 0 0 1 12 6.4 4.8 4.8 0 0 1 21.3 12c-2.3 4.3-9.3 8.6-9.3 8.6z" fill="currentColor" stroke="currentColor"/>',
   plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><line x1="20" y1="20" x2="15.8" y2="15.8"/>',
   camera: '<path d="M4 8h3.2l1.8-2.6h6l1.8 2.6H20v11H4z"/><circle cx="12" cy="13.5" r="3.3"/>',

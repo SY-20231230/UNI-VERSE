@@ -48,5 +48,6 @@ export function createAuthApi(options = {}) {
     },
     logout: (options = {}) => request('/auth/logout', { ...options, method: 'POST' }),
     me: (options = {}) => request('/users/me', options),
+    getUserProfile: (id, options = {}) => request(`/users/${id}/profile`, options),
   };
 }

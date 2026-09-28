@@ -16,3 +16,6 @@ venv/
 ai-server/models/*.pkl
 ai-server/data/
 ai-server/reports/
+
+# Backend Uploads
+backend/uploads/

@@ -9,6 +9,7 @@ export const tradeApi = {
   getTradeByItem: (itemId) => request(`/trades/item/${itemId}`),
   getTradeDetail: (tradeId) => request(`/trades/${tradeId}`),
   acceptTrade: (tradeId) => request(`/trades/${tradeId}/accept`, { method: 'POST' }),
+  promiseTrade: (tradeId) => request(`/trades/${tradeId}/promise`, { method: 'POST' }),
   confirmTrade: (tradeId) => request(`/trades/${tradeId}/confirm`, { method: 'POST' }),
   cancelTrade: (tradeId) => request(`/trades/${tradeId}/cancel`, { method: 'POST' }),
 };

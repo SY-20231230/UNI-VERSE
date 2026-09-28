@@ -57,6 +57,7 @@ public class NotificationEventListener {
             case SELLING -> "다시 판매 중이에요";
             case REQUESTED -> "거래가 요청됐어요";
             case TRADING -> "거래가 진행 중이에요";
+            case PROMISED -> "약속이 확정됐어요";
             case COMPLETED -> "판매가 완료됐어요";
             case CANCELLED -> null;
         };

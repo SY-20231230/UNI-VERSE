@@ -9,7 +9,8 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface MarketItemFavoriteRepository extends JpaRepository<MarketItemFavorite, MarketItemFavoriteId> {
-    boolean existsByItemIdAndUserId(Long itemId, Long userId);
+    @Query("SELECT CASE WHEN COUNT(f) > 0 THEN true ELSE false END FROM MarketItemFavorite f WHERE f.item.id = :itemId AND f.user.id = :userId")
+    boolean existsByItemIdAndUserId(@Param("itemId") Long itemId, @Param("userId") Long userId);
     void deleteByItemIdAndUserId(Long itemId, Long userId);
     long countByItemId(Long itemId);
 

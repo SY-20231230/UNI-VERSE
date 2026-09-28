@@ -49,6 +49,12 @@ public class Trade {
     @Column(name = "buyer_confirmed", nullable = false)
     private Boolean buyerConfirmed;
 
+    @Column(name = "seller_promised")
+    private Boolean sellerPromised;
+
+    @Column(name = "buyer_promised")
+    private Boolean buyerPromised;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private TradeStatus status;
@@ -71,6 +77,8 @@ public class Trade {
         this.listedPrice = listedPrice;
         this.sellerConfirmed = false;
         this.buyerConfirmed = false;
+        this.sellerPromised = false;
+        this.buyerPromised = false;
         this.status = TradeStatus.REQUESTED;
         this.startedAt = LocalDateTime.now();
     }
@@ -92,8 +100,24 @@ public class Trade {
         checkAndComplete();
     }
 
+    public void promiseBySeller() {
+        this.sellerPromised = true;
+        checkAndPromise();
+    }
+
+    public void promiseByBuyer() {
+        this.buyerPromised = true;
+        checkAndPromise();
+    }
+
+    private void checkAndPromise() {
+        if (this.status == TradeStatus.TRADING && Boolean.TRUE.equals(this.sellerPromised) && Boolean.TRUE.equals(this.buyerPromised)) {
+            this.status = TradeStatus.PROMISED;
+        }
+    }
+
     private void checkAndComplete() {
-        if (this.sellerConfirmed && this.buyerConfirmed) {
+        if (Boolean.TRUE.equals(this.sellerConfirmed) && Boolean.TRUE.equals(this.buyerConfirmed)) {
             this.status = TradeStatus.COMPLETED;
             this.completedAt = LocalDateTime.now();
         }
