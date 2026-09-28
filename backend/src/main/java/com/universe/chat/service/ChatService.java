@@ -16,6 +16,7 @@ import com.universe.market.repository.MarketItemRepository;
 import com.universe.user.entity.User;
 import com.universe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,7 @@ public class ChatService {
     private final ChatMemberRepository chatMemberRepository;
     private final UserRepository userRepository;
     private final MarketItemRepository itemRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public ChatRoomDto createRoom(Long requesterId, ChatRoomCreateRequest request) {
@@ -67,6 +69,8 @@ public class ChatService {
         ChatMember member1 = ChatMember.builder().room(room).user(requester).build();
         ChatMember member2 = ChatMember.builder().room(room).user(receiver).build();
         chatMemberRepository.saveAll(List.of(member1, member2));
+
+        messagingTemplate.convertAndSend("/sub/chat/user/" + receiver.getId(), "{\"type\":\"NEW_ROOM\"}");
 
         return new ChatRoomDto(room, receiver.getId(), receiver.getNickname());
     }
