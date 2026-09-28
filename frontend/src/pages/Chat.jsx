@@ -5,6 +5,7 @@ import Avatar from '../components/Avatar';
 import SafetyBanner from '../components/SafetyBanner';
 import ReportModal from '../components/ReportModal';
 import ConfirmModal from '../components/ConfirmModal';
+import TradeStatusModal from '../components/TradeStatusModal';
 import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
 import { timeAgo, won, hm, formatDate } from '../lib/format';
@@ -158,27 +159,14 @@ export default function Chat() {
     }
   }, [activeId, activeChat?.messages.length]);
 
-  // 채팅방 변경시 거래 정보 로드
-  const fetchTrade = useCallback(() => {
-    if (!activeId || !activeChat?.listingId || !session.isActive()) return;
-    tradeApi.getTradeByItem(activeChat.listingId).then(setTrade).catch(() => setTrade(null));
-  }, [activeId, activeChat?.listingId]);
-
+  // 채팅방 변경시 거래 정보 로드, 이후 5초마다 상대방 쪽 변화(요청·수락·완료)를 확인한다.
+  const seenTrade = useRef(new Set());
   useEffect(() => {
     setTrade(null);
     setMenuOpen(false);
-    fetchTrade();
-  }, [fetchTrade]);
-
-  useEffect(() => {
-    function handleTradeUpdate(e) {
-      if (activeChat?.listingId && e.detail === activeChat.listingId) {
-        fetchTrade();
-      }
-    }
-    window.addEventListener('trade_update', handleTradeUpdate);
-    return () => window.removeEventListener('trade_update', handleTradeUpdate);
-  }, [activeChat?.listingId, fetchTrade]);
+    if (!activeId || !activeChat?.listingId || !session.isActive()) return;
+    tradeApi.getTradeByItem(activeChat.listingId).then(setTrade).catch(() => setTrade(null));
+  }, [activeId]);
 
   // 메뉴 외부 클릭 시 닫기
   useEffect(() => {
@@ -198,7 +186,7 @@ export default function Chat() {
       const tradeId = await tradeApi.proposeTrade(activeChat.listingId);
       const t = tradeId ? await tradeApi.getTradeDetail(tradeId) : await tradeApi.getTradeByItem(activeChat.listingId);
       setTrade(t);
-      toast('거래 요청을 보냈습니다! 상대방이 수락하면 거래가 진행돼요.');
+      if (t) announceTrade(t, 'self');
     } catch (e) {
       toast(e?.message || '거래 요청에 실패했어요. 이미 진행 중인 거래가 있거나 판매 완료된 상품이에요.');
     } finally {
@@ -206,14 +194,14 @@ export default function Chat() {
     }
   }
 
-  async function handleAcceptTrade() {
-    if (!trade?.tradeId) return;
+  async function handleAcceptTrade(tradeId = trade?.tradeId) {
+    if (!tradeId) return;
     setTradeLoading(true);
     try {
-      await tradeApi.acceptTrade(trade.tradeId);
-      const t = await tradeApi.getTradeDetail(trade.tradeId);
+      await tradeApi.acceptTrade(tradeId);
+      const t = await tradeApi.getTradeDetail(tradeId);
       setTrade(t);
-      toast('거래 요청을 수락했습니다! 이제 거래를 진행해주세요.');
+      announceTrade(t, 'self');
     } catch (e) {
       toast(e?.message || '거래 수락에 실패했어요.');
     } finally {
@@ -236,18 +224,14 @@ export default function Chat() {
     }
   }
 
-  async function handleConfirmTrade() {
-    if (!trade?.tradeId) return;
+  async function handleConfirmTrade(tradeId = trade?.tradeId) {
+    if (!tradeId) return;
     setTradeLoading(true);
     try {
-      await tradeApi.confirmTrade(trade.tradeId);
-      const t = await tradeApi.getTradeDetail(trade.tradeId);
+      await tradeApi.confirmTrade(tradeId);
+      const t = await tradeApi.getTradeDetail(tradeId);
       setTrade(t);
-      if (t.status === 'COMPLETED') {
-        toast('거래가 완료되었습니다! 감사합니다 🎉');
-      } else {
-        toast('거래 완료 확인했습니다. 상대방의 확인을 기다리고 있어요.');
-      }
+      announceTrade(t, 'self');
     } catch (e) {
       toast('오류가 발생했어요.');
     } finally {
@@ -282,8 +266,9 @@ export default function Chat() {
   function handleDeleteRoom() {
     openModal(
       <ConfirmModal
-        title="채팅방을 삭제하시겠습니까?"
-        desc="삭제한 채팅방은 복구할 수 없으며 대화 내용이 모두 사라집니다."
+        title="채팅방을 삭제할까요?"
+        desc="삭제한 채팅방은 복구할 수 없고 대화 내용이 모두 사라져요."
+        confirmLabel="채팅방 삭제"
         onClose={closeOverlay}
         onConfirm={async () => {
           closeOverlay();
@@ -384,9 +369,6 @@ export default function Chat() {
               <button className="iconbtn ghost chat-room-close" title="채팅 닫기" onClick={() => navigate('/chat')}>
                 <Icon name="back" size={16} /> {/* desktop close icon to back arrow so X can be delete */}
               </button>
-              <button className="iconbtn ghost" style={{ color: 'var(--danger)', marginLeft: -6, marginRight: 6 }} title="채팅방 삭제" onClick={handleDeleteRoom}>
-                <Icon name="x" size={16} />
-              </button>
               <Avatar user={partner2} size={40} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="name">{partner2.name}</div>
@@ -451,6 +433,15 @@ export default function Chat() {
                     >
                       🚨 신고하기
                     </button>
+                    <div style={{ height: 1, background: 'var(--border-soft)', margin: '4px 0' }} />
+                    <button
+                      style={{ width: '100%', padding: '12px 16px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ink-soft)' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      onClick={() => { setMenuOpen(false); handleDeleteRoom(); }}
+                    >
+                      🗑️ 채팅방 삭제
+                    </button>
                   </div>
                 )}
               </div>
@@ -463,7 +454,7 @@ export default function Chat() {
                 borderBottom: '1px solid var(--border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontSize: 13
               }}>
-                <span style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+                <span>
                   {tradeStatus === 'COMPLETED' && '🎉 거래가 완료되었습니다'}
                   {tradeStatus === 'REQUESTED' && (
                     isSeller
@@ -477,35 +468,15 @@ export default function Chat() {
                   )}
                   {tradeStatus === 'CANCELLED' && '❌ 거래가 취소되었습니다'}
                 </span>
-                {tradeStatus === 'CANCELLED' && !isSeller && (
+                {tradeStatus === 'REQUESTED' && isSeller && (
                   <button
                     className="btn btn-primary btn-sm"
                     style={{ fontSize: 12, padding: '5px 12px' }}
-                    onClick={handleProposeTrade}
+                    onClick={handleAcceptTrade}
                     disabled={tradeLoading}
                   >
-                    다시 요청하기
+                    요청 수락
                   </button>
-                )}
-                {tradeStatus === 'REQUESTED' && isSeller && (
-                  <div className="row g8">
-                    <button
-                      className="btn btn-outline btn-sm"
-                      style={{ fontSize: 12, padding: '5px 12px' }}
-                      onClick={handleRejectTrade}
-                      disabled={tradeLoading}
-                    >
-                      거절
-                    </button>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      style={{ fontSize: 12, padding: '5px 12px' }}
-                      onClick={handleAcceptTrade}
-                      disabled={tradeLoading}
-                    >
-                      요청 수락
-                    </button>
-                  </div>
                 )}
                 {tradeStatus === 'TRADING' && !myConfirmed && (
                   <button
