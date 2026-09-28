@@ -258,10 +258,6 @@ export default function MarketDetail() {
                 <div className="info-value">{formatDate(listing.createdAt)}</div>
               </div>
               <div>
-                <div className="info-label">거래 희망 장소</div>
-                <div className="info-value">{listing.schoolName} 근처</div>
-              </div>
-              <div>
                 <div className="info-label">거래 상태</div>
                 <div className="info-value">{statusLabel}</div>
               </div>
