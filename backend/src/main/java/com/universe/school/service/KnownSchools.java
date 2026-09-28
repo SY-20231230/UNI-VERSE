@@ -28,6 +28,8 @@ final class KnownSchools {
             Map.entry("sejong.ac.kr", "세종대학교"),
             Map.entry("kw.ac.kr", "광운대학교"),
             Map.entry("mju.ac.kr", "명지대학교"),
+            Map.entry("skku.edu", "성균관대학교"),
+            Map.entry("dongguk.edu", "동국대학교"),
             Map.entry("ewha.ac.kr", "이화여자대학교"),
             Map.entry("sookmyung.ac.kr", "숙명여자대학교"),
             Map.entry("seoultech.ac.kr", "서울과학기술대학교"),

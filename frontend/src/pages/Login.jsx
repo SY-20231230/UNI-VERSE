@@ -117,7 +117,7 @@ export default function Login() {
             <div className="h2">{isSignup ? '회원가입' : '로그인'}</div>
             <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
               {isSignup
-                ? '학교 이메일(예: 학번@학교.ac.kr)로 인증해야 가입할 수 있어요'
+                ? '학교 이메일(예: 학번@mjc.ac.kr)로 인증해야 가입할 수 있어요'
                 : '학교 계정으로 로그인하면 커뮤니티와 중고거래를 바로 이용할 수 있어요'}
             </div>
           </div>
@@ -140,7 +140,7 @@ export default function Login() {
                 )}
               </div>
               {verify.step === 'idle' && (
-                <div className="faint" style={{ fontSize: 12 }}>네이버·다음·구글 등 일반 메일은 사용할 수 없어요 (.ac.kr 학교 메일만 가능)</div>
+                <div className="faint" style={{ fontSize: 12 }}>네이버·다음·구글 등 일반 메일은 사용할 수 없어요 (학교에서 발급한 메일만 가능)</div>
               )}
               {emailVerified && <span className="chip verified" style={{ alignSelf: 'flex-start' }}>✓ 학교 이메일 인증 완료</span>}
             </div>
