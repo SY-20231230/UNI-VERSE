@@ -196,6 +196,13 @@ export function AppProvider({ children }) {
     });
   }, []);
 
+  const updateTrustScore = useCallback((score) => {
+    setState((s) => ({
+      ...s,
+      users: { ...s.users, me: { ...s.users.me, trustScore: score } },
+    }));
+  }, []);
+
   const setCommunityFilter = useCallback((cat) => {
     setState((s) => ({ ...s, communityFilter: cat }));
   }, []);
@@ -522,6 +529,7 @@ export function AppProvider({ children }) {
     logout,
     updateProfilePhoto,
     removeProfilePhoto,
+    updateTrustScore,
     setCommunityFilter,
     setMarketFilter,
     setMarketStatusFilter,

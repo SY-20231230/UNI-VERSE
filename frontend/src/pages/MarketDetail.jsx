@@ -112,7 +112,7 @@ export default function MarketDetail() {
     );
   }
 
-  const seller = { id: listing.sellerId, name: listing.sellerNickname, dept: listing.schoolName, color: '#2F6FED', trades: 0 };
+  const seller = { id: listing.sellerId, name: listing.sellerNickname, dept: listing.schoolName, color: '#2F6FED', trades: listing.sellerTrades || 0 };
   const isMine = listing.sellerId === state.me?.userId;
 
   async function toggleLike() {

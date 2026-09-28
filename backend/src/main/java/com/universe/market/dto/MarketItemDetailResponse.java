@@ -27,11 +27,12 @@ public class MarketItemDetailResponse {
     private String sellerNickname;
     private Long schoolId;
     private String schoolName;
+    private long sellerTrades;
     private java.util.List<String> images;
 
     // Notice that purchasePrice is intentionally omitted per security rules!
 
-    public MarketItemDetailResponse(MarketItem item) {
+    public MarketItemDetailResponse(MarketItem item, long sellerTrades) {
         this.id = item.getId();
         this.title = item.getTitle();
         this.description = item.getDescription();
@@ -46,6 +47,7 @@ public class MarketItemDetailResponse {
         this.sellerNickname = item.getSeller().getNickname();
         this.schoolId = item.getSchool().getId();
         this.schoolName = item.getSchool().getSchoolName();
+        this.sellerTrades = sellerTrades;
         if (item.getImages() != null) {
             this.images = item.getImages().stream().map(com.universe.market.entity.MarketItemImage::getImageUrl).toList();
         }

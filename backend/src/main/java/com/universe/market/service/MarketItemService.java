@@ -12,6 +12,7 @@ import com.universe.market.entity.MarketItemImage;
 import com.universe.market.repository.MarketItemRepository;
 import com.universe.market.repository.MarketItemImageRepository;
 import com.universe.notification.event.MarketItemPriceChangedEvent;
+import com.universe.trade.repository.TradeRepository;
 import com.universe.school.entity.School;
 import com.universe.user.entity.User;
 import com.universe.user.repository.UserRepository;
@@ -33,6 +34,7 @@ public class MarketItemService {
     private final MarketItemRepository itemRepository;
     private final MarketItemImageRepository imageRepository;
     private final UserRepository userRepository;
+    private final TradeRepository tradeRepository;
     private final AiRiskService aiRiskService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -44,7 +46,8 @@ public class MarketItemService {
     public MarketItemDetailResponse getItemDetail(Long itemId) {
         MarketItem item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
-        return new MarketItemDetailResponse(item);
+        long sellerTrades = tradeRepository.countCompletedTrades(item.getSeller().getId());
+        return new MarketItemDetailResponse(item, sellerTrades);
     }
 
     @Transactional

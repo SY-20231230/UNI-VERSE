@@ -13,6 +13,7 @@ import com.universe.trade.repository.TradeRepository;
 import com.universe.user.entity.User;
 import com.universe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import com.universe.trust.service.TrustScoreService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ public class TradeService {
     private final MarketItemRepository itemRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final TrustScoreService trustScoreService;
 
     @Transactional
     public Long proposeTrade(Long buyerId, TradeCreateRequest request) {
@@ -122,6 +124,7 @@ public class TradeService {
         if (trade.getStatus() == TradeStatus.COMPLETED) {
             trade.getItem().changeTradeStatus(TradeStatus.COMPLETED);
             publishItemStatus(trade.getItem(), trade.getBuyer().getId());
+            trustScoreService.recordCompletedTrade(trade.getId());
         }
     }
 
