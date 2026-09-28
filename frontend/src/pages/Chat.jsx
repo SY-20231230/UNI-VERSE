@@ -224,12 +224,8 @@ export default function Chat() {
     }
   }
 
-  async function handleConfirmTrade() {
-    if (!trade?.tradeId) return;
-=========
   async function handleConfirmTrade(tradeId = trade?.tradeId) {
     if (!tradeId) return;
->>>>>>>>> Temporary merge branch 2
     setTradeLoading(true);
     try {
       await tradeApi.confirmTrade(tradeId);
