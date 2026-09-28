@@ -2,12 +2,17 @@ package com.universe.chat.service;
 
 import com.universe.chat.dto.ChatMessageRequest;
 import com.universe.chat.dto.ChatMessageResponse;
-import com.universe.chat.entity.ChatRoom;
-import com.universe.chat.entity.Message;
+import com.universe.chat.dto.ChatRoomCreateRequest;
+import com.universe.chat.dto.ChatRoomDto;
+import com.universe.chat.entity.*;
+import com.universe.chat.repository.ChatMemberRepository;
+import com.universe.chat.repository.ChatRequestRepository;
 import com.universe.chat.repository.ChatRoomRepository;
 import com.universe.chat.repository.MessageRepository;
 import com.universe.global.exception.BusinessException;
 import com.universe.global.exception.ErrorCode;
+import com.universe.market.entity.MarketItem;
+import com.universe.market.repository.MarketItemRepository;
 import com.universe.user.entity.User;
 import com.universe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,15 +29,65 @@ public class ChatService {
 
     private final MessageRepository messageRepository;
     private final ChatRoomRepository chatRoomRepository;
+    private final ChatRequestRepository chatRequestRepository;
+    private final ChatMemberRepository chatMemberRepository;
     private final UserRepository userRepository;
+    private final MarketItemRepository itemRepository;
+
+    @Transactional
+    public ChatRoomDto createRoom(Long requesterId, ChatRoomCreateRequest request) {
+        User requester = userRepository.findById(requesterId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        User receiver = userRepository.findById(request.getReceiverId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        MarketItem item = null;
+        if (request.getItemId() != null) {
+            item = itemRepository.findById(request.getItemId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        }
+
+        // Direct room creation (simplifying request/accept flow for immediate chat)
+        ChatRequest chatRequest = ChatRequest.builder()
+                .requester(requester)
+                .receiver(receiver)
+                .item(item)
+                .profileMode(request.getProfileMode())
+                .build();
+        chatRequest.accept();
+        chatRequestRepository.save(chatRequest);
+
+        ChatRoom room = ChatRoom.builder()
+                .request(chatRequest)
+                .item(item)
+                .profileMode(request.getProfileMode())
+                .build();
+        chatRoomRepository.save(room);
+
+        ChatMember member1 = ChatMember.builder().room(room).user(requester).build();
+        ChatMember member2 = ChatMember.builder().room(room).user(receiver).build();
+        chatMemberRepository.saveAll(List.of(member1, member2));
+
+        return new ChatRoomDto(room, receiver.getId(), receiver.getNickname());
+    }
+
+    public List<ChatRoomDto> getMyRooms(Long userId) {
+        List<ChatMember> memberships = chatMemberRepository.findByUserId(userId);
+        return memberships.stream().map(m -> {
+            ChatRoom room = m.getRoom();
+            User partner = chatMemberRepository.findByRoomId(room.getId()).stream()
+                    .filter(cm -> !cm.getUser().getId().equals(userId))
+                    .map(ChatMember::getUser)
+                    .findFirst().orElse(null);
+            
+            Long pId = partner != null ? partner.getId() : null;
+            String pName = partner != null ? partner.getNickname() : "알 수 없음";
+            
+            return new ChatRoomDto(room, pId, pName);
+        }).collect(Collectors.toList());
+    }
 
     public List<ChatMessageResponse> getRoomMessages(Long roomId, Long userId) {
-        ChatRoom room = chatRoomRepository.findById(roomId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-
-        // In a real application, verify if userId is part of this chat room
-        // Assuming verification is done or simplified for now
-
         return messageRepository.findByRoomIdOrderByCreatedAtAsc(roomId).stream()
                 .map(ChatMessageResponse::new)
                 .collect(Collectors.toList());
@@ -42,7 +97,6 @@ public class ChatService {
     public ChatMessageResponse saveMessage(ChatMessageRequest request, Long senderId) {
         ChatRoom room = chatRoomRepository.findById(request.getRoomId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
@@ -52,8 +106,6 @@ public class ChatService {
                 .messageType(request.getType())
                 .content(request.getContent())
                 .build();
-
-        Message savedMessage = messageRepository.save(message);
-        return new ChatMessageResponse(savedMessage);
+        return new ChatMessageResponse(messageRepository.save(message));
     }
 }

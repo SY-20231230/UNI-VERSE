@@ -3,8 +3,10 @@ import { seed } from '../lib/seed';
 import { uid } from '../lib/format';
 import { session, sessionApiOptions } from '../lib/session';
 import { createAuthApi } from '../lib/authApi';
+import { createChatApi } from '../lib/chatApi';
 
 const authApi = createAuthApi(sessionApiOptions);
+const chatApi = createChatApi(sessionApiOptions);
 
 const LS_KEY = 'universe_state_v10';
 const AppContext = createContext(null);
@@ -60,6 +62,7 @@ export function AppProvider({ children }) {
         ...s.users,
         me: {
           ...s.users.me,
+          serverId: profile.userId,  // 서버 유저 ID - me vs them 판별에 사용
           name: profile.nickname,
           trustScore: profile.trustScore,
           dept: profile.department || '',
@@ -87,9 +90,35 @@ export function AppProvider({ children }) {
   // 새로고침 후에도 저장된 토큰으로 회원 정보를 다시 확인한다.
   useEffect(() => {
     if (!session.isActive()) return;
-    authApi.me().then(applyMe).catch(() => {
-      /* 토큰이 만료돼 재발급까지 실패하면 session 구독이 로그아웃 처리한다 */
-    });
+    // Load chats from backend
+    async function loadChats(myProfile) {
+      try {
+        const rooms = await chatApi.getMyRooms();
+        const chatDict = {};
+        const myId = myProfile?.userId ?? null;
+        for (const r of rooms) {
+          const cid = String(r.roomId);
+          const msgs = await chatApi.getMessages(r.roomId);
+          chatDict[cid] = {
+            listingId: r.itemId,
+            partnerId: r.partnerId || 'unknown',
+            partnerName: r.partnerName,
+            anonymous: r.profileMode === 'ANONYMOUS',
+            showSafety: true,
+            status: 'accepted',
+            messages: msgs.map(m => ({
+              from: myId && String(m.senderId) === String(myId) ? 'me' : 'them',
+              text: m.content,
+              time: new Date(m.createdAt).getTime()
+            }))
+          };
+        }
+        setState(s => ({ ...s, chats: chatDict }));
+      } catch (e) {
+        console.error('Failed to load chats', e);
+      }
+    }
+    authApi.me().then(profile => { applyMe(profile); loadChats(profile); }).catch(() => {});
   }, [applyMe]);
 
   const login = useCallback(async (credentials) => {
@@ -97,6 +126,30 @@ export function AppProvider({ children }) {
     try {
       const profile = await authApi.me();
       applyMe(profile);
+      const myId = profile.userId;
+      
+      // Load chats on login
+      const rooms = await chatApi.getMyRooms();
+      const chatDict = {};
+      for (const r of rooms) {
+        const cid = String(r.roomId);
+        const msgs = await chatApi.getMessages(r.roomId);
+        chatDict[cid] = {
+          listingId: r.itemId,
+          partnerId: r.partnerId || 'unknown',
+          partnerName: r.partnerName,
+          anonymous: r.profileMode === 'ANONYMOUS',
+          showSafety: true,
+          status: 'accepted',
+          messages: msgs.map(m => ({
+            from: myId && String(m.senderId) === String(myId) ? 'me' : 'them',
+            text: m.content,
+            time: new Date(m.createdAt).getTime()
+          }))
+        };
+      }
+      setState(s => ({ ...s, chats: chatDict }));
+      
       return profile;
     } catch (error) {
       session.clear();
@@ -276,35 +329,40 @@ export function AppProvider({ children }) {
     }));
   }, []);
 
-  const sendChatRequest = useCallback((listingId, mode) => {
-    const cid = 'chat-' + listingId;
-    let existing = false;
-    setState((s) => {
-      if (s.chats[cid]) {
-        existing = true;
-        return s;
-      }
-      const listing = s.listings.find((x) => x.id === listingId);
-      return {
+  const sendChatRequest = useCallback(async (listing, mode) => {
+    try {
+      const response = await chatApi.createRoom({
+        itemId: listing.id,
+        receiverId: listing.sellerId,
+        profileMode: mode === 'anon' ? 'ANONYMOUS' : 'VERIFIED'
+      });
+      const roomId = response.roomId;
+      const cid = String(roomId); // Use the real DB room ID
+      
+      setState((s) => ({
         ...s,
         chats: {
           ...s.chats,
           [cid]: {
-            listingId,
-            partnerId: listing.sellerId,
+            listingId: listing.id,
+            partnerId: listing.sellerId || 'unknown',
+            partnerName: response.partnerName,
             anonymous: mode === 'anon',
             showSafety: true,
             status: 'accepted',
             messages: [{ from: 'them', text: `안녕하세요! "${listing.title}" 문의 주셔서 감사해요 :)`, time: Date.now() }],
           },
-        },
-        listings: s.listings.map((l) => (l.id === listingId ? { ...l, chatCount: (l.chatCount || 0) + 1 } : l)),
-      };
-    });
-    return { cid, existing };
+        }
+      }));
+      return { cid, existing: false };
+    } catch (e) {
+      console.error(e);
+      return { cid: null, existing: false };
+    }
   }, []);
 
   const sendChatMessage = useCallback((chatId, text) => {
+    // Keep local state update for UI responsiveness
     setState((s) => ({
       ...s,
       chats: {
@@ -315,26 +373,33 @@ export function AppProvider({ children }) {
         },
       },
     }));
+    // Note: STOMP integration will handle actual sending in Chat.jsx later
+  }, []);
 
-    const replies = ['넵 확인했습니다!', '좋아요, 그 시간 괜찮습니다 :)', '네 가능해요! 장소는 어디가 편하세요?', '알겠습니다, 그때 뵙겠습니다~'];
-    setTimeout(() => {
-      setState((s) => {
-        if (!s.chats[chatId]) return s;
-        return {
-          ...s,
-          chats: {
-            ...s.chats,
-            [chatId]: {
-              ...s.chats[chatId],
-              messages: [
-                ...s.chats[chatId].messages,
-                { from: 'them', text: replies[Math.floor(Math.random() * replies.length)], time: Date.now() },
-              ],
-            },
+  const receiveChatMessage = useCallback((chatId, data) => {
+    // data from server: { roomId, senderId, content, createdAt, messageType }
+    setState((s) => {
+      const chat = s.chats[chatId];
+      if (!chat) return s;
+      // me state가 있으면 그걸로 판별, 없으면 'them'으로 처리
+      const myId = s.users?.me?.serverId ?? null;
+      const from = myId && String(data.senderId) === String(myId) ? 'me' : 'them';
+      const newMsg = {
+        from,
+        text: data.content,
+        time: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
+      };
+      return {
+        ...s,
+        chats: {
+          ...s.chats,
+          [chatId]: {
+            ...s.chats[chatId],
+            messages: [...s.chats[chatId].messages, newMsg],
           },
-        };
-      });
-    }, 1100 + Math.random() * 700);
+        },
+      };
+    });
   }, []);
 
   const acceptChatRequest = useCallback((chatId) => {
@@ -419,7 +484,11 @@ export function AppProvider({ children }) {
     }));
   }, []);
 
-  const userOf = useCallback((id) => state.users[id] || state.users.me, [state.users]);
+  const userOf = useCallback((id, fallbackName) => {
+    if (state.users[id]) return state.users[id];
+    if (id === state.users.me?.id) return state.users.me;
+    return { name: fallbackName || '알 수 없음', id };
+  }, [state.users]);
 
   const exposedState = useMemo(() => ({ ...state, accessToken, me }), [state, accessToken, me]);
 
@@ -452,6 +521,7 @@ export function AppProvider({ children }) {
     deleteMarketListing,
     sendChatRequest,
     sendChatMessage,
+    receiveChatMessage,
     acceptChatRequest,
     declineChatRequest,
     dismissSafety,

@@ -131,8 +131,12 @@ export default function MarketDetail() {
     }
   }
 
-  function handleSend(mode) {
-    const { cid } = sendChatRequest(listing.id, mode);
+  async function handleSend(mode) {
+    const { cid } = await sendChatRequest(listing, mode);
+    if (!cid) {
+      toast('대화 요청에 실패했습니다.');
+      return;
+    }
     closeOverlay();
     navigate(`/chat/${cid}`);
     toast('대화 요청을 보냈습니다');
