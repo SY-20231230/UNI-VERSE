@@ -46,7 +46,7 @@ export default function MarketWrite() {
       async function load() {
         try {
           const res = await marketApi.getItem(id);
-          const p = res.data;
+          const p = res;
           setExisting(p);
           
           const origCat = Object.keys(MARKET_CATEGORY_META).find(c => marketCategoryToApi(c) === p.category) || p.category;
@@ -92,18 +92,7 @@ export default function MarketWrite() {
         toast('게시글이 수정되었습니다');
       } else {
         const response = await marketApi.createItem(payload);
-        // The backend returns 201 Created and the Location header has the ID.
-        // Wait, axios interceptor logic or we can try to extract ID from location header if returned,
-        // or if response.data.id exists. If neither, redirect to market.
-        // I will just redirect to market list because `marketApi.createItem` might not return a JSON body.
-        
-        let newId = null;
-        if (response.headers && response.headers.location) {
-          const parts = response.headers.location.split('/');
-          newId = parts[parts.length - 1];
-        }
-        
-        if (newId) navigate(`/market/${newId}`);
+        if (response.itemId) navigate(`/market/${response.itemId}`);
         else navigate(`/market`);
         
         toast('상품이 등록되었습니다');

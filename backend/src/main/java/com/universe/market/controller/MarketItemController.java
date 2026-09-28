@@ -1,5 +1,7 @@
 package com.universe.market.controller;
 
+import com.universe.global.common.ApiResponse;
+import com.universe.global.common.PageResponse;
 import com.universe.global.exception.BusinessException;
 import com.universe.global.exception.ErrorCode;
 import com.universe.global.util.SecurityUtil;
@@ -14,10 +16,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/market")
@@ -28,7 +29,7 @@ public class MarketItemController {
     private final UserRepository userRepository;
 
     @GetMapping
-    public ResponseEntity<Page<MarketItemListResponse>> searchItems(
+    public ApiResponse<PageResponse<MarketItemListResponse>> searchItems(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String sort,
@@ -43,33 +44,33 @@ public class MarketItemController {
         }
         
         Long schoolId = user.getSchool().getId();
-        
-        return ResponseEntity.ok(marketItemService.searchItems(schoolId, category, keyword, sort, pageable));
+        Page<MarketItemListResponse> page = marketItemService.searchItems(schoolId, category, keyword, sort, pageable);
+        return ApiResponse.success(new PageResponse<>(page));
     }
 
     @GetMapping("/{itemId}")
-    public ResponseEntity<MarketItemDetailResponse> getItemDetail(@PathVariable Long itemId) {
-        return ResponseEntity.ok(marketItemService.getItemDetail(itemId));
+    public ApiResponse<MarketItemDetailResponse> getItemDetail(@PathVariable Long itemId) {
+        return ApiResponse.success(marketItemService.getItemDetail(itemId));
     }
 
     @PostMapping
-    public ResponseEntity<Void> createItem(@Valid @RequestBody MarketItemCreateRequest request) {
+    public ApiResponse<Map<String, Long>> createItem(@Valid @RequestBody MarketItemCreateRequest request) {
         Long userId = SecurityUtil.getCurrentUserId();
         Long itemId = marketItemService.createItem(userId, request);
-        return ResponseEntity.created(URI.create("/api/market/" + itemId)).build();
+        return ApiResponse.success(Map.of("itemId", itemId));
     }
 
     @PutMapping("/{itemId}")
-    public ResponseEntity<Void> updateItem(@PathVariable Long itemId, @Valid @RequestBody MarketItemUpdateRequest request) {
+    public ApiResponse<Void> updateItem(@PathVariable Long itemId, @Valid @RequestBody MarketItemUpdateRequest request) {
         Long userId = SecurityUtil.getCurrentUserId();
         marketItemService.updateItem(userId, itemId, request);
-        return ResponseEntity.ok().build();
+        return ApiResponse.success();
     }
 
     @DeleteMapping("/{itemId}")
-    public ResponseEntity<Void> deleteItem(@PathVariable Long itemId) {
+    public ApiResponse<Void> deleteItem(@PathVariable Long itemId) {
         Long userId = SecurityUtil.getCurrentUserId();
         marketItemService.deleteItem(userId, itemId);
-        return ResponseEntity.noContent().build();
+        return ApiResponse.success();
     }
 }
