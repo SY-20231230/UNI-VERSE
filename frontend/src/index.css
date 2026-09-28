@@ -473,6 +473,13 @@ a{color:inherit; text-decoration:none;}
 }
 
 footer{border-top:1px solid var(--border-soft); margin-top:40px; background:color-mix(in srgb, var(--card-bg) 5%, #FFFFFF);}
+/* 제목 옆 ⓘ 안내 말풍선: 마우스를 올리거나 키보드 포커스, 탭(open)했을 때만 보인다 */
+.info-tip{position:relative; display:inline-flex;}
+.info-tip-btn{display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; padding:0; border:none; border-radius:99px; background:none; color:var(--ink-faint); cursor:pointer;}
+.info-tip-btn:hover, .info-tip.open .info-tip-btn{color:var(--ink-soft); background:var(--surface-sunken);}
+.info-tip-bubble{position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%); z-index:20; white-space:nowrap; padding:7px 10px; border-radius:9px; background:var(--ink); color:var(--surface); font-size:11.5px; font-weight:600; box-shadow:var(--shadow); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .12s ease;}
+.info-tip-bubble::before{content:''; position:absolute; top:-4px; left:50%; width:8px; height:8px; background:var(--ink); transform:translateX(-50%) rotate(45deg);}
+.info-tip:hover .info-tip-bubble, .info-tip-btn:focus-visible + .info-tip-bubble, .info-tip.open .info-tip-bubble{opacity:1; visibility:visible;}
 .footer-inner{max-width:1440px; margin:0 auto; padding:28px 28px 34px; display:flex; flex-wrap:wrap; gap:32px; justify-content:space-between;}
 @media (max-width:760px){ .footer-inner{padding:24px 16px 30px; gap:22px;} }
 .footer-brand{font-family:var(--font-display); font-weight:700; font-size:17px;}

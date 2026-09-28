@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../lib/icons';
 import { useApp } from '../context/AppContext';
@@ -23,6 +24,7 @@ export default function Home() {
   const heroRef = useMouseGlow();
   const topPosts = [...state.posts].sort((a, b) => b.likes - a.likes).slice(0, 4);
   const freshListings = state.listings.filter((l) => l.status === '판매중').slice(0, 4);
+  const [noticeTipOpen, setNoticeTipOpen] = useState(false);
   const todayLabel = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 
   const myActivity = [
@@ -95,6 +97,20 @@ export default function Home() {
               <div className="row between">
                 <div className="row g6">
                   <span className="h3">오늘의 캠퍼스</span>
+                  <span className={'info-tip' + (noticeTipOpen ? ' open' : '')}>
+                    <button type="button" className="info-tip-btn" aria-label="오늘의 캠퍼스 안내"
+                      aria-describedby="campus-notice-tip"
+                      onClick={() => setNoticeTipOpen((v) => !v)} onBlur={() => setNoticeTipOpen(false)}>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <circle cx="8" cy="8" r="6.8" stroke="currentColor" strokeWidth="1.4" />
+                        <path d="M8 7.2v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                        <circle cx="8" cy="4.9" r="0.95" fill="currentColor" />
+                      </svg>
+                    </button>
+                    <span id="campus-notice-tip" role="tooltip" className="info-tip-bubble">
+                      추후 학교 홈페이지와 연동 예정
+                    </span>
+                  </span>
                 </div>
                 <span className="faint" style={{ fontSize: 11, fontWeight: 700 }}>{todayLabel}</span>
               </div>
