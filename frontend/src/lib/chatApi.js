@@ -6,6 +6,7 @@ export function createChatApi(options = {}) {
   return {
     createRoom: async (data) => request('/chat/rooms', { method: 'POST', body: data }),
     getMyRooms: async () => request('/chat/rooms'),
-    getMessages: async (roomId) => request(`/chat/rooms/${roomId}/messages`)
+    getMessages: async (roomId) => request(`/chat/rooms/${roomId}/messages`),
+    deleteRoom: async (roomId) => request(`/chat/rooms/${roomId}`, { method: 'DELETE' })
   };
 }

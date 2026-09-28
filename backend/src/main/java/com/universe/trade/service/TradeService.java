@@ -50,15 +50,44 @@ public class TradeService {
                 .listedPrice(item.getListedPrice())
                 .build();
 
-        item.changeTradeStatus(TradeStatus.TRADING);
+        item.changeTradeStatus(TradeStatus.REQUESTED);
 
         Trade saved = tradeRepository.save(trade);
         publishItemStatus(item, buyerId);
         return saved.getId();
     }
 
+    @Transactional
+    public void acceptTrade(Long userId, Long tradeId) {
+        Trade trade = tradeRepository.findById(tradeId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+
+        if (trade.getStatus() != TradeStatus.REQUESTED) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+
+        if (!trade.getSeller().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        trade.acceptTrade();
+        trade.getItem().changeTradeStatus(TradeStatus.TRADING);
+        publishItemStatus(trade.getItem(), trade.getBuyer().getId());
+    }
+
     public TradeResponse getTradeDetail(Long userId, Long tradeId) {
         Trade trade = tradeRepository.findById(tradeId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+
+        if (!trade.getSeller().getId().equals(userId) && !trade.getBuyer().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        return new TradeResponse(trade);
+    }
+
+    public TradeResponse getTradeByItem(Long userId, Long itemId) {
+        Trade trade = tradeRepository.findTopByItemIdOrderByCreatedAtDesc(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
 
         if (!trade.getSeller().getId().equals(userId) && !trade.getBuyer().getId().equals(userId)) {

@@ -32,4 +32,11 @@ public class ChatApiController {
         Long userId = SecurityUtil.getCurrentUserId();
         return ApiResponse.success(chatService.getRoomMessages(roomId, userId));
     }
+
+    @DeleteMapping("/rooms/{roomId}")
+    public ApiResponse<Void> deleteRoom(@PathVariable Long roomId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        chatService.deleteRoom(roomId, userId);
+        return ApiResponse.success(null);
+    }
 }

@@ -71,8 +71,15 @@ public class Trade {
         this.listedPrice = listedPrice;
         this.sellerConfirmed = false;
         this.buyerConfirmed = false;
-        this.status = TradeStatus.TRADING;
+        this.status = TradeStatus.REQUESTED;
         this.startedAt = LocalDateTime.now();
+    }
+
+    public void acceptTrade() {
+        if (this.status != TradeStatus.REQUESTED) {
+            throw new IllegalStateException("Only REQUESTED trade can be accepted");
+        }
+        this.status = TradeStatus.TRADING;
     }
 
     public void confirmBySeller() {

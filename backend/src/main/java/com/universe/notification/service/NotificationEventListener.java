@@ -55,6 +55,7 @@ public class NotificationEventListener {
     public void onItemStatusChanged(MarketItemStatusChangedEvent e) {
         String status = switch (e.tradeStatus()) {
             case SELLING -> "다시 판매 중이에요";
+            case REQUESTED -> "거래가 요청됐어요";
             case TRADING -> "거래가 진행 중이에요";
             case COMPLETED -> "판매가 완료됐어요";
             case CANCELLED -> null;
