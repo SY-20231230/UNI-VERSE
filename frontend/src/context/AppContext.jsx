@@ -27,8 +27,10 @@ function load() {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.users) {
         // 서버 로그인 상태였는데 토큰이 사라졌다면 로그아웃 상태로 시작한다.
-        if (parsed.authMode === 'server' && !session.isActive()) return { ...parsed, user: null, isAdmin: false, authMode: null };
-        return parsed;
+        // 카테고리 필터는 새로 열 때마다 '전체'로 시작한다.
+        const filters = { communityFilter: '전체', marketFilter: '전체', marketStatusFilter: '전체' };
+        if (parsed.authMode === 'server' && !session.isActive()) return { ...parsed, ...filters, user: null, isAdmin: false, authMode: null };
+        return { ...parsed, ...filters };
       }
     }
   } catch (e) {
