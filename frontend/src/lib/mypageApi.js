@@ -22,6 +22,7 @@ export function createMypageApi(options = {}) {
     summary: (options = {}) => request('/mypage', options),
     posts: (query, options) => list('/mypage/posts', query, options),
     marketItems: (query, options) => list('/mypage/market-items', query, options),
+    favoriteItems: (query, options) => list('/mypage/favorite-items', query, options),
     trustHistory: (query, options) => list('/mypage/trust-history', query, options),
   };
 }

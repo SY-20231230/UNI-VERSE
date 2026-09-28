@@ -98,6 +98,7 @@ export default function MarketDetail() {
         setCurrentImageIndex(0); // Reset image index
         const res = await marketApi.getItem(id);
         setListing(res);
+        setLiked(res.isLiked || false);
         const relRes = await marketApi.getItems({ sort: 'popular', size: 5 });
         setRelated(relRes.content.filter(x => x.itemId != id));
         window.scrollTo(0, 0); // Scroll to top when item changes
@@ -321,7 +322,7 @@ export default function MarketDetail() {
                   className="iconbtn"
                   style={{ width: 48, height: 48, ...(liked ? { color: 'var(--danger)', borderColor: 'var(--danger)' } : {}) }}
                 >
-                  <Icon name="heart" size={20} />
+                  <Icon name={liked ? 'heart-fill' : 'heart'} size={20} />
                 </span>
                 <span className="like-count tnum">{listing.likeCount || 0}</span>
               </button>

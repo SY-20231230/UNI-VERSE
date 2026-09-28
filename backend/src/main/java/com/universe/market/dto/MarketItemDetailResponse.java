@@ -30,10 +30,12 @@ public class MarketItemDetailResponse {
     private long sellerTrades;
     private java.util.List<String> images;
     private int viewCount;
+    private long likeCount;
+    private boolean isLiked;
 
     // Notice that purchasePrice is intentionally omitted per security rules!
 
-    public MarketItemDetailResponse(MarketItem item, long sellerTrades) {
+    public MarketItemDetailResponse(MarketItem item, long sellerTrades, long likeCount, boolean isLiked) {
         this.id = item.getId();
         this.title = item.getTitle();
         this.description = item.getDescription();
@@ -53,5 +55,7 @@ public class MarketItemDetailResponse {
         if (item.getImages() != null) {
             this.images = item.getImages().stream().map(com.universe.market.entity.MarketItemImage::getImageUrl).toList();
         }
+        this.likeCount = likeCount;
+        this.isLiked = isLiked;
     }
 }

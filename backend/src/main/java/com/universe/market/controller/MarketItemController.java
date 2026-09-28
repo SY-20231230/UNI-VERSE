@@ -50,7 +50,25 @@ public class MarketItemController {
 
     @GetMapping("/{itemId}")
     public ApiResponse<MarketItemDetailResponse> getItemDetail(@PathVariable Long itemId) {
-        return ApiResponse.success(marketItemService.getItemDetail(itemId, SecurityUtil.getCurrentUserId()));
+        Long userId = null;
+        try {
+            userId = SecurityUtil.getCurrentUserId();
+        } catch (Exception e) {}
+        return ApiResponse.success(marketItemService.getItemDetail(itemId, userId));
+    }
+
+    @PostMapping("/{itemId}/favorites")
+    public ApiResponse<Void> favoriteItem(@PathVariable Long itemId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        marketItemService.favoriteItem(userId, itemId);
+        return ApiResponse.success(null);
+    }
+
+    @DeleteMapping("/{itemId}/favorites")
+    public ApiResponse<Void> unfavoriteItem(@PathVariable Long itemId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        marketItemService.unfavoriteItem(userId, itemId);
+        return ApiResponse.success(null);
     }
 
     @PostMapping
