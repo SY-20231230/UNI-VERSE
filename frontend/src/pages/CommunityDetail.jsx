@@ -139,7 +139,7 @@ export default function CommunityDetail() {
       </Link>
       <div className="detail-layout">
         <div>
-      <div className="card" style={{ padding: '30px 30px 6px' }}>
+      <div className="card post-detail-card">
         <div className="row between">
           <div className="row g8">
             <span className="chip accent">{postCategoryFromApi(post.category)}</span>
@@ -208,15 +208,14 @@ export default function CommunityDetail() {
             </span>
           ))}
         </div>
-        <div className="row g10" style={{ marginTop: 20, paddingBottom: 22 }}>
+        <div className="row g10" style={{ marginTop: 18, paddingBottom: 18 }}>
           <button
-            className={'btn btn-sm ' + (liked ? 'btn-primary' : 'btn-soft')}
-            style={{ borderRadius: 99 }}
+            className={'like-pill' + (liked ? ' on' : '')}
             onClick={likePost}
             disabled={likePending}
             aria-pressed={liked}
           >
-            <Icon name="heart" size={15} style={{ fill: liked ? 'currentColor' : 'none' }} /> 좋아요 {post.likeCount}
+            <Icon name="heart" size={13} style={{ fill: liked ? 'currentColor' : 'none' }} /> 좋아요 {post.likeCount}
           </button>
           <span className="stat">
             <Icon name="chat" size={14} />
@@ -241,17 +240,35 @@ export default function CommunityDetail() {
                   <span className="faint" style={{ fontSize: 11 }}>
                     {timeAgo(c.createdAt)}
                   </span>
-                  {/* Simplified edit/delete checks without proper user context */}
-                  {editingCommentId !== c.commentId && (
-                    <>
-                    <button className="link" style={{ fontSize: 11 }} onClick={() => startEditComment(c)}>
-                      수정
+                  {c.mine && editingCommentId !== c.commentId && (
+                    <button
+                      className="iconbtn ghost comment-more"
+                      title="댓글 관리"
+                      aria-label="댓글 관리"
+                      onClick={() =>
+                        openSheet(
+                          <ManageSheet
+                            onClose={closeOverlay}
+                            onEdit={() => startEditComment(c)}
+                            onDelete={() =>
+                              openModal(
+                                <ConfirmModal
+                                  title="댓글을 삭제할까요?"
+                                  desc="삭제한 댓글은 복구할 수 없어요."
+                                  onClose={closeOverlay}
+                                  onConfirm={() => { closeOverlay(); deleteComment(c.commentId); }}
+                                />
+                              )
+                            }
+                          />
+                        )
+                      }
+                    >
+                      <Icon name="more" size={16} />
                     </button>
-                    <button className="link faint" style={{ fontSize: 11 }} onClick={() => deleteComment(c.commentId)}>
-                      삭제
-                    </button>
-                    </>
                   )}
+                  {/* ⋯ 버튼이 없는 댓글도 같은 자리를 비워 두어 날짜 위치를 맞춘다 */}
+                  {!(c.mine && editingCommentId !== c.commentId) && <span className="comment-more" aria-hidden="true" />}
                 </div>
               </div>
               {editingCommentId === c.commentId ? (

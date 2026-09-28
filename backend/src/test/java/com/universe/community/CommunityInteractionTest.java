@@ -118,4 +118,16 @@ class CommunityInteractionTest {
         assertThat(response.isPostAuthor()).isFalse();
         assertThat(response.getAuthorName()).isEqualTo("다른닉네임");
     }
+
+    @Test
+    void anonymousCommentIsMarkedMineOnlyForItsWriter() {
+        Comment comment = Comment.builder().post(post).user(author).content("익명 댓글")
+                .isAnonymous(true).build();
+        ReflectionTestUtils.setField(comment, "id", 31L);
+
+        assertThat(CommentResponse.from(comment, author.getId()).isMine()).isTrue();
+        assertThat(CommentResponse.from(comment, author.getId() + 100).isMine()).isFalse();
+        assertThat(CommentResponse.from(comment).isMine()).isFalse();
+        assertThat(CommentResponse.from(comment, author.getId()).getAuthorId()).isNull();
+    }
 }
