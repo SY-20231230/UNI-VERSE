@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Nav from './components/Nav';
+import Footer from './components/Footer';
 import ScrollTopButton from './components/ScrollTopButton';
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -171,6 +172,7 @@ export default function App() {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      {state.user && <Footer />}
     </>
   );
 }

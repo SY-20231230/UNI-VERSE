@@ -4,7 +4,6 @@ import Icon from '../lib/icons';
 import { useApp } from '../context/AppContext';
 import PostCard from '../components/PostCard';
 import ListingGridCard from '../components/ListingGridCard';
-import Footer from '../components/Footer';
 import Avatar from '../components/Avatar';
 import VerifiedChip from '../components/VerifiedChip';
 import { useMouseGlow } from '../lib/useMouseGlow';
@@ -181,7 +180,6 @@ export default function Home() {
           ))}
         </div>
       </div>
-      <Footer />
     </>
   );
 }
