@@ -11,6 +11,11 @@
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
     />
     <title>UNI:VERSE</title>
+    <script>
+      if (typeof global === 'undefined') {
+        window.global = window;
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

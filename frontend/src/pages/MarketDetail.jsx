@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '../lib/icons';
 import Avatar from '../components/Avatar';
 import VerifiedChip from '../components/VerifiedChip';
@@ -10,6 +10,8 @@ import ReportModal from '../components/ReportModal';
 import ListingGridCard from '../components/ListingGridCard';
 import ManageSheet from '../components/ManageSheet';
 import ConfirmModal from '../components/ConfirmModal';
+import { marketApi } from '../lib/marketApi';
+import { marketCategoryFromApi } from '../lib/category';
 
 function ChatRequestSheet({ listing, onSend }) {
   const [mode, setMode] = useState('anon');
@@ -18,7 +20,7 @@ function ChatRequestSheet({ listing, onSend }) {
       <div>
         <div className="h3">대화 요청 보내기</div>
         <div className="faint" style={{ fontSize: 12.5, marginTop: 6 }}>
-          {listing.title} · {won(listing.price)}
+          {listing.title} · {won(listing.listedPrice !== undefined ? listing.listedPrice : listing.price)}
         </div>
       </div>
       <div className="stack g10">
@@ -63,9 +65,20 @@ function ChatRequestSheet({ listing, onSend }) {
   );
 }
 
+function conditionToKorean(cond) {
+  const map = {
+    NEW: '미개봉 새상품',
+    LIKE_NEW: '거의 새것',
+    GOOD: '사용감 적음',
+    FAIR: '사용감 많음',
+    POOR: '고장/파손'
+  };
+  return map[cond] || cond || '상태 모름';
+}
+
 export default function MarketDetail() {
   const { id } = useParams();
-  const { state, userOf, likeListing, sendChatRequest, deleteMarketListing } = useApp();
+  const { state, sendChatRequest } = useApp();
   const { openSheet, openModal, closeOverlay, toast } = useUI();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -73,19 +86,50 @@ export default function MarketDetail() {
   const backTo = fromAdmin ? '/admin' : '/market';
   const backLabel = fromAdmin ? '관리자' : '중고거래';
 
-  const listing = state.listings.find((x) => x.id === id);
+  const [listing, setListing] = useState(null);
+  const [liked, setLiked] = useState(false);
+  const [related, setRelated] = useState([]);
+  
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await marketApi.getItem(id);
+        setListing(res.data);
+        const relRes = await marketApi.getItems({ sort: 'popular', size: 5 });
+        setRelated(relRes.data.content.filter(x => x.id != id));
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    load();
+  }, [id]);
+
   if (!listing) {
     return (
       <div className="container mid fade-enter">
-        <div className="empty">매물을 찾을 수 없어요</div>
+        <div className="empty">매물을 불러오는 중이거나 찾을 수 없어요</div>
       </div>
     );
   }
 
-  const seller = userOf(listing.sellerId);
-  const liked = !!state.likedListings[listing.id];
-  const isMine = listing.sellerId === 'me';
-  const sellerOtherListings = state.listings.filter((l) => l.sellerId === listing.sellerId && l.id !== listing.id).slice(0, 4);
+  const seller = { id: listing.sellerId, name: listing.sellerNickname, dept: listing.schoolName, color: '#2F6FED', trades: 0 };
+  const isMine = listing.sellerId === (state.user ? state.users[state.user]?.id : null);
+
+  async function toggleLike() {
+    try {
+      if (liked) {
+        await marketApi.unfavoriteItem(listing.id);
+        setListing(l => ({ ...l, likeCount: Math.max(0, (l.likeCount || 0) - 1) }));
+        setLiked(false);
+      } else {
+        await marketApi.favoriteItem(listing.id);
+        setListing(l => ({ ...l, likeCount: (l.likeCount || 0) + 1 }));
+        setLiked(true);
+      }
+    } catch(e) {
+      toast('요청에 실패했습니다.');
+    }
+  }
 
   function handleSend(mode) {
     const { cid } = sendChatRequest(listing.id, mode);
@@ -93,6 +137,13 @@ export default function MarketDetail() {
     navigate(`/chat/${cid}`);
     toast('대화 요청을 보냈습니다');
   }
+
+  const categoryLabel = marketCategoryFromApi(listing.category);
+  const conditionLabel = conditionToKorean(listing.condition);
+  const statusLabel = listing.tradeStatus === 'SELLING' ? '판매중' : 
+                      listing.tradeStatus === 'TRADING' ? '예약중' : 
+                      listing.tradeStatus === 'COMPLETED' ? '거래완료' :
+                      listing.tradeStatus === 'CANCELLED' ? '거래취소' : listing.tradeStatus;
 
   return (
     <>
@@ -118,10 +169,15 @@ export default function MarketDetail() {
                             title="매물을 삭제할까요?"
                             desc="삭제한 매물은 복구할 수 없어요."
                             onClose={closeOverlay}
-                            onConfirm={() => {
-                              deleteMarketListing(listing.id);
-                              navigate('/market');
-                              toast('매물이 삭제되었습니다');
+                            onConfirm={async () => {
+                              closeOverlay();
+                              try {
+                                await marketApi.deleteItem(listing.id);
+                                navigate('/market');
+                                toast('매물이 삭제되었습니다');
+                              } catch(e) {
+                                toast('삭제 실패');
+                              }
                             }}
                           />
                         )
@@ -145,8 +201,8 @@ export default function MarketDetail() {
         <div className="market-detail-layout" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 30 }}>
           <div>
             <div className="thumb" style={{ width: '100%', aspectRatio: '4/3' }}>
-              <Icon name={listing.icon} size={64} />
-              {listing.status === '거래완료' && <div className="status-flag" style={{ fontSize: 16 }}>거래완료</div>}
+              <Icon name="box" size={64} />
+              {statusLabel === '거래완료' && <div className="status-flag" style={{ fontSize: 16 }}>거래완료</div>}
               <span className="chip" style={{ position: 'absolute', left: 14, bottom: 14, background: 'rgba(0,0,0,.55)', color: '#fff' }}>
                 1 / 1
               </span>
@@ -154,61 +210,55 @@ export default function MarketDetail() {
             <div className="info-grid" style={{ marginTop: 16 }}>
               <div>
                 <div className="info-label">카테고리</div>
-                <div className="info-value">{listing.category}</div>
+                <div className="info-value">{categoryLabel}</div>
               </div>
               <div>
                 <div className="info-label">등록일</div>
-                <div className="info-value">{formatDate(listing.time)}</div>
+                <div className="info-value">{formatDate(listing.createdAt)}</div>
               </div>
               <div>
                 <div className="info-label">거래 희망 장소</div>
-                <div className="info-value">{listing.loc}</div>
+                <div className="info-value">{listing.schoolName} 근처</div>
               </div>
               <div>
                 <div className="info-label">거래 상태</div>
-                <div className="info-value">{listing.status}</div>
+                <div className="info-value">{statusLabel}</div>
               </div>
             </div>
           </div>
           <div>
             <div className="row g8">
-              <span className="chip accent">{listing.category}</span>
-              <span className="chip outline">{listing.condition}</span>
+              <span className="chip accent">{categoryLabel}</span>
+              <span className="chip outline">{conditionLabel}</span>
             </div>
             <div className="h1" style={{ marginTop: 14 }}>
               {listing.title}
             </div>
             <div className="row g10" style={{ marginTop: 12, flexWrap: 'wrap', alignItems: 'baseline' }}>
               <span className="h1 tnum" style={{ fontSize: 28 }}>
-                {won(listing.price)}
+                {won(listing.listedPrice)}
               </span>
-              {discountPct(listing.price, listing.originalPrice) > 0 && (
-                <span className="faint" style={{ fontSize: 13 }}>실제가격 {won(listing.originalPrice)}</span>
-              )}
             </div>
             <div className="faint" style={{ fontSize: 12, marginTop: 10 }}>
-              <Icon name="pin" size={13} /> {listing.loc} · {timeAgo(listing.time)}
+              <Icon name="pin" size={13} /> {listing.schoolName} · {timeAgo(listing.createdAt)}
             </div>
             <div className="stat-bar">
               <span className="stat">
-                <Icon name="eye" size={15} /> 조회 {listing.views}
+                <Icon name="eye" size={15} /> 조회 {listing.viewCount || 0}
               </span>
               <span className="stat">
-                <Icon name="heart" size={15} /> 관심 {listing.likes}
-              </span>
-              <span className="stat">
-                <Icon name="chat" size={15} /> 대화 {listing.chatCount || 0}
+                <Icon name="heart" size={15} /> 관심 {listing.likeCount || 0}
               </span>
             </div>
             <div className="divider" style={{ margin: '20px 0' }}></div>
-            <div style={{ fontSize: 14.5, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{listing.desc}</div>
+            <div style={{ fontSize: 14.5, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{listing.description || listing.desc}</div>
             <div className="divider" style={{ margin: '20px 0' }}></div>
             <Link className="seller-card" to={fromAdmin ? `/users/${seller.id}?from=admin` : `/users/${seller.id}`}>
               <Avatar user={seller} size={46} />
               <div style={{ flex: 1 }}>
                 <div className="row g6">
                   <b style={{ fontSize: 14.5 }}>{seller.name}</b>
-                  <VerifiedChip level={seller.verified} />
+                  {seller.verified && <VerifiedChip level={seller.verified} />}
                 </div>
                 <div className="faint" style={{ fontSize: 11.5, marginTop: 3 }}>
                   거래 {seller.trades}회 · {seller.dept || ''}
@@ -227,7 +277,7 @@ export default function MarketDetail() {
                   border: 'none',
                   color: liked ? 'var(--danger)' : 'var(--ink-faint)',
                 }}
-                onClick={() => likeListing(listing.id)}
+                onClick={toggleLike}
               >
                 <span
                   className="iconbtn"
@@ -235,7 +285,7 @@ export default function MarketDetail() {
                 >
                   <Icon name="heart" size={20} />
                 </span>
-                <span className="like-count tnum">{listing.likes}</span>
+                <span className="like-count tnum">{listing.likeCount || 0}</span>
               </button>
               {isMine ? (
                 <button className="btn btn-soft" style={{ flex: 1 }} disabled>
@@ -255,13 +305,13 @@ export default function MarketDetail() {
           </div>
         </div>
 
-        {sellerOtherListings.length > 0 && (
+        {related.length > 0 && (
           <div style={{ marginTop: 40 }}>
             <div className="h3" style={{ marginBottom: 14 }}>
-              {seller.name}님의 다른 판매상품
+              인기 판매상품
             </div>
             <div className="card-grid">
-              {sellerOtherListings.map((l) => (
+              {related.map((l) => (
                 <ListingGridCard key={l.id} listing={l} />
               ))}
             </div>
