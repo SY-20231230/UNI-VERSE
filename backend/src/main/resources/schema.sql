@@ -307,6 +307,8 @@ CREATE TABLE trades (
     final_price BIGINT NULL,
     seller_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
     buyer_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
+    seller_promised BOOLEAN,
+    buyer_promised BOOLEAN,
     status VARCHAR(30) NOT NULL DEFAULT 'TRADING',
     started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at DATETIME NULL,

@@ -21,6 +21,8 @@ public class TradeResponse {
     private Long finalPrice;
     private Boolean sellerConfirmed;
     private Boolean buyerConfirmed;
+    private Boolean sellerPromised;
+    private Boolean buyerPromised;
     private TradeStatus status;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
@@ -35,8 +37,10 @@ public class TradeResponse {
         this.buyerNickname = trade.getBuyer().getNickname();
         this.listedPrice = trade.getListedPrice();
         this.finalPrice = trade.getFinalPrice();
-        this.sellerConfirmed = trade.getSellerConfirmed();
-        this.buyerConfirmed = trade.getBuyerConfirmed();
+        this.sellerConfirmed = Boolean.TRUE.equals(trade.getSellerConfirmed());
+        this.buyerConfirmed = Boolean.TRUE.equals(trade.getBuyerConfirmed());
+        this.sellerPromised = Boolean.TRUE.equals(trade.getSellerPromised());
+        this.buyerPromised = Boolean.TRUE.equals(trade.getBuyerPromised());
         this.status = trade.getStatus();
         this.startedAt = trade.getStartedAt();
         this.completedAt = trade.getCompletedAt();

@@ -31,6 +31,8 @@ public class MarketItemDetailResponse {
     private java.util.List<String> images;
     private int viewCount;
     private long likeCount;
+    
+    @com.fasterxml.jackson.annotation.JsonProperty("isLiked")
     private boolean isLiked;
 
     // Notice that purchasePrice is intentionally omitted per security rules!

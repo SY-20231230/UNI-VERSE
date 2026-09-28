@@ -39,10 +39,13 @@ export default function useNotifications() {
     tick();
     const timer = setInterval(tick, NOTIFICATION_POLL_MS);
     document.addEventListener('visibilitychange', tick);
+    const onRefresh = () => { tick(); };
+    window.addEventListener('notifications:refresh', onRefresh);
     return () => {
       controller.abort();
       clearInterval(timer);
       document.removeEventListener('visibilitychange', tick);
+      window.removeEventListener('notifications:refresh', onRefresh);
     };
   }, [enabled, refreshCount]);
 

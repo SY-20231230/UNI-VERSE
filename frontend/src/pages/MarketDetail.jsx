@@ -13,7 +13,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { marketApi } from '../lib/marketApi';
 import { marketCategoryFromApi } from '../lib/category';
 
-function ChatRequestSheet({ listing, onSend }) {
+function ChatRequestSheet({ listing, onSend, trustScore }) {
   const [mode, setMode] = useState('anon');
   return (
     <div className="stack g16">
@@ -44,7 +44,7 @@ function ChatRequestSheet({ listing, onSend }) {
         >
           <div className="row between">
             <b style={{ fontSize: 14 }}>인증 프로필로 요청</b>
-            <VerifiedChip level="A" />
+            <VerifiedChip level="A" score={trustScore} />
           </div>
           <div className="faint" style={{ fontSize: 12, marginTop: 4 }}>
             상대방도 인증 프로필로 대화하는 것을 권장합니다
@@ -98,7 +98,7 @@ export default function MarketDetail() {
         setCurrentImageIndex(0); // Reset image index
         const res = await marketApi.getItem(id);
         setListing(res);
-        setLiked(res.isLiked || false);
+        setLiked(res.isLiked ?? res.liked ?? false);
         const relRes = await marketApi.getItems({ sort: 'popular', size: 5 });
         setRelated(relRes.content.filter(x => x.itemId != id));
         window.scrollTo(0, 0); // Scroll to top when item changes
@@ -117,7 +117,7 @@ export default function MarketDetail() {
     );
   }
 
-  const seller = { id: listing.sellerId, name: listing.sellerNickname, dept: listing.schoolName, color: '#2F6FED', trades: listing.sellerTrades || 0 };
+  const seller = { id: listing.sellerId, name: listing.sellerNickname, dept: listing.schoolName, color: '#2F6FED', trades: listing.sellerTrades || 0, trustScore: listing.sellerTrustScore, verified: listing.sellerVerified };
   const isMine = listing.sellerId === state.me?.userId;
 
   async function toggleLike() {
@@ -286,13 +286,13 @@ export default function MarketDetail() {
                 <Icon name="eye" size={15} /> 조회 {listing.viewCount || 0}
               </span>
               <span className="stat">
-                <Icon name="heart" size={15} /> 관심 {listing.likeCount || 0}
+                <Icon name={liked ? 'heart-fill' : 'heart'} size={15} /> 관심 {listing.likeCount || 0}
               </span>
             </div>
             <div className="divider" style={{ margin: '20px 0' }}></div>
             <div style={{ fontSize: 14.5, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{listing.description || listing.desc}</div>
             <div className="divider" style={{ margin: '20px 0' }}></div>
-            <Link className="seller-card" to={fromAdmin ? `/users/${seller.id}?from=admin` : `/users/${seller.id}`}>
+            <Link className="seller-card" to={fromAdmin ? `/users/${seller.id}?from=admin` : `/users/${seller.id}`} state={{ user: seller }}>
               <Avatar user={seller} size={46} />
               <div style={{ flex: 1 }}>
                 <div className="row g6">
@@ -334,7 +334,7 @@ export default function MarketDetail() {
                 <button
                   className="btn btn-primary"
                   style={{ flex: 1 }}
-                  onClick={() => openSheet(<ChatRequestSheet listing={listing} onSend={handleSend} />)}
+                  onClick={() => openSheet(<ChatRequestSheet listing={listing} onSend={handleSend} trustScore={state.me?.trustScore} />)}
                   disabled={statusLabel === '거래완료'}
                 >
                   <Icon name="chat" size={17} />

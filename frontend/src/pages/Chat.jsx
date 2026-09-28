@@ -237,6 +237,21 @@ export default function Chat() {
     }
   }
 
+  async function handlePromiseTrade(tradeId = trade?.tradeId) {
+    if (!tradeId) return;
+    setTradeLoading(true);
+    try {
+      await tradeApi.promiseTrade(tradeId);
+      const t = await tradeApi.getTradeDetail(tradeId);
+      setTrade(t);
+      announceTrade(t, 'self');
+    } catch (e) {
+      toast('오류가 발생했어요.');
+    } finally {
+      setTradeLoading(false);
+    }
+  }
+
   async function handleConfirmTrade(tradeId = trade?.tradeId) {
     if (!tradeId) return;
     setTradeLoading(true);
@@ -303,6 +318,7 @@ export default function Chat() {
   const isSeller = trade && myServerId && String(trade.sellerId) === String(myServerId);
   const isBuyer = trade && myServerId && String(trade.buyerId) === String(myServerId);
   const myConfirmed = isSeller ? trade?.sellerConfirmed : (isBuyer ? trade?.buyerConfirmed : false);
+  const myPromised = isSeller ? trade?.sellerPromised : (isBuyer ? trade?.buyerPromised : false);
   const tradeStatus = trade?.status; // TRADING | COMPLETED | CANCELLED | null
   const itemTradeCompleted = tradeStatus === 'COMPLETED';
   // 상품이 거래완료면 메시지 입력 차단
@@ -382,14 +398,19 @@ export default function Chat() {
               <button className="iconbtn ghost chat-room-close" title="채팅 닫기" onClick={() => navigate('/chat')}>
                 <Icon name="back" size={16} /> {/* desktop close icon to back arrow so X can be delete */}
               </button>
-              <Avatar user={partner2} size={40} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="name">{partner2.name}</div>
+              <div 
+                style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: activeChat.anonymous ? 'default' : 'pointer' }}
+                onClick={() => { if (!activeChat.anonymous && partner2?.id) navigate(`/users/${partner2.id}`, { state: { user: partner2 } }); }}
+              >
+                <Avatar user={partner2} size={40} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="name" style={!activeChat.anonymous ? { '&:hover': { textDecoration: 'underline' } } : undefined}>{partner2.name}</div>
                 {listing2 && (
                   <div className="faint" style={{ fontSize: 11.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {listing2.title} · {won(listing2.price)} · 중고거래
                   </div>
                 )}
+              </div>
               </div>
               {listing2 && (
                 <Link className="btn btn-outline btn-sm chat-room-head-cta" to={`/market/${listing2.id}`}>
@@ -423,8 +444,20 @@ export default function Chat() {
                         🤝 거래 요청하기
                       </button>
                     )}
-                    {/* 거래 완료 확인 버튼 - 거래중이고 아직 내가 확인 안 했을 때 */}
-                    {trade && tradeStatus === 'TRADING' && !myConfirmed && (
+                    {/* 거래 약속 버튼 - 거래중이고 아직 내가 약속 안 했을 때 */}
+                    {trade && tradeStatus === 'TRADING' && !myPromised && (
+                      <button
+                        style={{ width: '100%', padding: '12px 16px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--accent)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                        onClick={() => { setMenuOpen(false); handlePromiseTrade(); }}
+                        disabled={tradeLoading}
+                      >
+                        🤝 거래 약속
+                      </button>
+                    )}
+                    {/* 거래 완료 확인 버튼 - 약속확정이고 아직 내가 확인 안 했을 때 */}
+                    {trade && tradeStatus === 'PROMISED' && !myConfirmed && (
                       <button
                         style={{ width: '100%', padding: '12px 16px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, color: '#10b981' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
@@ -460,69 +493,132 @@ export default function Chat() {
               </div>
             </div>
             {/* 거래 상태 배너 */}
-            {trade && (
-              <div style={{
-                padding: '10px 20px',
-                background: tradeStatus === 'COMPLETED' ? 'rgba(16,185,129,.1)' : 'rgba(109,40,217,.08)',
-                borderBottom: '1px solid var(--border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontSize: 13
-              }}>
-                <span>
-                  {tradeStatus === 'COMPLETED' && '🎉 거래가 완료되었습니다'}
-                  {tradeStatus === 'REQUESTED' && (
-                    isSeller
-                      ? '🤝 상대방이 거래를 요청했습니다.'
-                      : '⏳ 상대방의 수락을 기다리는 중입니다.'
-                  )}
-                  {tradeStatus === 'TRADING' && (
-                    <>
-                      🤝 거래 진행 중 · 판매자 {trade.sellerConfirmed ? '✅' : '⏳'} 구매자 {trade.buyerConfirmed ? '✅' : '⏳'}
-                    </>
-                  )}
-                  {tradeStatus === 'CANCELLED' && '❌ 거래가 취소되었습니다'}
-                </span>
-                {tradeStatus === 'REQUESTED' && isSeller && (
-                  <div className="row g8">
-                    <button
-                      className="btn btn-outline btn-sm"
-                      style={{ fontSize: 12, padding: '5px 12px' }}
-                      onClick={() => handleRejectTrade()}
-                      disabled={tradeLoading}
-                    >
-                      거절
-                    </button>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      style={{ fontSize: 12, padding: '5px 12px' }}
-                      onClick={() => handleAcceptTrade()}
-                      disabled={tradeLoading}
-                    >
-                      요청 수락
-                    </button>
+            {trade && (() => {
+              if (tradeStatus === 'CANCELLED') return null;
+              
+              const steps = ['거래 시작', '거래 중', '약속 확정', '거래 완료'];
+              let activeIdx = 0;
+              if (tradeStatus === 'TRADING') activeIdx = 1;
+              if (tradeStatus === 'PROMISED') activeIdx = 2;
+              if (tradeStatus === 'COMPLETED') activeIdx = 3;
+
+              return (
+                <div style={{ padding: '20px 20px 10px' }}>
+                  <div style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12,
+                    padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 24,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div className="row g16" style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          width: 48, height: 48, borderRadius: 8, background: 'var(--accent-soft)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0
+                        }}>
+                          <Icon name="book" size={24} />
+                        </div>
+                        <div className="stack g4" style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>
+                            {tradeStatus === 'REQUESTED' ? '거래 요청이 도착했어요' :
+                             tradeStatus === 'TRADING' ? '거래 중이에요' :
+                             tradeStatus === 'PROMISED' ? '약속이 확정됐어요' :
+                             '거래가 완료됐어요'}
+                          </div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {listing2?.title || trade.listingTitle || '상품 정보 없음'}
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>
+                            {listing2 ? won(listing2.price) : '0원'}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ marginLeft: 16, flexShrink: 0 }}>
+                        {tradeStatus === 'REQUESTED' && isSeller && (
+                          <div className="row g8">
+                            <button
+                              className="btn btn-outline btn-sm"
+                              onClick={() => handleRejectTrade()}
+                              disabled={tradeLoading}
+                            >
+                              거절
+                            </button>
+                            <button
+                              className="btn btn-primary btn-sm"
+                              onClick={() => handleAcceptTrade()}
+                              disabled={tradeLoading}
+                            >
+                              수락
+                            </button>
+                          </div>
+                        )}
+                        {tradeStatus === 'TRADING' && !myPromised && (
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handlePromiseTrade()}
+                            disabled={tradeLoading}
+                          >
+                            거래 약속
+                          </button>
+                        )}
+                        {tradeStatus === 'TRADING' && myPromised && (
+                          <div style={{ fontSize: 13, color: 'var(--ink-soft)', background: 'var(--surface-2)', padding: '6px 12px', borderRadius: 6 }}>
+                            ⏳ 상대방의 수락을 기다리는 중...
+                          </div>
+                        )}
+                        {tradeStatus === 'PROMISED' && !myConfirmed && (
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleConfirmTrade()}
+                            disabled={tradeLoading}
+                          >
+                            거래 완료 확인
+                          </button>
+                        )}
+                        {tradeStatus === 'PROMISED' && myConfirmed && (
+                          <div style={{ fontSize: 13, color: 'var(--ink-soft)', background: 'var(--surface-2)', padding: '6px 12px', borderRadius: 6 }}>
+                            ⏳ 상대방의 확인을 기다리는 중...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* PROGRESS BAR */}
+                    <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', padding: '0 10px', marginTop: 10 }}>
+                      <div style={{ position: 'absolute', top: 6, left: 40, right: 40, height: 2, background: 'var(--border)', zIndex: 0 }} />
+                      <div style={{ position: 'absolute', top: 6, left: 40, width: `calc((100% - 80px) * ${activeIdx / 3})`, height: 2, background: 'var(--accent)', zIndex: 0, transition: 'width 0.3s ease' }} />
+                      
+                      {steps.map((step, idx) => {
+                        const isPast = idx < activeIdx;
+                        const isActive = idx === activeIdx;
+                        return (
+                          <div key={step} className="stack" style={{ alignItems: 'center', gap: 10, zIndex: 1, width: 60 }}>
+                            <div style={{
+                              width: 14, height: 14, borderRadius: '50%', background: 'var(--surface)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              ...(isActive || isPast ? {} : { border: '2px solid var(--border)' })
+                            }}>
+                              {isActive ? (
+                                <div style={{ width: 14, height: 14, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 0 4px var(--accent-soft)' }} />
+                              ) : isPast ? (
+                                <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--accent)' }} />
+                              ) : null}
+                            </div>
+                            <div style={{ fontSize: 12, fontWeight: isActive || isPast ? 600 : 400, color: isActive || isPast ? 'var(--accent)' : 'var(--ink-faint)', whiteSpace: 'nowrap' }}>
+                              {step}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                )}
-                {tradeStatus === 'TRADING' && !myConfirmed && (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    style={{ fontSize: 12, padding: '5px 12px' }}
-                    onClick={() => handleConfirmTrade()}
-                    disabled={tradeLoading}
-                  >
-                    거래 완료 확인
-                  </button>
-                )}
-                {tradeStatus === 'CANCELLED' && !isSeller && (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    style={{ fontSize: 12, padding: '5px 12px' }}
-                    onClick={() => handleProposeTrade()}
-                    disabled={tradeLoading}
-                  >
-                    다시 요청하기
-                  </button>
-                )}
-              </div>
-            )}
+                </div>
+              );
+            })()}
             {activeChat.showSafety !== false && (
               <div style={{ padding: '12px 20px 0' }}>
                 <SafetyBanner onClose={() => dismissSafety(activeId)} />
