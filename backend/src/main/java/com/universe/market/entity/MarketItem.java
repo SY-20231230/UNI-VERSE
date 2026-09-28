@@ -62,6 +62,9 @@ public class MarketItem {
     @Column(name = "ai_status", length = 20)
     private AiAnalysisResult aiStatus;
 
+    @Column(name = "view_count", nullable = false, columnDefinition = "int not null default 0")
+    private Integer viewCount = 0;
+
     @OneToMany(mappedBy = "item", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<MarketItemImage> images = new java.util.ArrayList<>();
 
@@ -107,5 +110,9 @@ public class MarketItem {
 
     public void changeTradeStatus(TradeStatus status) {
         this.tradeStatus = status;
+    }
+
+    public void increaseViewCount() {
+        this.viewCount = (this.viewCount == null ? 0 : this.viewCount) + 1;
     }
 }

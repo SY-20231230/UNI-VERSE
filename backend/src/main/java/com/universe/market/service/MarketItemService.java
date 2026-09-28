@@ -36,6 +36,22 @@ public class MarketItemService {
     private final UserRepository userRepository;
     private final TradeRepository tradeRepository;
     private final AiRiskService aiRiskService;
+
+    /** 조회수 중복 방지: "회원:상품" → 마지막으로 센 시각(ms). 새로고침·개발모드 이중 호출로 부풀지 않게 한다. */
+    private static final long VIEW_DEDUP_MILLIS = 30 * 60 * 1000L;
+    private final java.util.concurrent.ConcurrentHashMap<String, Long> recentViews = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private boolean shouldCountView(Long viewerId, Long itemId) {
+        long now = System.currentTimeMillis();
+        if (recentViews.size() > 10_000) recentViews.values().removeIf(t -> now - t > VIEW_DEDUP_MILLIS);
+        boolean[] counted = {false};
+        recentViews.compute(viewerId + ":" + itemId, (k, last) -> {
+            if (last != null && now - last < VIEW_DEDUP_MILLIS) return last;
+            counted[0] = true;
+            return now;
+        });
+        return counted[0];
+    }
     private final ApplicationEventPublisher eventPublisher;
 
     public Page<MarketItemListResponse> searchItems(Long schoolId, String category, String keyword, String sort, Pageable pageable) {
@@ -44,8 +60,15 @@ public class MarketItemService {
     }
 
     public MarketItemDetailResponse getItemDetail(Long itemId) {
+        return getItemDetail(itemId, null);
+    }
+
+    /** 상세 조회. 같은 사람(판매자 포함)은 30분에 한 번만 조회수를 올린다. */
+    @Transactional
+    public MarketItemDetailResponse getItemDetail(Long itemId, Long viewerId) {
         MarketItem item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+        if (viewerId != null && shouldCountView(viewerId, itemId)) item.increaseViewCount();
         long sellerTrades = tradeRepository.countCompletedTrades(item.getSeller().getId());
         return new MarketItemDetailResponse(item, sellerTrades);
     }

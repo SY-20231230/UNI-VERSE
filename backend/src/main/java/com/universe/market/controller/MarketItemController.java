@@ -50,7 +50,7 @@ public class MarketItemController {
 
     @GetMapping("/{itemId}")
     public ApiResponse<MarketItemDetailResponse> getItemDetail(@PathVariable Long itemId) {
-        return ApiResponse.success(marketItemService.getItemDetail(itemId));
+        return ApiResponse.success(marketItemService.getItemDetail(itemId, SecurityUtil.getCurrentUserId()));
     }
 
     @PostMapping
