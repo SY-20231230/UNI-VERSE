@@ -8,7 +8,7 @@ const INITIAL = { status: 'PENDING', reportType: '', targetUserId: '', from: '',
 const date = (value) => value ? value.replace('T', ' ').slice(0, 19) : '—';
 const statusClass = (status) => status === 'PENDING' ? 'warn' : status === 'PROCESSED' ? 'success' : 'outline';
 
-const CONTENT_STATUS = { SELLING: '판매중', TRADING: '예약중', COMPLETED: '거래완료', CANCELLED: '거래취소', ACTIVE: '게시중', DELETED: '삭제됨', BLOCKED: '차단됨' };
+const CONTENT_STATUS = { SELLING: '판매중', REQUESTED: '거래 요청됨', TRADING: '예약중', COMPLETED: '거래완료', CANCELLED: '거래취소', ACTIVE: '게시중', DELETED: '삭제됨', BLOCKED: '차단됨' };
 const ACCOUNT_STATUS = { ACTIVE: '정상', SUSPENDED: '일시정지', BANNED: '영구정지', DELETED: '탈퇴' };
 const SUSPENSION_PRESETS = [1, 3, 7, 14, 30];
 const untilLabel = (days) => { const d = new Date(Date.now() + days * 86400000); return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`; };

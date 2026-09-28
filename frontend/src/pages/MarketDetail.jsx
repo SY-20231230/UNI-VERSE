@@ -145,6 +145,7 @@ export default function MarketDetail() {
   const categoryLabel = marketCategoryFromApi(listing.category);
   const conditionLabel = conditionToKorean(listing.condition);
   const statusLabel = listing.tradeStatus === 'SELLING' ? '판매중' : 
+                      listing.tradeStatus === 'REQUESTED' ? '거래 요청중' : 
                       listing.tradeStatus === 'TRADING' ? '예약중' : 
                       listing.tradeStatus === 'COMPLETED' ? '거래완료' :
                       listing.tradeStatus === 'CANCELLED' ? '거래취소' : listing.tradeStatus;
@@ -233,10 +234,6 @@ export default function MarketDetail() {
               <div>
                 <div className="info-label">등록일</div>
                 <div className="info-value">{formatDate(listing.createdAt)}</div>
-              </div>
-              <div>
-                <div className="info-label">거래 희망 장소</div>
-                <div className="info-value">{listing.schoolName} 근처</div>
               </div>
               <div>
                 <div className="info-label">거래 상태</div>

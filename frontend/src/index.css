@@ -255,6 +255,37 @@ a{color:inherit; text-decoration:none;}
 .like-pill:disabled{opacity:.6; cursor:default;}
 .comment-more{width:28px; height:28px; margin:-4px -6px -4px 0;}
 span.comment-more{display:inline-block; flex:none;}
+/* 채팅 거래 상태 카드 + 알림 팝업 */
+.trade-card{margin:12px 20px 0; padding:14px 16px 12px; border-radius:16px; background:var(--surface); border:1px solid var(--border-soft); box-shadow:0 1px 2px rgba(15,16,22,.04), 0 6px 18px rgba(15,16,22,.05); --tc:var(--accent); --tc-soft:var(--accent-soft);}
+.trade-card.action{border-color:color-mix(in srgb, var(--accent) 45%, transparent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent), 0 6px 18px rgba(15,16,22,.06);}
+.trade-card.done{--tc:var(--success); --tc-soft:var(--success-soft);}
+.trade-card.cancelled{--tc:var(--ink-faint); --tc-soft:var(--surface-sunken);}
+.trade-card-head{display:flex; align-items:center; gap:14px;}
+.trade-card-info{flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;}
+.trade-badge{align-self:flex-start; padding:3px 9px; border-radius:99px; background:var(--tc-soft); color:var(--tc); font-size:11px; font-weight:800; letter-spacing:.01em;}
+.trade-card.action .trade-badge{background:var(--tc); color:var(--accent-ink);}
+.trade-card-item{display:flex; align-items:baseline; gap:8px; min-width:0;}
+.trade-card-item strong{font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.trade-card-item span{flex:none; font-size:13px; font-weight:700; color:var(--ink-soft);}
+.trade-card-hint{font-size:12px; color:var(--ink-faint);}
+.trade-card-cta{flex:none; border-radius:99px; padding:9px 16px;}
+.trade-progress{display:flex; gap:4px; margin-top:12px;}
+.trade-progress-step{flex:1; display:flex; flex-direction:column; gap:5px;}
+.trade-progress-bar{height:5px; border-radius:99px; background:var(--border-soft); transition:background .2s ease;}
+.trade-progress-step.done .trade-progress-bar{background:var(--tc);}
+.trade-progress-step.now .trade-progress-bar{background:linear-gradient(90deg, var(--tc) 50%, var(--border-soft) 50%);}
+.trade-progress-label{font-size:10.5px; font-weight:700; color:var(--ink-faint);}
+.trade-progress-step.done .trade-progress-label, .trade-progress-step.now .trade-progress-label{color:var(--tc);}
+.trade-card-parties{display:flex; gap:14px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-soft); font-size:12px; color:var(--ink-faint);}
+.trade-card-parties .ok{color:var(--success); font-weight:700;}
+@media (max-width:540px){ .trade-card{margin:10px 12px 0;} .trade-card-head{flex-wrap:wrap;} .trade-card-cta{width:100%;} }
+.trade-modal{text-align:center;}
+.trade-modal-icon{width:72px; height:72px; border-radius:24px; display:flex; align-items:center; justify-content:center; font-size:34px; margin:4px auto 16px; animation:trade-pop .35s cubic-bezier(.2,1.4,.4,1);}
+@keyframes trade-pop{from{transform:scale(.6); opacity:0;} to{transform:none; opacity:1;}}
+.trade-modal-desc{font-size:13px; margin-top:8px; line-height:1.6;}
+.trade-modal-item{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:16px; padding:11px 14px; border-radius:12px; background:var(--surface-sunken); text-align:left; font-size:13px;}
+.trade-modal-item strong{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.trade-modal-item span{flex:none; font-weight:700; color:var(--ink-soft);}
 .login-error{font-size:12.5px; color:var(--danger); line-height:1.5;}
 
 .sheet-backdrop{position:fixed; inset:0; background:rgba(10,10,14,.5); z-index:20; display:flex; align-items:flex-end; justify-content:center; backdrop-filter:blur(1px);}
