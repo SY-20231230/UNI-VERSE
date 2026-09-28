@@ -8,7 +8,7 @@ import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
 import { timeAgo, won, hm, formatDate } from '../lib/format';
 import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
+import SockJS from 'sockjs-client/dist/sockjs';
 import { session } from '../lib/session';
 
 function dateLabel(ts) {

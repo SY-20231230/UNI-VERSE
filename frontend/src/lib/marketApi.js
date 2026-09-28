@@ -1,4 +1,5 @@
-import { createTransport, sessionApiOptions } from './api';
+import { createTransport } from './api.js';
+import { sessionApiOptions } from './session';
 
 const request = createTransport(sessionApiOptions);
 
