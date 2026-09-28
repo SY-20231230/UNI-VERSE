@@ -50,4 +50,12 @@ public class MyPageController {
         return ApiResponse.success(new PageResponse<>(myPage.findTrustHistory(currentUser.requireId(authentication), 
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id")))));
     }
+
+    @GetMapping("/favorite-items")
+    public ApiResponse<PageResponse<MarketItemListResponse>> findFavoriteItems(Authentication authentication,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        return ApiResponse.success(new PageResponse<>(myPage.findFavoriteItems(currentUser.requireId(authentication), 
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id")))));
+    }
 }

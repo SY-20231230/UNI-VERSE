@@ -51,4 +51,9 @@ public class MyPageService {
         access.requireActiveUser(authenticatedUserId);
         return histories.findByUserId(authenticatedUserId, pageable).map(TrustHistoryResponse::from);
     }
+
+    public Page<MarketItemListResponse> findFavoriteItems(Long authenticatedUserId, Pageable pageable) {
+        access.requireActiveUser(authenticatedUserId);
+        return items.findFavoriteItemsByUserId(authenticatedUserId, pageable).map(MarketItemListResponse::from);
+    }
 }
