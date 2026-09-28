@@ -20,8 +20,18 @@ public class TrustScorePolicy {
         return Math.min(100, currentScore + delta);
     }
 
+    public static final int WARNING_PENALTY = 1;
+    public static final int SUSPENSION_PENALTY_PER_DAY = 2;
+
+    /** 경고: -1점 */
     public int afterWarning(int currentScore) {
         if (currentScore < 0 || currentScore > 100) throw new IllegalArgumentException("Invalid trust score");
-        return Math.max(0, currentScore - 10);
+        return Math.max(0, currentScore - WARNING_PENALTY);
+    }
+
+    /** 일시정지: 하루당 -2점 (1일 -2, 2일 -4 ...) */
+    public int afterSuspension(int currentScore, long days) {
+        if (currentScore < 0 || currentScore > 100 || days < 1) throw new IllegalArgumentException("Invalid suspension");
+        return (int) Math.max(0, currentScore - SUSPENSION_PENALTY_PER_DAY * days);
     }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../lib/icons';
 import { useApp } from '../context/AppContext';
@@ -8,7 +8,9 @@ import Footer from '../components/Footer';
 import Avatar from '../components/Avatar';
 import VerifiedChip from '../components/VerifiedChip';
 import { useMouseGlow } from '../lib/useMouseGlow';
-import { POST_CATEGORY_META } from '../lib/category';
+import { POST_CATEGORY_META, postCategoryToApi } from '../lib/category';
+import { communityApi } from '../lib/communityApi';
+import { marketApi } from '../lib/marketApi';
 
 const HOME_BOARD_CATS = ['자유', '수업/학점', '학교생활', '시설/환경', '기숙사', '취업/진로', '기타'];
 const CAMPUS_NOTICES = [
@@ -22,8 +24,33 @@ export default function Home() {
   const navigate = useNavigate();
   const me = userOf('me');
   const heroRef = useMouseGlow();
-  const topPosts = [...state.posts].sort((a, b) => b.likes - a.likes).slice(0, 4);
-  const freshListings = state.listings.filter((l) => l.status === '판매중').slice(0, 4);
+  // 실제 로그인이면 서버의 인기글·새 매물·게시판별 글 수를, 데모 모드면 목업 데이터를 보여준다.
+  const isServer = state.authMode === 'server';
+  const [server, setServer] = useState({ posts: [], listings: [], counts: {} });
+  useEffect(() => {
+    if (!isServer) return undefined;
+    let cancelled = false;
+    const safe = (promise, fallback) => promise.catch((err) => { console.error(err); return fallback; });
+    Promise.all([
+      safe(communityApi.getPosts({ sort: 'popular', page: 0, size: 4 }), { content: [] }),
+      safe(marketApi.getItems({ sort: 'createdAt,desc', page: 0, size: 12 }), { content: [] }),
+      Promise.all(HOME_BOARD_CATS.map((c) =>
+        safe(communityApi.getPosts({ category: postCategoryToApi(c), page: 0, size: 1 }), { totalElements: 0 })
+          .then((res) => [c, res.totalElements ?? 0]))),
+    ]).then(([posts, items, counts]) => {
+      if (cancelled) return;
+      setServer({
+        posts: posts.content || [],
+        listings: (items.content || []).filter((l) => l.tradeStatus === 'SELLING').slice(0, 4),
+        counts: Object.fromEntries(counts),
+      });
+    });
+    return () => { cancelled = true; };
+  }, [isServer]);
+
+  const topPosts = isServer ? server.posts : [...state.posts].sort((a, b) => b.likes - a.likes).slice(0, 4);
+  const freshListings = isServer ? server.listings : state.listings.filter((l) => l.status === '판매중').slice(0, 4);
+  const boardCount = (c) => (isServer ? server.counts[c] ?? 0 : state.posts.filter((p) => p.category === c).length);
   const [noticeTipOpen, setNoticeTipOpen] = useState(false);
   const todayLabel = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 
@@ -88,8 +115,9 @@ export default function Home() {
                 커뮤니티 더보기
               </Link>
             </div>
+            {topPosts.length === 0 && <div className="home-empty">아직 올라온 글이 없어요. 첫 글을 남겨보세요!</div>}
             {topPosts.map((p) => (
-              <PostCard key={p.id} post={p} compact />
+              <PostCard key={p.postId ?? p.id} post={p} compact />
             ))}
           </div>
           <div>
@@ -131,7 +159,7 @@ export default function Home() {
                     <Icon name={POST_CATEGORY_META[c].icon} size={15} />
                     {c}
                     <span className="cat-quicklist-count">
-                      {state.posts.filter((p) => p.category === c).length}
+                      {boardCount(c)}
                     </span>
                   </button>
                 ))}
@@ -146,9 +174,10 @@ export default function Home() {
             중고거래 더보기
           </Link>
         </div>
+        {freshListings.length === 0 && <div className="home-empty">아직 판매 중인 물건이 없어요.</div>}
         <div className="card-grid">
           {freshListings.map((l) => (
-            <ListingGridCard key={l.id} listing={l} />
+            <ListingGridCard key={l.itemId ?? l.id} listing={l} />
           ))}
         </div>
       </div>

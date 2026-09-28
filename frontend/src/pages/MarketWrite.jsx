@@ -41,6 +41,7 @@ export default function MarketWrite() {
   const [originalPrice, setOriginalPrice] = useState('');
   const [desc, setDesc] = useState('');
   const [images, setImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -139,6 +140,7 @@ export default function MarketWrite() {
       toast('사진은 최대 5장까지 첨부할 수 있습니다.');
       return;
     }
+    setUploading(true);
     try {
       const uploadedUrls = [];
       for (const file of files) {
@@ -150,6 +152,8 @@ export default function MarketWrite() {
       setImages(prev => [...prev, ...uploadedUrls]);
     } catch (err) {
       toast('사진 업로드에 실패했습니다.');
+    } finally {
+      setUploading(false);
     }
   }
   
@@ -185,23 +189,22 @@ export default function MarketWrite() {
 
       <div className="field" style={{ marginTop: 26 }}>
         <label>사진 추가 (최대 5장)</label>
-        <div className="row g10">
-          <button type="button" className="photo-slot" onClick={() => fileRef.current?.click()}>
+        <div className="photo-row">
+          <button type="button" className="photo-slot" onClick={() => fileRef.current?.click()}
+            disabled={uploading || images.length >= 5}>
             <Icon name="camera" size={20} />
-            <span>{images.length}/5</span>
+            <span>{uploading ? '업로드 중' : `${images.length}/5`}</span>
           </button>
           <input type="file" ref={fileRef} hidden accept="image/*" multiple onChange={handleImageUpload} />
-          
-          <div className="row g8" style={{ overflowX: 'auto', paddingBottom: 4 }}>
-            {images.map((url, i) => (
-              <div key={i} className="photo-preview-wrap">
-                <img src={url} alt={`업로드 이미지 ${i+1}`} className="photo-preview" />
-                <button type="button" className="photo-remove" onClick={() => removeImage(i)}>
-                  <Icon name="close" size={10} />
-                </button>
-              </div>
-            ))}
-          </div>
+          {images.map((url, i) => (
+            <div key={url + i} className="photo-preview-wrap">
+              <img src={url} alt={`업로드 이미지 ${i + 1}`} className="photo-preview" />
+              {i === 0 && <span className="photo-badge">대표</span>}
+              <button type="button" className="photo-remove" aria-label={`${i + 1}번째 사진 삭제`} onClick={() => removeImage(i)}>
+                <Icon name="x" size={11} />
+              </button>
+            </div>
+          ))}
         </div>
       </div>
 

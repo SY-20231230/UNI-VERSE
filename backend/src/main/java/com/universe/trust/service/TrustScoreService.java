@@ -35,11 +35,9 @@ public class TrustScoreService {
         record(user, null, null, 50, "INITIALIZED");
     }
 
+    /** 신고 확정 자체로는 점수를 바꾸지 않는다. 점수는 함께 부과한 제재(경고·정지·영구정지)에 따라서만 깎인다. */
     public void confirmReport(Report report) {
         if (report.getStatus() != ReportStatus.PROCESSED) throw new ModerationException(REPORT_ALREADY_PROCESSED);
-        User user = lockUser(report.getTargetUser().getId());
-        if (!histories.existsByUserIdAndReportIdAndReason(user.getId(), report.getId(), "REPORT_CONFIRMED"))
-            record(user, null, report, 30, "REPORT_CONFIRMED");
     }
 
     public void applyWarning(UserSanction sanction) {
@@ -47,10 +45,32 @@ public class TrustScoreService {
             throw new ModerationException(INVALID_SANCTION);
         User user = lockUser(sanction.getUser().getId());
         String reason = "WARNING:" + sanction.getId();
-        if (sanction.getReport() != null && histories.existsByUserIdAndReportIdAndReason(
-                user.getId(), sanction.getReport().getId(), "REPORT_CONFIRMED")) return;
         if (!histories.existsByUserIdAndReason(user.getId(), reason))
             record(user, null, sanction.getReport(), policy.afterWarning(user.getTrustScore()), reason);
+    }
+
+    public void applySuspension(UserSanction sanction) {
+        if (sanction.getId() == null || sanction.getSanctionType() != SanctionType.SUSPENSION
+                || sanction.getStartAt() == null || sanction.getEndAt() == null)
+            throw new ModerationException(INVALID_SANCTION);
+        User user = lockUser(sanction.getUser().getId());
+        String reason = "SUSPENSION:" + sanction.getId();
+        if (!histories.existsByUserIdAndReason(user.getId(), reason))
+            record(user, null, sanction.getReport(), policy.afterSuspension(user.getTrustScore(), suspensionDays(sanction)), reason);
+    }
+
+    public void applyBan(UserSanction sanction) {
+        if (sanction.getId() == null || sanction.getSanctionType() != SanctionType.BAN)
+            throw new ModerationException(INVALID_SANCTION);
+        User user = lockUser(sanction.getUser().getId());
+        String reason = "BAN:" + sanction.getId();
+        if (!histories.existsByUserIdAndReason(user.getId(), reason)) record(user, null, sanction.getReport(), 0, reason);
+    }
+
+    /** 정지 기간(일). 요청 처리 중 몇 초 차이는 반올림으로 흡수한다. */
+    static long suspensionDays(UserSanction sanction) {
+        long minutes = java.time.Duration.between(sanction.getStartAt(), sanction.getEndAt()).toMinutes();
+        return Math.max(1, Math.round(minutes / 1440.0));
     }
 
     public void releaseSuspension(UserSanction sanction, LocalDateTime releasedAt) {
@@ -60,7 +80,9 @@ public class TrustScoreService {
         User user = lockUser(sanction.getUser().getId());
         if (user.getAccountStatus() != AccountStatus.ACTIVE) throw new ModerationException(INVALID_ACCOUNT_TRANSITION);
         String reason = "SUSPENSION_RELEASED:" + sanction.getId();
-        if (!histories.existsByUserIdAndReason(user.getId(), reason)) record(user, null, sanction.getReport(), 50, reason);
+        // 정지가 끝나도 깎인 점수는 복구하지 않는다. 이력만 남겨 이후 거래 보너스 계산의 기준점으로 쓴다.
+        if (!histories.existsByUserIdAndReason(user.getId(), reason))
+            record(user, null, sanction.getReport(), user.getTrustScore(), reason);
     }
 
     public void recordCompletedTrade(Long tradeId) {

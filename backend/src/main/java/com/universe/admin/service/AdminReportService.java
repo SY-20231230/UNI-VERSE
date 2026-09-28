@@ -1,5 +1,7 @@
 package com.universe.admin.service;
 
+import java.time.LocalDateTime;
+
 import com.universe.admin.dto.request.*;
 import com.universe.admin.repository.AdminReportRepository;
 import org.springframework.data.domain.Page;
@@ -42,9 +44,12 @@ public class AdminReportService {
     public AdminReportDetailResponse getDetail(Long authenticatedAdminId, Long reportId) {
         access.requireAdmin(authenticatedAdminId);
         Report r = reports.findById(reportId).orElseThrow(() -> new ModerationException(REPORT_NOT_FOUND));
-        return new AdminReportDetailResponse(ReportResponse.from(r), r.getReporter().getId(), r.getDescription(),
-                r.getAdmin() == null ? null : r.getAdmin().getId(), r.getAdminNote(), AdminUserResponse.from(r.getTargetUser()),
+        return new AdminReportDetailResponse(ReportResponse.from(r), r.getReporter().getId(), r.getReporter().getEmail(), r.getReporter().getNickname(), r.getDescription(),
+                r.getAdmin() == null ? null : r.getAdmin().getId(), r.getAdmin() == null ? null : r.getAdmin().getNickname(),
+                r.getAdminNote(), AdminUserResponse.from(r.getTargetUser()),
                 r.getTrade() == null ? null : AdminTradeSummaryResponse.from(r.getTrade()),
+                r.getItem() != null ? AdminReportedContentResponse.from(r.getItem())
+                        : r.getPost() != null ? AdminReportedContentResponse.from(r.getPost()) : null,
                 evidences.findByReportIdOrderByIdAsc(reportId).stream().map(ReportEvidenceResponse::from).toList());
     }
 
@@ -67,7 +72,9 @@ public class AdminReportService {
                 .orElseThrow(() -> new ModerationException(USER_NOT_FOUND));
         if (target.getRole() == UserRole.ADMIN || target.getAccountStatus() == AccountStatus.DELETED)
             throw new ModerationException(FORBIDDEN);
-        var endAt = request.sanctionType() == SanctionType.SUSPENSION ? suspensionPolicy.endAt() : null;
+        var endAt = request.sanctionType() != SanctionType.SUSPENSION ? null
+                : request.suspensionDays() != null ? LocalDateTime.now().plusDays(request.suspensionDays())
+                : suspensionPolicy.endAt();
         report.approve(admin, request.adminNote());
         trust.confirmReport(report);
         UserSanction sanction = request.sanctionType() == null ? null : sanctions.impose(admin, target, report,

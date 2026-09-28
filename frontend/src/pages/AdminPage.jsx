@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../lib/icons';
 import Avatar from '../components/Avatar';
@@ -6,6 +7,7 @@ import { useUI } from '../context/UIContext';
 import { formatDate } from '../lib/format';
 import AdminReportPanel from '../components/admin/AdminReportPanel';
 import useAdminReportApi from '../lib/useAdminReportApi';
+import { REPORT_TYPES } from '../lib/reportLabels';
 
 function isToday(ts) {
   const d = new Date(ts);
@@ -13,20 +15,62 @@ function isToday(ts) {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
 }
 
+function todayStart() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T00:00`;
+}
+
+/** 실제 로그인한 관리자면 서버에서 대시보드 숫자·정지 회원·유형별 통계를 모은다. */
+function useServerDashboard(api, enabled, revision) {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    if (!enabled) return undefined;
+    const controller = new AbortController();
+    const options = { signal: controller.signal };
+    const count = (input) => api.count(input, options).catch(() => 0);
+    Promise.all([
+      count({ status: 'PENDING' }),
+      count({ from: todayStart() }),
+      count({ status: 'PROCESSED' }),
+      count({ status: 'REJECTED' }),
+      Promise.all(Object.keys(REPORT_TYPES).map((type) => count({ reportType: type }).then((n) => [REPORT_TYPES[type], n]))),
+      Promise.all(['SUSPENDED', 'BANNED'].map((status) => api.users(status, options).catch(() => []))),
+    ]).then(async ([pending, today, processed, rejected, byType, [suspended, banned]]) => {
+      const withEnd = await Promise.all(suspended.map((u) => api.latestSanction(u.userId, options)
+        .then((s) => ({ ...u, endAt: s?.endAt || null })).catch(() => ({ ...u, endAt: null }))));
+      setData({
+        pending, today, resolved: processed + rejected,
+        reasonCounts: Object.fromEntries(byType.filter(([, n]) => n > 0)),
+        suspendedUsers: [
+          ...withEnd.map((u) => ({ id: u.userId, name: u.nickname, permanent: false, until: u.endAt })),
+          ...banned.map((u) => ({ id: u.userId, name: u.nickname, permanent: true, until: null })),
+        ],
+      });
+    }).catch(() => {});
+    return () => controller.abort();
+  }, [api, enabled, revision]);
+  return data;
+}
+
 export default function AdminPage() {
   const { state, liftSuspension } = useApp();
   const { toast } = useUI();
   const reportApi = useAdminReportApi();
+  const isServer = state.authMode === 'server';
+  const [revision, setRevision] = useState(0);
+  const server = useServerDashboard(reportApi, isServer, revision);
 
   const records = [...(state.reportRecords || [])].sort((a, b) => b.time - a.time);
-  const pendingCount = records.filter((r) => r.status === '대기중').length;
-  const resolvedCount = records.filter((r) => r.status === '처리완료').length;
-  const todayCount = records.filter((r) => isToday(r.time)).length;
-  const suspendedUsers = Object.values(state.users).filter(
+  const demoSuspended = Object.values(state.users).filter(
     (u) => u.suspendedPermanently || (u.suspendedUntil && u.suspendedUntil > Date.now())
-  );
+  ).map((u) => ({ id: u.id, name: u.name, permanent: !!u.suspendedPermanently, until: u.suspendedUntil, user: u, dept: u.dept }));
+  const pendingCount = isServer ? server?.pending ?? '–' : records.filter((r) => r.status === '대기중').length;
+  const resolvedCount = isServer ? server?.resolved ?? '–' : records.filter((r) => r.status === '처리완료').length;
+  const todayCount = isServer ? server?.today ?? '–' : records.filter((r) => isToday(r.time)).length;
+  const suspendedUsers = isServer ? server?.suspendedUsers || [] : demoSuspended;
 
-  const reasonCounts = records.reduce((acc, r) => {
+  const reasonCounts = isServer ? server?.reasonCounts || {} : records.reduce((acc, r) => {
     acc[r.reason] = (acc[r.reason] || 0) + 1;
     return acc;
   }, {});
@@ -39,6 +83,12 @@ export default function AdminPage() {
     liftSuspension(u.id);
     toast(u.name + '님의 정지를 해제했습니다');
   }
+
+  const untilText = (u) => {
+    if (u.permanent) return '영구정지';
+    if (!u.until) return '기간 확인 불가';
+    return `${formatDate(typeof u.until === 'number' ? u.until : new Date(u.until).getTime())}까지`;
+  };
 
   return (
     <div className="container fade-enter">
@@ -64,7 +114,7 @@ export default function AdminPage() {
       </div>
 
       <div className="admin-layout" style={{ marginTop: 20 }}>
-        <AdminReportPanel api={reportApi} onNotice={toast} />
+        <AdminReportPanel api={reportApi} onNotice={toast} onChanged={() => setRevision((v) => v + 1)} />
 
         <div className="wf-col g20" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div className="card" style={{ padding: 24 }}>
@@ -86,21 +136,29 @@ export default function AdminPage() {
               <div style={{ marginTop: 6 }}>
                 {suspendedUsers.map((u) => (
                   <div className="admin-report-row" key={u.id}>
-                    <Link className="admin-report-user" to={`/users/${u.id}?from=admin`}>
-                      <Avatar user={u} size={28} />
-                      <span>{u.name}</span>
-                    </Link>
+                    {u.user ? (
+                      <Link className="admin-report-user" to={`/users/${u.id}?from=admin`}>
+                        <Avatar user={u.user} size={28} />
+                        <span>{u.name}</span>
+                      </Link>
+                    ) : (
+                      <div className="row between g8">
+                        <strong style={{ fontSize: 13.5 }}>{u.name}</strong>
+                        <span className="faint" style={{ fontSize: 11.5 }}>회원 #{u.id}</span>
+                      </div>
+                    )}
                     <div className="row g6 wrap" style={{ marginTop: 8 }}>
-                      <span className={'chip ' + (u.suspendedPermanently ? 'danger' : 'warn')}>
-                        {u.suspendedPermanently ? '영구정지' : `${formatDate(u.suspendedUntil)}까지`}
-                      </span>
+                      <span className={'chip ' + (u.permanent ? 'danger' : 'warn')}>{untilText(u)}</span>
                       {u.dept && <span className="faint" style={{ fontSize: 11.5 }}>{u.dept}</span>}
                     </div>
-                    <button className="btn btn-outline btn-sm btn-full" style={{ marginTop: 10 }} onClick={() => unsuspend(u)}>
-                      정지 해제
-                    </button>
+                    {!isServer && (
+                      <button className="btn btn-outline btn-sm btn-full" style={{ marginTop: 10 }} onClick={() => unsuspend(u.user)}>
+                        정지 해제
+                      </button>
+                    )}
                   </div>
                 ))}
+                {isServer && <p className="faint" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.6 }}>일시정지는 기간이 끝나면 자동으로 해제돼요.</p>}
               </div>
             )}
           </div>

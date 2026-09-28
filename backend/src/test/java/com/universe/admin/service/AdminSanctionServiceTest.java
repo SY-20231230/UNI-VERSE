@@ -67,7 +67,7 @@ class AdminSanctionServiceTest {
         assertThat(target.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
     }
 
-    @Test void suspensionAndBanChangeAccountStatusWithoutWarningDeduction() {
+    @Test void suspensionAndBanChangeAccountStatusAndDeductTrust() {
         LocalDateTime endAt = LocalDateTime.now().plusDays(3);
         UserSanction suspension = service.impose(admin, target, null, SanctionType.SUSPENSION, "temporary", endAt);
         assertThat(target.getAccountStatus()).isEqualTo(AccountStatus.SUSPENDED);
@@ -77,7 +77,9 @@ class AdminSanctionServiceTest {
         UserSanction ban = service.impose(admin, target, null, SanctionType.BAN, "permanent", null);
         assertThat(target.getAccountStatus()).isEqualTo(AccountStatus.BANNED);
         assertThat(ban.getEndAt()).isNull();
-        verifyNoInteractions(trust);
+        verify(trust).applySuspension(suspension);
+        verify(trust).applyBan(ban);
+        verify(trust, never()).applyWarning(any());
     }
 
     @Test void linkedReportMustBeProcessedAndTargetTheSameUserBeforeUserLock() {
