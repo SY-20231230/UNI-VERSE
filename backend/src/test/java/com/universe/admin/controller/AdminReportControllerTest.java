@@ -79,7 +79,7 @@ class AdminReportControllerTest {
         verifyNoInteractions(reports);
     }
     @Test void detailIsReturnedFromAdminService() throws Exception {
-        when(reports.getDetail(42L, 7L)).thenReturn(new AdminReportDetailResponse(report, 1L, "Test", null, null, null, null, List.of()));
+        when(reports.getDetail(42L, 7L)).thenReturn(new AdminReportDetailResponse(report, 1L, "reporter@test.ac.kr", "reporter", "Test", null, null, null, null, null, null, List.of()));
         mvc.perform(get("/api/v1/admin/reports/7").with(user("42"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.report.reportId").value(7)).andExpect(jsonPath("$.data.reporterId").value(1));
     }

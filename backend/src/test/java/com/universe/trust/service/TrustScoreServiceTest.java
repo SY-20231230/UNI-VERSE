@@ -76,27 +76,36 @@ class TrustScoreServiceTest {
         verify(histories, never()).save(any());
     }
 
-    @Test void confirmedReportSetsTargetToThirtyExactlyOnce() {
-        User reporter = user(1L, 50);
+    @Test void confirmedReportAloneDoesNotChangeScore() {
         User target = user(2L, 80);
-        User admin = user(3L, 50);
-        Report report = Report.builder().reporter(reporter).targetUser(target)
+        Report report = Report.builder().reporter(user(1L, 50)).targetUser(target)
                 .reportType(ReportType.SCAM).description("confirmed").build();
         ReflectionTestUtils.setField(report, "id", 7L);
-        report.approve(admin, "reviewed");
+        report.approve(user(3L, 50), "reviewed");
+
+        service.confirmReport(report);
+
+        assertThat(target.getTrustScore()).isEqualTo(80);
+        verifyNoInteractions(users, histories);
+    }
+
+    @Test void suspensionDeductsTwoPointsPerDayAndBanSetsZero() {
+        User target = user(2L, 50);
+        LocalDateTime start = LocalDateTime.now();
+        UserSanction suspension = UserSanction.builder().user(target).admin(user(1L, 50))
+                .sanctionType(SanctionType.SUSPENSION).reason("suspended").startAt(start).endAt(start.plusDays(3)).build();
+        ReflectionTestUtils.setField(suspension, "id", 10L);
         when(users.findLockedById(2L)).thenReturn(Optional.of(target));
-        when(histories.existsByUserIdAndReportIdAndReason(2L, 7L, "REPORT_CONFIRMED"))
-                .thenReturn(false, true);
+        when(policy.afterSuspension(50, 3)).thenReturn(44);
 
-        service.confirmReport(report);
-        service.confirmReport(report);
+        service.applySuspension(suspension);
+        assertThat(target.getTrustScore()).isEqualTo(44);
 
-        assertThat(target.getTrustScore()).isEqualTo(30);
-        ArgumentCaptor<TrustHistory> saved = ArgumentCaptor.forClass(TrustHistory.class);
-        verify(histories, times(1)).save(saved.capture());
-        assertThat(saved.getValue().getBeforeScore()).isEqualTo(80);
-        assertThat(saved.getValue().getAfterScore()).isEqualTo(30);
-        assertThat(saved.getValue().getReason()).isEqualTo("REPORT_CONFIRMED");
+        UserSanction ban = UserSanction.builder().user(target).admin(user(1L, 50))
+                .sanctionType(SanctionType.BAN).reason("banned").build();
+        ReflectionTestUtils.setField(ban, "id", 11L);
+        service.applyBan(ban);
+        assertThat(target.getTrustScore()).isEqualTo(0);
     }
 
     @Test void pendingReportCannotChangeTrustScore() {
@@ -125,7 +134,7 @@ class TrustScoreServiceTest {
         verify(histories).save(any(TrustHistory.class));
     }
 
-    @Test void expiredSuspensionReleaseResetsActiveUserToFifty() {
+    @Test void expiredSuspensionReleaseKeepsDeductedScore() {
         User target = user(2L, 10);
         UserSanction suspension = UserSanction.builder().user(target).admin(user(1L, 50))
                 .sanctionType(SanctionType.SUSPENSION).reason("suspended")
@@ -136,7 +145,7 @@ class TrustScoreServiceTest {
 
         service.releaseSuspension(suspension, LocalDateTime.now());
 
-        assertThat(target.getTrustScore()).isEqualTo(50);
+        assertThat(target.getTrustScore()).isEqualTo(10);
         ArgumentCaptor<TrustHistory> saved = ArgumentCaptor.forClass(TrustHistory.class);
         verify(histories).save(saved.capture());
         assertThat(saved.getValue().getReason()).isEqualTo("SUSPENSION_RELEASED:9");

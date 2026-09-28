@@ -56,8 +56,8 @@ public class AdminSanctionService {
                 .sanctionType(type).reason(reason).startAt(now).endAt(endAt).build());
         switch (type) {
             case WARNING -> trust.applyWarning(sanction);
-            case SUSPENSION -> user.updateAccountStatus(AccountStatus.SUSPENDED);
-            case BAN -> user.updateAccountStatus(AccountStatus.BANNED);
+            case SUSPENSION -> { user.updateAccountStatus(AccountStatus.SUSPENDED); trust.applySuspension(sanction); }
+            case BAN -> { user.updateAccountStatus(AccountStatus.BANNED); trust.applyBan(sanction); }
         }
         events.publishEvent(new SanctionImposedEvent(sanction.getId(), user.getId(), type, endAt));
         return sanction;

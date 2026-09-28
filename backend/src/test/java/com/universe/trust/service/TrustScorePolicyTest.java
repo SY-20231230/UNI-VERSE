@@ -38,11 +38,16 @@ class TrustScorePolicyTest {
     }
 
     @Test void warningDoesNotResetMilestones() {
-        assertThat(policy.afterSafeTrade(policy.afterWarning(90), 9, NORMAL)).isEqualTo(81);
+        assertThat(policy.afterSafeTrade(policy.afterWarning(90), 9, NORMAL)).isEqualTo(90);
     }
 
-    @ParameterizedTest @CsvSource({"0,0", "5,0", "10,0", "50,40", "100,90"})
-    void warningFloor(int before, int expected) { assertThat(policy.afterWarning(before)).isEqualTo(expected); }
+    @ParameterizedTest @CsvSource({"0,0", "1,0", "10,9", "50,49", "100,99"})
+    void warningDeductsOne(int before, int expected) { assertThat(policy.afterWarning(before)).isEqualTo(expected); }
+
+    @ParameterizedTest @CsvSource({"50,1,48", "50,2,46", "50,7,36", "50,30,0", "3,2,0"})
+    void suspensionDeductsTwoPerDay(int before, long days, int expected) {
+        assertThat(policy.afterSuspension(before, days)).isEqualTo(expected);
+    }
 
     @Test void rejectsInvalidState() {
         assertThatIllegalArgumentException().isThrownBy(() -> policy.afterSafeTrade(-1, 1, NORMAL));

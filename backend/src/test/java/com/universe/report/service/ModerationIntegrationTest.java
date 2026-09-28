@@ -93,33 +93,19 @@ class ModerationIntegrationTest {
         assertThat(histories.findByUserId(seller.getId(), PageRequest.of(0, 30)).getTotalElements()).isEqualTo(6);
     }
 
-    @Test void approvalAndWarningDoNotDoubleDeductAndRecoveryRestarts() {
-        Long id = reportSeller();
-        adminReports.approve(admin.getId(), id, new ReportApproveRequest("confirmed", SanctionType.WARNING));
-        em.flush();
-        assertThat(seller.getTrustScore()).isEqualTo(30);
-        for (int i = 0; i < 9; i++) completeTrade();
-        assertThat(seller.getTrustScore()).isEqualTo(30);
-        completeTrade();
+    @Test void approvalScoreFollowsChosenSanction() {
+        adminReports.approve(admin.getId(), reportSeller(), new ReportApproveRequest("no sanction", null)); em.flush();
         assertThat(seller.getTrustScore()).isEqualTo(50);
-        for (int i = 0; i < 5; i++) completeTrade();
-        assertThat(seller.getTrustScore()).isEqualTo(60);
-        assertThat(reports.findById(id).orElseThrow().getStatus()).isEqualTo(ReportStatus.PROCESSED);
+        adminReports.approve(admin.getId(), reportSeller(), new ReportApproveRequest("warning", SanctionType.WARNING)); em.flush();
+        assertThat(seller.getTrustScore()).isEqualTo(49);
+        adminReports.approve(admin.getId(), reportSeller(), new ReportApproveRequest("suspend", SanctionType.SUSPENSION, 2)); em.flush();
+        assertThat(seller.getTrustScore()).isEqualTo(45);
+        assertThat(seller.getAccountStatus()).isEqualTo(AccountStatus.SUSPENDED);
     }
 
-    @Test void repeatedReportResetsRecoveryCounter() {
-        adminReports.approve(admin.getId(), reportSeller(), new ReportApproveRequest("first", null)); em.flush();
-        for (int i = 0; i < 9; i++) completeTrade();
-        adminReports.approve(admin.getId(), reportSeller(), new ReportApproveRequest("second", null)); em.flush();
-        completeTrade();
-        assertThat(seller.getTrustScore()).isEqualTo(30);
-        for (int i = 0; i < 9; i++) completeTrade();
-        assertThat(seller.getTrustScore()).isEqualTo(50);
-    }
-
-    @Test void standaloneWarningDeductsTen() {
+    @Test void standaloneWarningDeductsOne() {
         adminSanctions.create(admin.getId(), seller.getId(), new UserSanctionCreateRequest(SanctionType.WARNING, "warning", null, null));
-        assertThat(seller.getTrustScore()).isEqualTo(40);
+        assertThat(seller.getTrustScore()).isEqualTo(49);
     }
 
     @Test void suspensionReleaseUsesOptionAAndCannotReleaseEarly() {
@@ -129,11 +115,11 @@ class ModerationIntegrationTest {
         var sanction = sanctions.findById(response.sanctionId()).orElseThrow();
         ReflectionTestUtils.setField(sanction, "endAt", LocalDateTime.now().minusSeconds(1));
         adminUsers.updateStatus(admin.getId(), seller.getId(), new UserStatusUpdateRequest(AccountStatus.ACTIVE)); em.flush();
-        assertThat(seller.getTrustScore()).isEqualTo(50);
+        assertThat(seller.getTrustScore()).isEqualTo(44);
         for (int i = 0; i < 5; i++) completeTrade();
-        assertThat(seller.getTrustScore()).isEqualTo(50);
+        assertThat(seller.getTrustScore()).isEqualTo(44);
         completeTrade();
-        assertThat(seller.getTrustScore()).isEqualTo(60);
+        assertThat(seller.getTrustScore()).isEqualTo(54);
     }
 
     @Test void suspensionCannotBeReleasedBeforeEnd() {
@@ -153,7 +139,7 @@ class ModerationIntegrationTest {
         assertThat(suspensionRelease.releaseIfExpired(seller.getId(), LocalDateTime.now())).isTrue(); em.flush();
         assertThat(suspensionRelease.releaseIfExpired(seller.getId(), LocalDateTime.now())).isFalse();
         assertThat(sanctions.findExpiredUserIds(LocalDateTime.now(), PageRequest.of(0, 100))).isEmpty();
-        assertThat(seller.getTrustScore()).isEqualTo(50);
+        assertThat(seller.getTrustScore()).isEqualTo(44);
     }
 
     @Test void permanentBanCannotBeReactivated() {

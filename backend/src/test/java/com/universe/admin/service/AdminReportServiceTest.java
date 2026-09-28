@@ -129,6 +129,20 @@ class AdminReportServiceTest {
         order.verify(events).publishEvent(new ReportProcessedEvent(7L, 2L, true));
     }
 
+    @Test void approveWithSuspensionDaysUsesChosenPeriodInsteadOfPolicy() {
+        when(access.requireAdmin(1L)).thenReturn(admin);
+        when(reports.findLockedById(7L)).thenReturn(Optional.of(report));
+        when(users.findLockedById(3L)).thenReturn(Optional.of(target));
+
+        java.time.LocalDateTime before = java.time.LocalDateTime.now();
+        service.approve(1L, 7L, new ReportApproveRequest("confirmed", SanctionType.SUSPENSION, 7));
+
+        var endAt = org.mockito.ArgumentCaptor.forClass(java.time.LocalDateTime.class);
+        verify(sanctions).impose(eq(admin), eq(target), eq(report), eq(SanctionType.SUSPENSION), eq("confirmed"), endAt.capture());
+        assertThat(endAt.getValue()).isBetween(before.plusDays(7), java.time.LocalDateTime.now().plusDays(7));
+        verifyNoInteractions(suspensionPolicy);
+    }
+
     @Test void involvedAdminAndProtectedTargetCannotApproveReport() {
         when(reports.findLockedById(7L)).thenReturn(Optional.of(report));
         when(access.requireAdmin(2L)).thenReturn(reporter);
