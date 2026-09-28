@@ -11,4 +11,5 @@ export const marketApi = {
   deleteItem: (id) => request(`/market/${id}`, { method: 'DELETE' }),
   favoriteItem: (id) => request(`/market/${id}/favorites`, { method: 'POST' }),
   unfavoriteItem: (id) => request(`/market/${id}/favorites`, { method: 'DELETE' }),
+  uploadImage: (formData) => request('/images', { method: 'POST', body: formData }),
 };

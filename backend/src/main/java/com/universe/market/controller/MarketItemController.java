@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/market")
+@RequestMapping("/api/v1/market")
 @RequiredArgsConstructor
 public class MarketItemController {
 
