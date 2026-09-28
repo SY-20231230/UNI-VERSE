@@ -159,14 +159,27 @@ export default function Chat() {
     }
   }, [activeId, activeChat?.messages.length]);
 
-  // 채팅방 변경시 거래 정보 로드, 이후 5초마다 상대방 쪽 변화(요청·수락·완료)를 확인한다.
-  const seenTrade = useRef(new Set());
+  // 채팅방 변경시 거래 정보 로드 및 STOMP 이벤트 수신
+  const fetchTrade = useCallback(() => {
+    if (!activeId || !activeChat?.listingId || !session.isActive()) return;
+    tradeApi.getTradeByItem(activeChat.listingId).then(setTrade).catch(() => setTrade(null));
+  }, [activeId, activeChat?.listingId]);
+
   useEffect(() => {
     setTrade(null);
     setMenuOpen(false);
-    if (!activeId || !activeChat?.listingId || !session.isActive()) return;
-    tradeApi.getTradeByItem(activeChat.listingId).then(setTrade).catch(() => setTrade(null));
-  }, [activeId]);
+    fetchTrade();
+  }, [activeId, fetchTrade]);
+
+  useEffect(() => {
+    function handleTradeUpdate(e) {
+      if (activeChat?.listingId && e.detail === activeChat.listingId) {
+        fetchTrade();
+      }
+    }
+    window.addEventListener('trade_update', handleTradeUpdate);
+    return () => window.removeEventListener('trade_update', handleTradeUpdate);
+  }, [activeChat?.listingId, fetchTrade]);
 
   // 메뉴 외부 클릭 시 닫기
   useEffect(() => {
@@ -398,8 +411,8 @@ export default function Chat() {
                     borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,.12)',
                     minWidth: 160, zIndex: 100, overflow: 'hidden'
                   }}>
-                    {/* 거래 요청 버튼 - 상품 ID가 있고 거래가 없을 때 표시 */}
-                    {activeChat?.listingId && !trade && (
+                    {/* 거래 요청 버튼 - 상품 ID가 있고 거래가 없을 때 표시 (취소된 경우 포함) */}
+                    {activeChat?.listingId && (!trade || tradeStatus === 'CANCELLED') && !isSeller && (
                       <button
                         style={{ width: '100%', padding: '12px 16px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ink)' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
@@ -469,23 +482,43 @@ export default function Chat() {
                   {tradeStatus === 'CANCELLED' && '❌ 거래가 취소되었습니다'}
                 </span>
                 {tradeStatus === 'REQUESTED' && isSeller && (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    style={{ fontSize: 12, padding: '5px 12px' }}
-                    onClick={handleAcceptTrade}
-                    disabled={tradeLoading}
-                  >
-                    요청 수락
-                  </button>
+                  <div className="row g8">
+                    <button
+                      className="btn btn-outline btn-sm"
+                      style={{ fontSize: 12, padding: '5px 12px' }}
+                      onClick={() => handleRejectTrade()}
+                      disabled={tradeLoading}
+                    >
+                      거절
+                    </button>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: 12, padding: '5px 12px' }}
+                      onClick={() => handleAcceptTrade()}
+                      disabled={tradeLoading}
+                    >
+                      요청 수락
+                    </button>
+                  </div>
                 )}
                 {tradeStatus === 'TRADING' && !myConfirmed && (
                   <button
                     className="btn btn-primary btn-sm"
                     style={{ fontSize: 12, padding: '5px 12px' }}
-                    onClick={handleConfirmTrade}
+                    onClick={() => handleConfirmTrade()}
                     disabled={tradeLoading}
                   >
                     거래 완료 확인
+                  </button>
+                )}
+                {tradeStatus === 'CANCELLED' && !isSeller && (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    style={{ fontSize: 12, padding: '5px 12px' }}
+                    onClick={() => handleProposeTrade()}
+                    disabled={tradeLoading}
+                  >
+                    다시 요청하기
                   </button>
                 )}
               </div>
