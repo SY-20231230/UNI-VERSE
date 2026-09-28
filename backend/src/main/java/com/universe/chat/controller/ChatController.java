@@ -22,18 +22,16 @@ public class ChatController {
     private final SimpMessageSendingOperations messagingTemplate;
     private final ChatService chatService;
 
-    // HTTP Endpoint to fetch history
-    @GetMapping("/api/chat/rooms/{roomId}/messages")
-    public ResponseEntity<List<ChatMessageResponse>> getMessages(@PathVariable Long roomId) {
-        Long userId = SecurityUtil.getCurrentUserId();
-        return ResponseEntity.ok(chatService.getRoomMessages(roomId, userId));
-    }
-
     // STOMP WebSocket Endpoint
     @MessageMapping("/chat/message")
-    public void sendMessage(ChatMessageRequest messageRequest, Authentication authentication) {
-        // When using STOMP, Authentication is set by StompHandler
-        Long senderId = Long.parseLong(authentication.getName());
+    public void sendMessage(@org.springframework.messaging.handler.annotation.Payload ChatMessageRequest messageRequest, org.springframework.messaging.simp.SimpMessageHeaderAccessor headerAccessor) {
+        Long senderId = null;
+        if (headerAccessor.getSessionAttributes() != null && headerAccessor.getSessionAttributes().get("USER_ID") != null) {
+            senderId = (Long) headerAccessor.getSessionAttributes().get("USER_ID");
+        } else if (headerAccessor.getUser() != null) {
+            senderId = Long.parseLong(headerAccessor.getUser().getName());
+        }
+        if (senderId == null) throw new IllegalArgumentException("Unauthorized websocket message");
         
         ChatMessageResponse response = chatService.saveMessage(messageRequest, senderId);
         
