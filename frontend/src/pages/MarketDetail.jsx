@@ -89,14 +89,18 @@ export default function MarketDetail() {
   const [listing, setListing] = useState(null);
   const [liked, setLiked] = useState(false);
   const [related, setRelated] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   useEffect(() => {
     async function load() {
       try {
+        setListing(null); // Clear previous item to show loading state
+        setCurrentImageIndex(0); // Reset image index
         const res = await marketApi.getItem(id);
         setListing(res);
         const relRes = await marketApi.getItems({ sort: 'popular', size: 5 });
         setRelated(relRes.content.filter(x => x.itemId != id));
+        window.scrollTo(0, 0); // Scroll to top when item changes
       } catch (err) {
         console.error(err);
       }
@@ -145,7 +149,7 @@ export default function MarketDetail() {
   const categoryLabel = marketCategoryFromApi(listing.category);
   const conditionLabel = conditionToKorean(listing.condition);
   const statusLabel = listing.tradeStatus === 'SELLING' ? '판매중' : 
-                      listing.tradeStatus === 'TRADING' ? '예약중' : 
+                      (listing.tradeStatus === 'REQUESTED' || listing.tradeStatus === 'TRADING') ? '거래중' : 
                       listing.tradeStatus === 'COMPLETED' ? '거래완료' :
                       listing.tradeStatus === 'CANCELLED' ? '거래취소' : listing.tradeStatus;
 
@@ -204,25 +208,44 @@ export default function MarketDetail() {
         </div>
         <div className="market-detail-layout" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 30 }}>
           <div>
-            <div className="thumb" style={{ width: '100%', aspectRatio: '4/3', overflowX: 'auto', display: 'flex', snapType: 'x mandatory', padding: 0 }}>
-              {listing.images && listing.images.length > 0 ? (
-                listing.images.map((url, i) => (
-                  <img key={i} src={url} alt={`매물 이미지 ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', flexShrink: 0, scrollSnapAlign: 'start' }} />
-                ))
-              ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon name="box" size={64} />
-                </div>
-              )}
+            <div className="thumb" style={{ width: '100%', aspectRatio: '4/3', overflow: 'hidden', padding: 0, position: 'relative' }}>
+              <div style={{ display: 'flex', width: '100%', height: '100%', transition: 'transform 0.3s ease-in-out', transform: `translateX(-${currentImageIndex * 100}%)` }}>
+                {listing.images && listing.images.length > 0 ? (
+                  listing.images.map((url, i) => (
+                    <img key={i} src={url} alt={`매물 이미지 ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', flexShrink: 0 }} />
+                  ))
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon name="box" size={64} />
+                  </div>
+                )}
+              </div>
               {statusLabel === '거래완료' && <div className="status-flag" style={{ fontSize: 16 }}>거래완료</div>}
-              {listing.images && listing.images.length > 0 ? (
-                <span className="chip" style={{ position: 'absolute', left: 14, bottom: 14, background: 'rgba(0,0,0,.55)', color: '#fff' }}>
-                  {listing.images.length}장 (스크롤)
-                </span>
-              ) : (
-                <span className="chip" style={{ position: 'absolute', left: 14, bottom: 14, background: 'rgba(0,0,0,.55)', color: '#fff' }}>
-                  1 / 1
-                </span>
+              {listing.images && listing.images.length > 1 && (
+                <>
+                  <button 
+                    className="iconbtn ghost" 
+                    style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', padding: 6, display: currentImageIndex === 0 ? 'none' : 'flex' }}
+                    onClick={(e) => { e.preventDefault(); setCurrentImageIndex(Math.max(0, currentImageIndex - 1)); }}
+                  >
+                    <Icon name="chev" size={20} style={{ transform: 'rotate(180deg)' }} />
+                  </button>
+                  <button 
+                    className="iconbtn ghost" 
+                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', padding: 6, display: currentImageIndex === listing.images.length - 1 ? 'none' : 'flex' }}
+                    onClick={(e) => { e.preventDefault(); setCurrentImageIndex(Math.min(listing.images.length - 1, currentImageIndex + 1)); }}
+                  >
+                    <Icon name="chev" size={20} />
+                  </button>
+                  <div style={{ position: 'absolute', bottom: 12, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
+                    {listing.images.map((_, i) => (
+                      <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === currentImageIndex ? 'white' : 'rgba(255,255,255,0.4)', transition: 'background 0.2s' }} />
+                    ))}
+                  </div>
+                  <span className="chip" style={{ position: 'absolute', right: 14, bottom: 14, background: 'rgba(0,0,0,.55)', color: '#fff', fontSize: 11, padding: '2px 6px', height: 'auto' }}>
+                    {currentImageIndex + 1} / {listing.images.length}
+                  </span>
+                </>
               )}
             </div>
             <div className="info-grid" style={{ marginTop: 16 }}>

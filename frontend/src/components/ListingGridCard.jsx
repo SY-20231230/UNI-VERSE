@@ -10,7 +10,7 @@ export default function ListingGridCard({ listing }) {
   // Handle both API response and old state
   const id = listing.id || listing.itemId;
   const status = listing.tradeStatus === 'SELLING' ? '판매중' : 
-                 listing.tradeStatus === 'TRADING' ? '예약중' : 
+                 (listing.tradeStatus === 'REQUESTED' || listing.tradeStatus === 'TRADING') ? '거래중' : 
                  listing.tradeStatus === 'COMPLETED' ? '거래완료' :
                  listing.tradeStatus === 'CANCELLED' ? '거래취소' :
                  listing.status; // Fallback
@@ -26,6 +26,7 @@ export default function ListingGridCard({ listing }) {
           </div>
         )}
         {status === '거래완료' && <div className="status-flag">거래완료</div>}
+        {status === '거래중' && <div className="status-flag" style={{ background: 'rgba(30, 158, 107, 0.75)' }}>거래중</div>}
       </div>
       <div className="lg-body">
         <div className="lg-title">{listing.title}</div>

@@ -15,6 +15,7 @@ import com.universe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import com.universe.trust.service.TrustScoreService;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,7 @@ public class TradeService {
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final TrustScoreService trustScoreService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public Long proposeTrade(Long buyerId, TradeCreateRequest request) {
@@ -125,7 +127,25 @@ public class TradeService {
             trade.getItem().changeTradeStatus(TradeStatus.COMPLETED);
             publishItemStatus(trade.getItem(), trade.getBuyer().getId());
             trustScoreService.recordCompletedTrade(trade.getId());
+        } else {
+            // 거래 완료 전이라도 상대방 UI에 진행 상황(체크표시)을 즉시 반영하기 위해 STOMP 전송
+            sendTradeUpdateStomp(trade.getItem().getId(), trade.getSeller().getId(), trade.getBuyer().getId());
         }
+    }
+
+    private void sendTradeUpdateStomp(Long itemId, Long sellerId, Long buyerId) {
+        String payload = "{\"type\":\"TRADE_UPDATE\", \"itemId\":" + itemId + "}";
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+            new org.springframework.transaction.support.TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    messagingTemplate.convertAndSend("/sub/chat/user/" + sellerId, payload);
+                    if (buyerId != null) {
+                        messagingTemplate.convertAndSend("/sub/chat/user/" + buyerId, payload);
+                    }
+                }
+            }
+        );
     }
 
     @Transactional
@@ -149,5 +169,6 @@ public class TradeService {
     // 찜한 사용자 알림용. 거래 당사자인 구매자는 알림 대상에서 제외한다.
     private void publishItemStatus(MarketItem item, Long buyerId) {
         eventPublisher.publishEvent(new MarketItemStatusChangedEvent(item.getId(), item.getTitle(), item.getTradeStatus(), buyerId));
+        sendTradeUpdateStomp(item.getId(), item.getSeller().getId(), buyerId);
     }
 }
