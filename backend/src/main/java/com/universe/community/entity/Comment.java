@@ -66,5 +66,7 @@ public class Comment {
 
     public void updateContent(String content, Boolean isAnonymous) { this.content = content; this.isAnonymous = isAnonymous; }
 
+    public void changeAnonymity(boolean anonymous) { this.isAnonymous = anonymous; }
+
     public void deleteComment() { this.status = PostStatus.DELETED; }
 }
