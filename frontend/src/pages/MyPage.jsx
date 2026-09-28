@@ -260,7 +260,7 @@ function ServerTabs({ tab, posts, items, loading }) {
                   <span className={'chip ' + meta.variant}>{meta.label}</span>
                   {p.isAnonymous && <span className="chip outline">익명</span>}
                 </div>
-                <span className="title">{p.title}</span>
+                <Link className="title" to={`/community/${p.postId}`}>{p.title}</Link>
                 <div className="meta">
                   {formatDate(p.createdAt)} · 조회 {p.viewCount}
                 </div>
@@ -284,7 +284,7 @@ function ServerTabs({ tab, posts, items, loading }) {
                 <div className="row g6">
                   <span className={'chip ' + status.variant}>{status.label}</span>
                 </div>
-                <span className="title">{item.title}</span>
+                <Link className="title" to={`/market/${item.itemId}`}>{item.title}</Link>
                 <div className="meta">
                   {won(item.listedPrice)} · {formatDate(item.createdAt)}
                 </div>

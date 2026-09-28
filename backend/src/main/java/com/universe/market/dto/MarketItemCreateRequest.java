@@ -27,4 +27,6 @@ public class MarketItemCreateRequest {
     
     @NotBlank
     private String description;
+
+    private java.util.List<String> images;
 }

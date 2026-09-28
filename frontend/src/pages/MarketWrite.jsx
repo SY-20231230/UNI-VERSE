@@ -1,5 +1,5 @@
 import { useNavigate, Link, useParams } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Icon from '../lib/icons';
 import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
@@ -40,6 +40,8 @@ export default function MarketWrite() {
   const [price, setPrice] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
   const [desc, setDesc] = useState('');
+  const [images, setImages] = useState([]);
+  const fileRef = useRef(null);
 
   useEffect(() => {
     if (isEdit) {
@@ -56,6 +58,7 @@ export default function MarketWrite() {
           setPrice(String(p.listedPrice || ''));
           setOriginalPrice(''); // backend doesn't return purchasePrice due to security rules
           setDesc(p.description);
+          setImages(p.images || []);
           setLoading(false);
         } catch (e) {
           console.error(e);
@@ -83,6 +86,7 @@ export default function MarketWrite() {
       purchasePrice: Number(originalPrice.replace(/\D/g, '')) || 0,
       condition: conditionToApi(cond),
       description: d, 
+      images: images,
     };
 
     try {
@@ -127,7 +131,31 @@ export default function MarketWrite() {
       }
     }
   }
+  async function handleImageUpload(e) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length) return;
+    if (images.length + files.length > 5) {
+      toast('사진은 최대 5장까지 첨부할 수 있습니다.');
+      return;
+    }
+    try {
+      const uploadedUrls = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const url = await marketApi.uploadImage(formData);
+        uploadedUrls.push(url);
+      }
+      setImages(prev => [...prev, ...uploadedUrls]);
+    } catch (err) {
+      toast('사진 업로드에 실패했습니다.');
+    }
+  }
   
+  function removeImage(index) {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  }
   if (loading) {
     return (
       <div className="container narrow fade-enter">
@@ -158,13 +186,22 @@ export default function MarketWrite() {
       <div className="field" style={{ marginTop: 26 }}>
         <label>사진 추가 (최대 5장)</label>
         <div className="row g10">
-          <button type="button" className="photo-slot">
+          <button type="button" className="photo-slot" onClick={() => fileRef.current?.click()}>
             <Icon name="camera" size={20} />
-            <span>0/5</span>
+            <span>{images.length}/5</span>
           </button>
-          <span className="faint" style={{ fontSize: 11.5 }}>
-            데모에서는 사진 업로드가 비활성화되어 있어요. 아이콘으로 대체됩니다.
-          </span>
+          <input type="file" ref={fileRef} hidden accept="image/*" multiple onChange={handleImageUpload} />
+          
+          <div className="row g8" style={{ overflowX: 'auto', paddingBottom: 4 }}>
+            {images.map((url, i) => (
+              <div key={i} className="photo-preview-wrap">
+                <img src={url} alt={`업로드 이미지 ${i+1}`} className="photo-preview" />
+                <button type="button" className="photo-remove" onClick={() => removeImage(i)}>
+                  <Icon name="close" size={10} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

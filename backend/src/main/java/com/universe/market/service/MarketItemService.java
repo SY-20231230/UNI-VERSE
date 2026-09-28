@@ -8,7 +8,9 @@ import com.universe.market.dto.MarketItemDetailResponse;
 import com.universe.market.dto.MarketItemListResponse;
 import com.universe.market.dto.MarketItemUpdateRequest;
 import com.universe.market.entity.MarketItem;
+import com.universe.market.entity.MarketItemImage;
 import com.universe.market.repository.MarketItemRepository;
+import com.universe.market.repository.MarketItemImageRepository;
 import com.universe.notification.event.MarketItemPriceChangedEvent;
 import com.universe.school.entity.School;
 import com.universe.user.entity.User;
@@ -20,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -28,6 +31,7 @@ import java.util.Objects;
 public class MarketItemService {
 
     private final MarketItemRepository itemRepository;
+    private final MarketItemImageRepository imageRepository;
     private final UserRepository userRepository;
     private final AiRiskService aiRiskService;
     private final ApplicationEventPublisher eventPublisher;
@@ -76,6 +80,17 @@ public class MarketItemService {
 
         MarketItem savedItem = itemRepository.save(item);
         
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
+            int order = 0;
+            for (String url : request.getImages()) {
+                imageRepository.save(MarketItemImage.builder()
+                        .item(savedItem)
+                        .imageUrl(url)
+                        .imageOrder(order++)
+                        .build());
+            }
+        }
+        
         return savedItem.getId();
     }
 
@@ -110,6 +125,21 @@ public class MarketItemService {
         if (!java.util.Objects.equals(oldListedPrice, item.getListedPrice())) {
             eventPublisher.publishEvent(new MarketItemPriceChangedEvent(item.getId(), item.getTitle(),
                     oldListedPrice, item.getListedPrice(), userId));
+        }
+
+        // Handle image updates
+        List<MarketItemImage> existingImages = imageRepository.findByItemIdOrderByImageOrderAsc(item.getId());
+        imageRepository.deleteAll(existingImages);
+
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
+            int order = 0;
+            for (String url : request.getImages()) {
+                imageRepository.save(MarketItemImage.builder()
+                        .item(item)
+                        .imageUrl(url)
+                        .imageOrder(order++)
+                        .build());
+            }
         }
     }
 
