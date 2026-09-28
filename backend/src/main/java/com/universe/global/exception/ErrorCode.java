@@ -21,7 +21,7 @@ public enum ErrorCode {
     VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "VERIFICATION_NOT_FOUND", "학교 인증 요청을 찾을 수 없습니다."),
     VERIFICATION_EXPIRED(HttpStatus.BAD_REQUEST, "VERIFICATION_EXPIRED", "학교 인증코드가 만료되었습니다."),
     VERIFICATION_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "VERIFICATION_CODE_MISMATCH", "학교 인증코드가 일치하지 않습니다."),
-    SCHOOL_EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "SCHOOL_EMAIL_REQUIRED", "학교 이메일(예: 학번@학교.ac.kr)로만 가입할 수 있습니다. 네이버·구글 등 일반 메일은 사용할 수 없습니다."),
+    SCHOOL_EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "SCHOOL_EMAIL_REQUIRED", "학교 이메일로만 가입할 수 있습니다. 네이버·다음·구글 등 일반 메일은 사용할 수 없습니다."),
     EMAIL_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "EMAIL_NOT_VERIFIED", "학교 이메일 인증을 먼저 완료해주세요."),
     VERIFICATION_TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "VERIFICATION_TOO_MANY_REQUESTS", "인증번호는 1분 후에 다시 요청할 수 있습니다."),
     ALREADY_VERIFIED(HttpStatus.CONFLICT, "ALREADY_VERIFIED", "이미 학교 인증이 완료되었습니다."),

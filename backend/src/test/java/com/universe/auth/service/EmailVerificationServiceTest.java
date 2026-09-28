@@ -38,11 +38,20 @@ class EmailVerificationServiceTest {
         assertError(() -> service.consume("student@on.mjc.ac.kr"), ErrorCode.EMAIL_NOT_VERIFIED);
     }
 
-    @Test void publicAndNonAcademicDomainsAreRejected() {
+    @Test void publicMailDomainsAreRejected() {
         assertError(() -> service.send("me@naver.com"), ErrorCode.SCHOOL_EMAIL_REQUIRED);
         assertError(() -> service.send("me@gmail.com"), ErrorCode.SCHOOL_EMAIL_REQUIRED);
-        assertError(() -> service.send("me@samsung.com"), ErrorCode.SCHOOL_EMAIL_REQUIRED);
+        assertError(() -> service.send("me@hanmail.net"), ErrorCode.SCHOOL_EMAIL_REQUIRED);
+        assertError(() -> service.send("me@outlook.com"), ErrorCode.SCHOOL_EMAIL_REQUIRED);
+        assertError(() -> service.send("me@localhost"), ErrorCode.SCHOOL_EMAIL_REQUIRED);
         verifyNoInteractions(mail);
+    }
+
+    @Test void schoolsWithOwnDomainFormatsAreAllowed() {
+        assertThatCode(() -> service.send("me@on.mjc.ac.kr")).doesNotThrowAnyException();
+        assertThatCode(() -> service.send("me@g.skku.edu")).doesNotThrowAnyException();
+        assertThatCode(() -> service.send("me@dongguk.edu")).doesNotThrowAnyException();
+        assertThatCode(() -> service.send("me@stu.somecollege.kr")).doesNotThrowAnyException();
     }
 
     @Test void wrongCodeFailsAndLocksAfterFiveAttempts() {

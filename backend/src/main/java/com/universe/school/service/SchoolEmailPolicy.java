@@ -15,19 +15,27 @@ import java.util.Set;
 
 /**
  * 회원가입에 쓸 수 있는 학교 이메일인지 판별하고, 도메인에 해당하는 학교를 찾는다.
- * 허용: 등록된 학교 도메인(서브도메인 포함, 예: on.mjc.ac.kr → mjc.ac.kr) 또는 *.ac.kr
- * 차단: 네이버·다음·구글 등 일반 포털/메일 서비스 도메인
+ * 학교마다 메일 형식이 달라(ac.kr, .edu, 자체 도메인 등) 일반 포털/메일 서비스 도메인만 차단하고 나머지는 허용한다.
+ * 차단: 네이버·다음·구글·MS·애플 등 누구나 가입할 수 있는 메일 서비스
  */
 @Component
 @RequiredArgsConstructor
 public class SchoolEmailPolicy {
 
     private static final Set<String> PUBLIC_DOMAINS = Set.of(
+            // 국내 포털
             "naver.com", "daum.net", "hanmail.net", "kakao.com", "nate.com", "empas.com", "korea.com",
-            "gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.kr", "hotmail.com", "outlook.com",
-            "live.com", "msn.com", "icloud.com", "me.com", "mac.com", "proton.me", "protonmail.com");
+            "hanmir.com", "dreamwiz.com", "chol.com", "paran.com", "freechal.com", "lycos.co.kr", "netian.com",
+            // 해외 메일 서비스
+            "gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.kr", "ymail.com",
+            "hotmail.com", "hotmail.co.kr", "outlook.com", "outlook.kr", "live.com", "live.co.kr", "msn.com",
+            "icloud.com", "me.com", "mac.com", "aol.com", "mail.com", "gmx.com", "gmx.net",
+            "proton.me", "protonmail.com", "zoho.com", "yandex.com", "qq.com", "163.com", "126.com");
 
-    private static final String ACADEMIC_SUFFIX = ".ac.kr";
+    /** 두 단계 국가 도메인: 이 앞 라벨까지가 기관 도메인이다 (on.mjc.ac.kr → mjc.ac.kr). */
+    private static final Set<String> SECOND_LEVEL_SUFFIXES = Set.of(
+            "ac.kr", "co.kr", "or.kr", "go.kr", "re.kr", "ne.kr", "pe.kr",
+            "ac.jp", "ac.uk", "edu.au", "edu.cn");
 
     private final SchoolRepository schools;
 
@@ -38,8 +46,7 @@ public class SchoolEmailPolicy {
     /** 가입 가능한 학교 이메일인지 검사한다. 통과하지 못하면 예외. */
     public void validate(String email) {
         String domain = domainOf(email);
-        if (domain.isEmpty() || isPublic(domain)) throw new BusinessException(ErrorCode.SCHOOL_EMAIL_REQUIRED);
-        if (findRegistered(domain).isEmpty() && !domain.endsWith(ACADEMIC_SUFFIX)) {
+        if (domain.isEmpty() || !domain.contains(".") || isPublic(domain)) {
             throw new BusinessException(ErrorCode.SCHOOL_EMAIL_REQUIRED);
         }
     }
@@ -49,7 +56,7 @@ public class SchoolEmailPolicy {
         validate(email);
         String domain = domainOf(email);
         School school = findRegistered(domain).orElseGet(() -> {
-            String root = academicRoot(domain);
+            String root = organizationRoot(domain);
             String name = KnownSchools.nameOf(root).orElse(root);
             return schools.save(School.builder().schoolName(name).emailDomain(root).build());
         });
@@ -82,9 +89,11 @@ public class SchoolEmailPolicy {
         return Optional.empty();
     }
 
-    /** on.mjc.ac.kr → mjc.ac.kr (ac.kr 바로 앞 라벨까지) */
-    private String academicRoot(String domain) {
+    /** 서브도메인을 떼어 학교 대표 도메인을 구한다. on.mjc.ac.kr → mjc.ac.kr, g.skku.edu → skku.edu */
+    private String organizationRoot(String domain) {
         String[] labels = domain.split("\\.");
-        return labels.length <= 3 ? domain : String.join(".", Arrays.copyOfRange(labels, labels.length - 3, labels.length));
+        int n = labels.length;
+        int keep = n >= 3 && SECOND_LEVEL_SUFFIXES.contains(labels[n - 2] + "." + labels[n - 1]) ? 3 : 2;
+        return n <= keep ? domain : String.join(".", Arrays.copyOfRange(labels, n - keep, n));
     }
 }

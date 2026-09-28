@@ -76,6 +76,20 @@ class AuthSignupTrustTest {
         verify(emailVerification).consume("student@on.mjc.ac.kr");
     }
 
+    @Test void nonAcKrSchoolDomainResolvesToOrganizationRoot() {
+        var request = new SignupRequest();
+        ReflectionTestUtils.setField(request, "email", "student@g.skku.edu");
+        ReflectionTestUtils.setField(request, "password", "password1");
+        ReflectionTestUtils.setField(request, "name", "name");
+        ReflectionTestUtils.setField(request, "nickname", "nick");
+        ReflectionTestUtils.setField(request, "department", "경영학과");
+
+        Long userId = auth.signup(request).getUserId();
+        em.flush(); em.clear();
+
+        assertThat(users.findById(userId).orElseThrow().getSchool().getEmailDomain()).isEqualTo("skku.edu");
+    }
+
     @Test void publicMailDomainIsRejected() {
         var request = new SignupRequest();
         ReflectionTestUtils.setField(request, "email", "someone@naver.com");
