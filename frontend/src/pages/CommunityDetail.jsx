@@ -20,9 +20,12 @@ export default function CommunityDetail() {
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
+  const [commentAnonymous, setCommentAnonymous] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editText, setEditText] = useState('');
-  const [liked, setLiked] = useState(false); // Can be improved with actual like state from API
+  const [editAnonymous, setEditAnonymous] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [likePending, setLikePending] = useState(false);
   const [related, setRelated] = useState([]);
 
   useEffect(() => {
@@ -30,6 +33,7 @@ export default function CommunityDetail() {
       try {
         const pRes = await communityApi.getPost(id);
         setPost(pRes);
+        setLiked(Boolean(pRes.likedByCurrentUser));
         const cRes = await communityApi.getComments(id);
         setComments(cRes.content || []);
         // Fetch related posts (simplification for now: just fetch top popular)
@@ -60,39 +64,42 @@ export default function CommunityDetail() {
       return;
     }
     try {
-      await communityApi.addComment(post.postId, { content: text, isAnonymous: false });
+      await communityApi.addComment(post.postId, { content: text, isAnonymous: commentAnonymous });
       setCommentText('');
+      setCommentAnonymous(false);
       const cRes = await communityApi.getComments(id);
       setComments(cRes.content || []);
-    } catch (e) {
+    } catch {
       toast('댓글 작성에 실패했습니다.');
     }
   }
 
   async function likePost() {
+    if (likePending) return;
+    setLikePending(true);
     try {
-      if (liked) {
-        await communityApi.unlikePost(post.postId);
-        setPost(p => ({ ...p, likeCount: p.likeCount - 1 }));
-        setLiked(false);
-      } else {
-        await communityApi.likePost(post.postId);
-        setPost(p => ({ ...p, likeCount: p.likeCount + 1 }));
-        setLiked(true);
-      }
-    } catch (e) {
+      const response = liked
+        ? await communityApi.unlikePost(post.postId)
+        : await communityApi.likePost(post.postId);
+      setPost(p => ({ ...p, likeCount: response.likeCount }));
+      setLiked(response.liked);
+    } catch {
       toast('요청에 실패했습니다.');
+    } finally {
+      setLikePending(false);
     }
   }
 
   function startEditComment(c) {
     setEditingCommentId(c.commentId);
     setEditText(c.content);
+    setEditAnonymous(c.anonymous);
   }
 
   function cancelEditComment() {
     setEditingCommentId(null);
     setEditText('');
+    setEditAnonymous(false);
   }
 
   async function saveEditComment() {
@@ -102,12 +109,13 @@ export default function CommunityDetail() {
       return;
     }
     try {
-      await communityApi.updateComment(editingCommentId, { content: text, isAnonymous: false });
+      await communityApi.updateComment(editingCommentId, { content: text, isAnonymous: editAnonymous });
       setEditingCommentId(null);
       setEditText('');
+      setEditAnonymous(false);
       const cRes = await communityApi.getComments(id);
       setComments(cRes.content || []);
-    } catch (e) {
+    } catch {
       toast('댓글 수정에 실패했습니다.');
     }
   }
@@ -118,7 +126,7 @@ export default function CommunityDetail() {
       toast('댓글이 삭제되었습니다');
       const cRes = await communityApi.getComments(id);
       setComments(cRes.content || []);
-    } catch (e) {
+    } catch {
       toast('댓글 삭제에 실패했습니다.');
     }
   }
@@ -158,7 +166,7 @@ export default function CommunityDetail() {
                               await communityApi.deletePost(post.postId);
                               navigate('/community');
                               toast('게시글이 삭제되었습니다');
-                            } catch (e) {
+                            } catch {
                               toast('삭제에 실패했습니다.');
                             }
                           }}
@@ -201,8 +209,14 @@ export default function CommunityDetail() {
           ))}
         </div>
         <div className="row g10" style={{ marginTop: 20, paddingBottom: 22 }}>
-          <button className={'btn btn-sm ' + (liked ? 'btn-primary' : 'btn-soft')} style={{ borderRadius: 99 }} onClick={likePost}>
-            <Icon name="heart" size={15} /> 좋아요 {post.likeCount}
+          <button
+            className={'btn btn-sm ' + (liked ? 'btn-primary' : 'btn-soft')}
+            style={{ borderRadius: 99 }}
+            onClick={likePost}
+            disabled={likePending}
+            aria-pressed={liked}
+          >
+            <Icon name="heart" size={15} style={{ fill: liked ? 'currentColor' : 'none' }} /> 좋아요 {post.likeCount}
           </button>
           <span className="stat">
             <Icon name="chat" size={14} />
@@ -219,7 +233,10 @@ export default function CommunityDetail() {
           comments.map((c) => (
             <div className="card" style={{ padding: '14px 18px' }} key={c.commentId}>
               <div className="row between">
-                <b style={{ fontSize: 13 }}>{c.authorName}</b>
+                <div className="row g6">
+                  <b style={{ fontSize: 13 }}>{c.authorName}</b>
+                  {c.postAuthor && <span className="chip accent" style={{ fontSize: 10 }}>작성자</span>}
+                </div>
                 <div className="row g8">
                   <span className="faint" style={{ fontSize: 11 }}>
                     {timeAgo(c.createdAt)}
@@ -245,6 +262,14 @@ export default function CommunityDetail() {
                     value={editText}
                     onChange={(e) => setEditText(e.target.value)}
                   />
+                  <label className="row g6" style={{ marginTop: 8, fontSize: 12 }}>
+                    <input
+                      type="checkbox"
+                      checked={editAnonymous}
+                      onChange={(e) => setEditAnonymous(e.target.checked)}
+                    />
+                    익명으로 표시
+                  </label>
                   <div className="row g8" style={{ marginTop: 8, justifyContent: 'flex-end' }}>
                     <button className="btn btn-outline btn-sm" onClick={cancelEditComment}>
                       취소
@@ -265,20 +290,30 @@ export default function CommunityDetail() {
           </div>
         )}
       </div>
-      <div className="row g8" style={{ marginTop: 16 }}>
-        <input
-          className="input"
-          placeholder="댓글을 입력하세요..."
-          style={{ flex: 1 }}
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') submitComment();
-          }}
-        />
-        <button className="iconbtn accent" onClick={submitComment}>
-          <Icon name="send" size={16} />
-        </button>
+      <div style={{ marginTop: 16 }}>
+        <label className="row g6" style={{ marginBottom: 8, fontSize: 12 }}>
+          <input
+            type="checkbox"
+            checked={commentAnonymous}
+            onChange={(e) => setCommentAnonymous(e.target.checked)}
+          />
+          {commentAnonymous ? '익명으로 작성' : '닉네임으로 작성'}
+        </label>
+        <div className="row g8">
+          <input
+            className="input"
+            placeholder="댓글을 입력하세요..."
+            style={{ flex: 1 }}
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submitComment();
+            }}
+          />
+          <button className="iconbtn accent" onClick={submitComment}>
+            <Icon name="send" size={16} />
+          </button>
+        </div>
       </div>
         </div>
 

@@ -24,6 +24,7 @@ const PATHS = {
   flag: '<path d="M5.5 20.5V4"/><path d="M5.5 4.6h12.3l-2.8 3.9 2.8 3.9H5.5"/>',
   bot: '<rect x="4" y="8.2" width="16" height="10.6" rx="3"/><circle cx="9.2" cy="13.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="14.8" cy="13.5" r="1.2" fill="currentColor" stroke="none"/><path d="M12 8.2V4.6"/><circle cx="12" cy="3.3" r="1.1"/>',
   eye: '<path d="M2.5 12s3.6-6.8 9.5-6.8 9.5 6.8 9.5 6.8-3.6 6.8-9.5 6.8-9.5-6.8-9.5-6.8z"/><circle cx="12" cy="12" r="2.7"/>',
+  eyeOff: '<path d="M2.5 12s3.6-6.8 9.5-6.8 9.5 6.8 9.5 6.8-3.6 6.8-9.5 6.8-9.5-6.8-9.5-6.8z"/><circle cx="12" cy="12" r="2.7"/><line x1="4" y1="20" x2="20" y2="4"/>',
   box: '<path d="M3.5 7.8 12 3.5l8.5 4.3v8.4L12 20.5l-8.5-4.3z"/><path d="M3.7 8 12 12.2 20.3 8"/><line x1="12" y1="12.2" x2="12" y2="20.5"/>',
   grad: '<path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6 11.6v4c0 1.4 2.7 3 6 3s6-1.6 6-3v-4"/><line x1="21.5" y1="9.5" x2="21.5" y2="15.5"/>',
   trend: '<polyline points="3 17 9.5 10 14 14.5 21 6.5"/><polyline points="15 6.5 21 6.5 21 12.5"/>',

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
 import { useMouseGlow } from '../lib/useMouseGlow';
+import Icon from '../lib/icons';
 
 const EMPTY_FORM = { email: '', password: '', name: '', nickname: '', department: '' };
 // 인증 단계: idle(미발송) → sent(인증번호 발송됨) → verified(인증 완료)
@@ -20,6 +21,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [verify, setVerify] = useState(EMPTY_VERIFY);
+  const [showPassword, setShowPassword] = useState(false);
   const isSignup = mode === 'signup';
   const emailVerified = verify.step === 'verified';
 
@@ -82,7 +84,8 @@ export default function Login() {
     try {
       const profile = isSignup ? await signup(form) : await login(form);
       toast(isSignup ? `${profile.nickname}님, 가입을 환영해요` : `${profile.nickname}님, 반가워요`);
-      goBack();
+      // 관리자 계정은 관리자 페이지로, 그 외 회원은 항상 홈 화면으로 보낸다.
+      navigate(profile.role === 'ADMIN' ? '/admin' : '/', { replace: true });
     } catch (err) {
       setError(err.message || '요청을 처리하지 못했습니다. 다시 시도해주세요.');
     } finally {
@@ -94,7 +97,8 @@ export default function Login() {
     if (asAdmin) loginDemoAdmin();
     else loginDemo();
     toast(asAdmin ? '데모 관리자로 둘러봅니다' : '데모 계정으로 둘러봅니다');
-    goBack();
+    if (asAdmin) navigate('/admin', { replace: true });
+    else goBack();
   }
 
   return (
@@ -174,8 +178,14 @@ export default function Login() {
             </div>
           )}
           <div className="field">
-            <input className="input" type="password" autoComplete={isSignup ? 'new-password' : 'current-password'}
-              placeholder={isSignup ? '비밀번호 (8자 이상)' : '비밀번호'} value={form.password} onChange={update('password')} required />
+            <div className="pw-field">
+              <input className="input" type={showPassword ? 'text' : 'password'} autoComplete={isSignup ? 'new-password' : 'current-password'}
+                placeholder={isSignup ? '비밀번호 (8자 이상)' : '비밀번호'} value={form.password} onChange={update('password')} required />
+              <button type="button" className="pw-toggle" onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'} aria-pressed={showPassword}>
+                <Icon name={showPassword ? 'eyeOff' : 'eye'} size={18} />
+              </button>
+            </div>
           </div>
           {isSignup && (
             <>

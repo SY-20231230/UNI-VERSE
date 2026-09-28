@@ -60,9 +60,28 @@ export function createAdminReportApi(options = {}) {
       if (input.sanctionType) {
         if (!Object.hasOwn(REPORT_SANCTIONS, input.sanctionType)) invalid('제재 유형을 확인해주세요.');
         body.sanctionType = input.sanctionType;
+        if (input.sanctionType === 'SUSPENSION' && input.suspensionDays != null) {
+          const days = Number(input.suspensionDays);
+          if (!Number.isInteger(days) || days < 1 || days > 3650) invalid('정지 기간은 1일부터 3650일까지 입력해주세요.');
+          body.suspensionDays = days;
+        }
       }
       return request(`/admin/reports/${requireId(id)}/approve`, { ...options, method: 'POST', body })
         .then((data) => { requireReport(data?.report, id, 'PROCESSED'); return data; });
+    },
+    /** 조건에 맞는 신고 건수만 필요할 때 (대시보드 통계) */
+    async count(input = {}, options = {}) {
+      const page = await this.search({ ...input, page: 0, size: 1 }, options);
+      return page.totalElements ?? 0;
+    },
+    /** 계정 상태별 회원 목록 (정지 회원 관리) */
+    async users(accountStatus, options = {}) {
+      const page = normalizePage(await request('/admin/users', { ...options, query: { accountStatus, page: 0, size: 50 } }), 0);
+      return page.content;
+    },
+    async latestSanction(userId, options = {}) {
+      const page = normalizePage(await request(`/admin/users/${requireId(userId)}/sanctions`, { ...options, query: { page: 0, size: 1 } }), 0);
+      return page.content[0] || null;
     },
     dismiss(id, input, options = {}) {
       return request(`/admin/reports/${requireId(id)}/dismiss`, { ...options, method: 'POST', body: { adminNote: note(input.adminNote) } })

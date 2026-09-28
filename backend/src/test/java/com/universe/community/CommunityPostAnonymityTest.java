@@ -1,10 +1,12 @@
 package com.universe.community;
 
 import com.universe.community.dto.request.PostUpdateRequest;
+import com.universe.community.entity.Comment;
 import com.universe.community.entity.CommunityPost;
 import com.universe.community.entity.PostCategory;
 import com.universe.community.entity.PostStatus;
 import com.universe.community.repository.CommunityPostRepository;
+import com.universe.community.repository.CommentRepository;
 import com.universe.community.repository.HashtagRepository;
 import com.universe.community.repository.PostHashtagRepository;
 import com.universe.community.repository.PostLikeRepository;
@@ -38,6 +40,7 @@ class CommunityPostAnonymityTest {
     @Mock HashtagRepository hashtags;
     @Mock PostHashtagRepository postHashtags;
     @Mock PostLikeRepository likes;
+    @Mock CommentRepository comments;
 
     CommunityPostService service;
     CommunityPost post;
@@ -53,7 +56,7 @@ class CommunityPostAnonymityTest {
         post = CommunityPost.builder().user(author).school(school).category(PostCategory.FREE)
                 .title("제목").content("내용").isAnonymous(true).build();
         ReflectionTestUtils.setField(post, "id", 20L);
-        service = new CommunityPostService(posts, users, schools, hashtags, postHashtags, likes);
+        service = new CommunityPostService(posts, users, schools, hashtags, postHashtags, likes, comments);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(1L, null, List.of()));
         when(posts.findByIdAndStatus(20L, PostStatus.ACTIVE)).thenReturn(Optional.of(post));
@@ -80,6 +83,44 @@ class CommunityPostAnonymityTest {
 
         assertThat(post.getIsAnonymous()).isTrue();
         assertThat(response.isAnonymous()).isTrue();
+    }
+
+    @Test
+    void changingPostToAnonymousAlsoAnonymizesAuthorsActiveComments() {
+        service.update(20L, request(false));
+        Comment authorComment = Comment.builder().post(post).user(post.getUser())
+                .content("작성자 댓글").isAnonymous(false).build();
+        when(comments.findByPostIdAndUserIdAndStatus(20L, 1L, PostStatus.ACTIVE))
+                .thenReturn(List.of(authorComment));
+
+        service.update(20L, request(true));
+
+        assertThat(authorComment.getIsAnonymous()).isTrue();
+    }
+
+    @Test
+    void changingPostBackToNicknameAlsoRevealsAuthorsActiveComments() {
+        Comment authorComment = Comment.builder().post(post).user(post.getUser())
+                .content("작성자 댓글").isAnonymous(true).build();
+        when(comments.findByPostIdAndUserIdAndStatus(20L, 1L, PostStatus.ACTIVE))
+                .thenReturn(List.of(authorComment));
+
+        service.update(20L, request(false));
+
+        assertThat(authorComment.getIsAnonymous()).isFalse();
+    }
+
+    @Test
+    void detailReturnsCurrentUsersLikeState() {
+        when(users.findById(1L)).thenReturn(Optional.of(post.getUser()));
+        when(likes.countByPostId(20L)).thenReturn(1L);
+        when(likes.existsByPostIdAndUserId(20L, 1L)).thenReturn(true);
+        when(postHashtags.findByPostId(20L)).thenReturn(List.of());
+
+        var response = service.detail(20L);
+
+        assertThat(response.isLikedByCurrentUser()).isTrue();
+        assertThat(response.getLikeCount()).isEqualTo(1L);
     }
 
     private PostUpdateRequest request(boolean anonymous) {

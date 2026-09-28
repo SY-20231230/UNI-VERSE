@@ -24,6 +24,8 @@ public class AdminReportRepositoryImpl implements AdminReportRepositoryCustom {
         var id = report.getNumber("id", Long.class);
         var reporterId = report.get("reporter", User.class).getNumber("id", Long.class);
         var targetId = report.get("targetUser", User.class).getNumber("id", Long.class);
+        var reporterNickname = report.get("reporter", User.class).getString("nickname");
+        var targetNickname = report.get("targetUser", User.class).getString("nickname");
         var type = report.getEnum("reportType", ReportType.class);
         var status = report.getEnum("status", ReportStatus.class);
         var createdAt = report.getDateTime("createdAt", LocalDateTime.class);
@@ -39,7 +41,7 @@ public class AdminReportRepositoryImpl implements AdminReportRepositoryCustom {
         var order = pageable.getSort().getOrderFor("createdAt");
         boolean ascending = order != null && order.isAscending();
         var rows = query.select(Projections.constructor(AdminReportListResponse.class,
-                        id, reporterId, targetId, type, status, createdAt, processedAt))
+                        id, reporterId, targetId, type, status, createdAt, processedAt, reporterNickname, targetNickname))
                 .from(report).where(where)
                 .orderBy(ascending ? createdAt.asc() : createdAt.desc(), ascending ? id.asc() : id.desc())
                 .offset(pageable.getOffset()).limit(pageable.getPageSize()).fetch();

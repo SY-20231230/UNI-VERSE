@@ -110,3 +110,12 @@ test('malformed detail and processing responses are rejected instead of crashing
   const other = fixture({ report: { reportId: 8, status: 'PROCESSED' } });
   await assert.rejects(other.api.approve(7, { adminNote: 'reviewed' }), { code: 'INVALID_RESPONSE' });
 });
+
+test('approve sends chosen suspension days only for SUSPENSION', async () => {
+  const { api, calls } = fixture();
+  await api.approve(7, { adminNote: 'reason', sanctionType: 'SUSPENSION', suspensionDays: 7 });
+  assert.deepEqual(JSON.parse(calls[0].body), { adminNote: 'reason', sanctionType: 'SUSPENSION', suspensionDays: 7 });
+  await api.approve(7, { adminNote: 'reason', sanctionType: 'WARNING', suspensionDays: 7 });
+  assert.deepEqual(JSON.parse(calls[1].body), { adminNote: 'reason', sanctionType: 'WARNING' });
+  assert.throws(() => api.approve(7, { adminNote: 'reason', sanctionType: 'SUSPENSION', suspensionDays: 0 }), { code: 'INVALID_INPUT' });
+});
