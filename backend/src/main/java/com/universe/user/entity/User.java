@@ -40,6 +40,9 @@ public class User {
     @Column(nullable = false, length = 50)
     private String nickname;
 
+    @Column(length = 100)
+    private String department;
+
     @Column(name = "school_verified", nullable = false)
     private Boolean schoolVerified;
 
@@ -63,11 +66,12 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Builder
-    public User(String email, String password, String name, String nickname) {
+    public User(String email, String password, String name, String nickname, String department) {
         this.email = email;
         this.password = password;
         this.name = name;
         this.nickname = nickname;
+        this.department = department;
         this.schoolVerified = false;
         this.role = UserRole.USER;
         this.accountStatus = AccountStatus.ACTIVE;
@@ -82,6 +86,10 @@ public class User {
 
     public void updateNickname(String nickname) {
         this.nickname = nickname;
+    }
+
+    public void updateDepartment(String department) {
+        this.department = department;
     }
 
     public void changePassword(String newPassword) {
