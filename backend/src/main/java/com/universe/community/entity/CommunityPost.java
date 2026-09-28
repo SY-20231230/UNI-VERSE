@@ -73,10 +73,11 @@ public class CommunityPost {
         this.status = PostStatus.ACTIVE;
     }
 
-    public void updateContent(String title, String content, PostCategory category) {
+    public void updateContent(String title, String content, PostCategory category, Boolean isAnonymous) {
         this.title = title;
         this.content = content;
         this.category = category;
+        this.isAnonymous = isAnonymous;
     }
 
     public void deletePost() { this.status = PostStatus.DELETED; }
