@@ -10,6 +10,7 @@ export default function ListingGridCard({ listing }) {
   // Handle both API response and old state
   const id = listing.id || listing.itemId;
   const status = listing.tradeStatus === 'SELLING' ? '판매중' : 
+                 listing.tradeStatus === 'REQUESTED' ? '거래 요청중' : 
                  listing.tradeStatus === 'TRADING' ? '예약중' : 
                  listing.tradeStatus === 'COMPLETED' ? '거래완료' :
                  listing.tradeStatus === 'CANCELLED' ? '거래취소' :
