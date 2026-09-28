@@ -396,6 +396,9 @@ a{color:inherit; text-decoration:none;}
 .profile-logout:hover{background:rgba(255,255,255,.32);}
 .profile-body{display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; padding:0 26px 20px; margin-top:-36px;}
 .profile-avatar-wrap{position:relative; flex:none;}
+/* 커버와 겹치는 36px 아래에서 시작해 이름이 커버 경계선에 붙지 않게 한다 */
+.profile-info{flex:1; min-width:200px; align-self:flex-start; padding-top:50px;}
+@media (max-width:400px){ .profile-info{padding-top:0;} }
 .profile-avatar-wrap .avatar{border:4px solid var(--surface); box-shadow:var(--shadow);}
 .avatar-edit-btn{position:absolute; right:-2px; bottom:-2px; width:30px; height:30px; border-radius:50%; background:var(--ink); color:#fff; border:3px solid var(--surface); display:flex; align-items:center; justify-content:center; transition:background .12s ease;}
 .avatar-edit-btn:hover{background:var(--accent);}

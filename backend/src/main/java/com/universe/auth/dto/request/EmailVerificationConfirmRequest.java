@@ -1,0 +1,1 @@
+package com.universe.auth.dto.request; import jakarta.validation.constraints.*; import lombok.Getter; @Getter public class EmailVerificationConfirmRequest { @NotBlank @Email @Size(max=150) private String email; @NotBlank @Pattern(regexp="\\d{6}") private String code; }

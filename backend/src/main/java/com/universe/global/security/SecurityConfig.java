@@ -21,7 +21,7 @@ public class SecurityConfig {
     @Bean SecurityFilterChain securityFilterChain(HttpSecurity http)throws Exception{
         return http.csrf(csrf->csrf.disable()).formLogin(f->f.disable()).httpBasic(h->h.disable())
             .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(a->a.requestMatchers("/api/v1/auth/signup","/api/v1/auth/login","/api/v1/auth/refresh","/api/v1/schools","/error").permitAll().anyRequest().authenticated())
+            .authorizeHttpRequests(a->a.requestMatchers("/api/v1/auth/signup","/api/v1/auth/email-verifications","/api/v1/auth/email-verifications/confirm","/api/v1/auth/login","/api/v1/auth/refresh","/api/v1/schools","/error").permitAll().anyRequest().authenticated())
             .exceptionHandling(e->e.authenticationEntryPoint(authenticationEntryPoint).accessDeniedHandler((req,res,ex)->errorResponseWriter.write(res,ErrorCode.FORBIDDEN)))
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class).build();
     }
