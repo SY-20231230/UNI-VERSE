@@ -59,7 +59,7 @@ export default function MyPage() {
         { label: '내 신고', value: state.reports || 0 },
       ];
   const counts = server.enabled
-    ? { posts: summary?.postCount ?? 0, listings: summary?.marketItemCount ?? 0, liked: null }
+    ? { posts: summary?.postCount ?? 0, listings: summary?.marketItemCount ?? 0, liked: server.favorites?.length ?? 0 }
     : tabCounts;
 
   function setTab(k) {
@@ -155,7 +155,7 @@ export default function MyPage() {
       </div>
 
       {server.enabled ? (
-        <ServerTabs tab={tab} posts={server.posts} items={server.items} loading={server.loading} />
+        <ServerTabs tab={tab} posts={server.posts} items={server.items} loading={server.loading} favorites={server.favorites} />
       ) : (
       <div style={{ marginTop: 4 }}>
         {tab === 'posts' && (
@@ -251,7 +251,7 @@ function Empty({ icon, text }) {
 }
 
 // 커뮤니티·중고거래 상세 화면이 아직 목업이라 서버 목록은 링크 없이 보여준다.
-function ServerTabs({ tab, posts, items, loading }) {
+function ServerTabs({ tab, posts, items, loading, favorites }) {
   if (loading) return <div className="empty">불러오는 중…</div>;
 
   if (tab === 'posts') {
@@ -303,5 +303,29 @@ function ServerTabs({ tab, posts, items, loading }) {
     );
   }
 
-  return <Empty icon="heart" text="찜 목록은 아직 준비 중이에요" />;
+  if (tab === 'liked') {
+    if (!favorites || !favorites.length) return <Empty icon="heart" text="아직 찜한 거래가 없어요" />;
+    return (
+      <div style={{ maxWidth: 760, marginTop: 4 }}>
+        {favorites.map((item) => {
+          const status = TRADE_STATUS_LABELS[item.tradeStatus] || { label: item.tradeStatus, variant: 'outline' };
+          return (
+            <div className="mypage-post-row" key={item.itemId || item.id}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="row g6">
+                  <span className={'chip ' + status.variant}>{status.label}</span>
+                </div>
+                <Link className="title" to={`/market/${item.itemId || item.id}`}>{item.title}</Link>
+                <div className="meta">
+                  {won(item.listedPrice || item.price)} · {formatDate(item.createdAt)}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return null;
 }

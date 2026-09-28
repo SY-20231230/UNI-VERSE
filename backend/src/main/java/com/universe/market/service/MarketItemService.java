@@ -13,6 +13,8 @@ import com.universe.market.repository.MarketItemRepository;
 import com.universe.market.repository.MarketItemImageRepository;
 import com.universe.notification.event.MarketItemPriceChangedEvent;
 import com.universe.trade.repository.TradeRepository;
+import com.universe.market.entity.MarketItemFavorite;
+import com.universe.market.repository.MarketItemFavoriteRepository;
 import com.universe.school.entity.School;
 import com.universe.user.entity.User;
 import com.universe.user.repository.UserRepository;
@@ -35,6 +37,7 @@ public class MarketItemService {
     private final MarketItemImageRepository imageRepository;
     private final UserRepository userRepository;
     private final TradeRepository tradeRepository;
+    private final MarketItemFavoriteRepository favoriteRepository;
     private final AiRiskService aiRiskService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -43,11 +46,16 @@ public class MarketItemService {
                 .map(MarketItemListResponse::new);
     }
 
-    public MarketItemDetailResponse getItemDetail(Long itemId) {
+    public MarketItemDetailResponse getItemDetail(Long itemId, Long userId) {
         MarketItem item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
         long sellerTrades = tradeRepository.countCompletedTrades(item.getSeller().getId());
-        return new MarketItemDetailResponse(item, sellerTrades);
+        long likeCount = favoriteRepository.countByItemId(itemId);
+        boolean isLiked = false;
+        if (userId != null) {
+            isLiked = favoriteRepository.existsByItemIdAndUserId(itemId, userId);
+        }
+        return new MarketItemDetailResponse(item, sellerTrades, likeCount, isLiked);
     }
 
     @Transactional
@@ -156,5 +164,22 @@ public class MarketItemService {
         }
         
         itemRepository.delete(item);
+    }
+
+    @Transactional
+    public void favoriteItem(Long userId, Long itemId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        MarketItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+
+        if (!favoriteRepository.existsByItemIdAndUserId(itemId, userId)) {
+            favoriteRepository.save(new MarketItemFavorite(item, user));
+        }
+    }
+
+    @Transactional
+    public void unfavoriteItem(Long userId, Long itemId) {
+        favoriteRepository.deleteByItemIdAndUserId(itemId, userId);
     }
 }
