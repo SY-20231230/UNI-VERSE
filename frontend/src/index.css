@@ -286,6 +286,7 @@ span.comment-more{display:inline-block; flex:none;}
 .trade-modal-item{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:16px; padding:11px 14px; border-radius:12px; background:var(--surface-sunken); text-align:left; font-size:13px;}
 .trade-modal-item strong{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .trade-modal-item span{flex:none; font-weight:700; color:var(--ink-soft);}
+.lg-status-badge{position:absolute; top:10px; left:10px; padding:4px 9px; border-radius:99px; background:rgba(15,16,22,.72); color:#fff; font-size:11px; font-weight:700; backdrop-filter:blur(4px);}
 .login-error{font-size:12.5px; color:var(--danger); line-height:1.5;}
 
 .sheet-backdrop{position:fixed; inset:0; background:rgba(10,10,14,.5); z-index:20; display:flex; align-items:flex-end; justify-content:center; backdrop-filter:blur(1px);}

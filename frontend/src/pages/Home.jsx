@@ -40,7 +40,8 @@ export default function Home() {
       if (cancelled) return;
       setServer({
         posts: posts.content || [],
-        listings: (items.content || []).filter((l) => l.tradeStatus === 'SELLING').slice(0, 4),
+        // 거래가 끝나지 않은 상품(판매중·거래 요청중·예약중)을 보여준다.
+        listings: (items.content || []).filter((l) => !['COMPLETED', 'CANCELLED'].includes(l.tradeStatus)).slice(0, 4),
         counts: Object.fromEntries(counts),
       });
     });
@@ -173,7 +174,7 @@ export default function Home() {
             중고거래 더보기
           </Link>
         </div>
-        {freshListings.length === 0 && <div className="home-empty">아직 판매 중인 물건이 없어요.</div>}
+        {freshListings.length === 0 && <div className="home-empty">아직 거래 중인 물건이 없어요.</div>}
         <div className="card-grid">
           {freshListings.map((l) => (
             <ListingGridCard key={l.itemId ?? l.id} listing={l} />

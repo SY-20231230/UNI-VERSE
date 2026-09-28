@@ -28,6 +28,7 @@ export default function ListingGridCard({ listing }) {
         )}
         {status === '거래완료' && <div className="status-flag">거래완료</div>}
         {status === '거래중' && <div className="status-flag" style={{ background: 'rgba(30, 158, 107, 0.75)' }}>거래중</div>}
+        {(status === '거래 요청중' || status === '예약중') && <span className="lg-status-badge">{status}</span>}
       </div>
       <div className="lg-body">
         <div className="lg-title">{listing.title}</div>
@@ -36,9 +37,15 @@ export default function ListingGridCard({ listing }) {
           <span className="faint" style={{ fontSize: 11 }}>
             {listing.sellerNickname || listing.schoolName || listing.condition || '상태 알 수 없음'}
           </span>
+          <span className="row g8">
+          <span className="stat">
+            <Icon name="eye" size={12} />
+            {listing.viewCount ?? listing.views ?? 0}
+          </span>
           <span className="stat">
             <Icon name="heart" size={12} />
             {listing.likeCount !== undefined ? listing.likeCount : (listing.likes || 0)}
+          </span>
           </span>
         </div>
       </div>
