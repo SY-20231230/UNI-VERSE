@@ -411,7 +411,39 @@ export function AppProvider({ children }) {
   }, []);
 
   const allChatIds = useMemo(() => Object.keys(state.chats), [state.chats]);
-  const { connected: stompConnected, sendMessage: publishMessage } = useGlobalChatSocket(allChatIds, receiveChatMessage);
+  const myServerId = state.users?.me?.serverId ?? null;
+
+  const handleNewRoom = useCallback(() => {
+    // When a new room is created, reload all chats from the backend
+    if (session.isActive()) {
+      authApi.me().then(profile => {
+        chatApi.getMyRooms().then(async rooms => {
+          const chatDict = {};
+          const myId = profile?.userId ?? null;
+          for (const r of rooms) {
+            const cid = String(r.roomId);
+            const msgs = await chatApi.getMessages(r.roomId);
+            chatDict[cid] = {
+              listingId: r.itemId,
+              partnerId: r.partnerId || 'unknown',
+              partnerName: r.partnerName,
+              anonymous: r.profileMode === 'ANONYMOUS',
+              showSafety: true,
+              status: 'accepted',
+              messages: msgs.map(m => ({
+                from: myId && String(m.senderId) === String(myId) ? 'me' : 'them',
+                text: m.content,
+                time: new Date(m.createdAt).getTime()
+              }))
+            };
+          }
+          setState(s => ({ ...s, chats: chatDict }));
+        });
+      }).catch(() => {});
+    }
+  }, []);
+
+  const { connected: stompConnected, sendMessage: publishMessage } = useGlobalChatSocket(myServerId, allChatIds, receiveChatMessage, handleNewRoom);
 
   const acceptChatRequest = useCallback((chatId) => {
     setState((s) => ({

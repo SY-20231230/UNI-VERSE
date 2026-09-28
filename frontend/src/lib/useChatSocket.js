@@ -3,15 +3,17 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client/dist/sockjs';
 import { session } from './session';
 
-export function useGlobalChatSocket(chatIds, onMessageReceived) {
+export function useGlobalChatSocket(userId, chatIds, onMessageReceived, onNewRoom) {
   const [connected, setConnected] = useState(false);
   const clientRef = useRef(null);
   const subsRef = useRef(new Set());
   const callbackRef = useRef(onMessageReceived);
+  const newRoomCallbackRef = useRef(onNewRoom);
 
   useEffect(() => {
     callbackRef.current = onMessageReceived;
-  }, [onMessageReceived]);
+    newRoomCallbackRef.current = onNewRoom;
+  }, [onMessageReceived, onNewRoom]);
 
   useEffect(() => {
     if (!session.isActive()) return;
@@ -38,6 +40,20 @@ export function useGlobalChatSocket(chatIds, onMessageReceived) {
         });
         subsRef.current.add(String(id));
       });
+
+      // Subscribe to user-specific events (e.g. NEW_ROOM)
+      if (userId) {
+        client.subscribe(`/sub/chat/user/${userId}`, (msg) => {
+          if (msg.body) {
+            try {
+              const data = JSON.parse(msg.body);
+              if (data.type === 'NEW_ROOM') {
+                if (newRoomCallbackRef.current) newRoomCallbackRef.current();
+              }
+            } catch (e) { console.error('Failed to parse user event', e); }
+          }
+        });
+      }
     };
 
     client.onStompError = (frame) => console.error('[STOMP] Error:', frame);
@@ -49,7 +65,7 @@ export function useGlobalChatSocket(chatIds, onMessageReceived) {
       setConnected(false);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.isActive()]);
+  }, [session.isActive(), userId]);
 
   // Subscribe to new rooms dynamically
   useEffect(() => {
