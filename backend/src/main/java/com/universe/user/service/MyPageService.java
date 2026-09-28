@@ -26,7 +26,7 @@ public class MyPageService {
 
     public MyPageResponse getSummary(Long authenticatedUserId) {
         User user = access.requireActiveUser(authenticatedUserId);
-        return new MyPageResponse(user.getId(), user.getEmail(), user.getName(), user.getNickname(),
+        return new MyPageResponse(user.getId(), user.getEmail(), user.getName(), user.getNickname(), user.getDepartment(),
                 user.getSchool() == null ? null : user.getSchool().getId(),
                 user.getSchool() == null ? null : user.getSchool().getSchoolName(),
                 Boolean.TRUE.equals(user.getSchoolVerified()), user.getTrustScore(),

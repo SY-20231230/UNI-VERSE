@@ -34,7 +34,7 @@ export function createAuthApi(options = {}) {
       return request('/auth/signup', { method: 'POST', auth: false, body: {
         email: email(input.email), password: input.password,
         name: field(input.name, '이름', 50), nickname: field(input.nickname, '닉네임', 50),
-        department: field(input.department, '학과', 50),
+        department: field(input.department, '학과', 100),
       } });
     },
     sendEmailCode(value) {

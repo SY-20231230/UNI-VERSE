@@ -29,12 +29,12 @@ export default function CommunityDetail() {
     async function loadData() {
       try {
         const pRes = await communityApi.getPost(id);
-        setPost(pRes.data);
+        setPost(pRes);
         const cRes = await communityApi.getComments(id);
-        setComments(cRes.data.content || []);
+        setComments(cRes.content || []);
         // Fetch related posts (simplification for now: just fetch top popular)
         const relRes = await communityApi.getPosts({ sort: 'popular', size: 5 });
-        setRelated(relRes.data.content.filter(x => x.postId != id));
+        setRelated(relRes.content.filter(x => x.postId != id));
       } catch (err) {
         console.error('Failed to load post', err);
       }
@@ -51,7 +51,7 @@ export default function CommunityDetail() {
   }
 
   const author = post.anonymous ? { name: '익명', dept: '', color: '#9195A6' } : { name: post.authorName, dept: '', color: '#2F6FED' }; // Simplified avatar
-  const isMine = post.authorId === (state.user ? state.users[state.user]?.id : null); // Note: Need actual logic to check ownership
+  const isMine = post.authorId === state.me?.userId;
 
   async function submitComment() {
     const text = commentText.trim();
@@ -63,7 +63,7 @@ export default function CommunityDetail() {
       await communityApi.addComment(post.postId, { content: text, isAnonymous: false });
       setCommentText('');
       const cRes = await communityApi.getComments(id);
-      setComments(cRes.data.content || []);
+      setComments(cRes.content || []);
     } catch (e) {
       toast('댓글 작성에 실패했습니다.');
     }
@@ -106,7 +106,7 @@ export default function CommunityDetail() {
       setEditingCommentId(null);
       setEditText('');
       const cRes = await communityApi.getComments(id);
-      setComments(cRes.data.content || []);
+      setComments(cRes.content || []);
     } catch (e) {
       toast('댓글 수정에 실패했습니다.');
     }
@@ -117,7 +117,7 @@ export default function CommunityDetail() {
       await communityApi.deleteComment(cid);
       toast('댓글이 삭제되었습니다');
       const cRes = await communityApi.getComments(id);
-      setComments(cRes.data.content || []);
+      setComments(cRes.content || []);
     } catch (e) {
       toast('댓글 삭제에 실패했습니다.');
     }

@@ -40,7 +40,7 @@ public class User {
     @Column(nullable = false, length = 50)
     private String nickname;
 
-    @Column(length = 50)
+    @Column(length = 100)
     private String department;
 
     @Column(name = "school_verified", nullable = false)
@@ -86,6 +86,10 @@ public class User {
 
     public void updateNickname(String nickname) {
         this.nickname = nickname;
+    }
+
+    public void updateDepartment(String department) {
+        this.department = department;
     }
 
     public void changePassword(String newPassword) {

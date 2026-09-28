@@ -31,7 +31,7 @@ export default function CommunityWrite() {
       async function loadPost() {
         try {
           const res = await communityApi.getPost(id);
-          const p = res.data;
+          const p = res;
           setExisting(p);
           // Find original category string
           const origCat = CATS.find(c => postCategoryToApi(c) === p.category) || p.category;
@@ -106,7 +106,7 @@ export default function CommunityWrite() {
         toast('게시글이 수정되었습니다');
       } else {
         const res = await communityApi.createPost(payload);
-        navigate(`/community/${res.data.postId}`);
+        navigate(`/community/${res.postId}`);
         toast('게시글이 등록되었습니다');
       }
     } catch (e) {

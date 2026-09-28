@@ -48,14 +48,14 @@ export default function Market() {
         });
         
         // Temporary client side filtering for status if backend doesn't support it yet
-        let dataList = res.data.content || [];
+        let dataList = res.content || [];
         if (state.marketStatusFilter !== '전체') {
            const targetStatus = state.marketStatusFilter === '판매중' ? 'SELLING' : 'COMPLETED';
            dataList = dataList.filter(item => item.tradeStatus === targetStatus);
         }
         
         setList(dataList);
-        setTotalElements(res.data.totalElements || dataList.length);
+        setTotalElements(res.totalElements || dataList.length);
       } catch (err) {
         console.error('Failed to fetch market items', err);
       }

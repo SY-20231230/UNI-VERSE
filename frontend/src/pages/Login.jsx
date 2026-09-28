@@ -188,7 +188,7 @@ export default function Login() {
                   value={form.nickname} onChange={update('nickname')} required />
               </div>
               <div className="field">
-                <input className="input" placeholder="학과 (예: 컴퓨터공학과)" maxLength={50}
+                <input className="input" placeholder="학과 (예: 컴퓨터공학과)" maxLength={100}
                   value={form.department} onChange={update('department')} required />
               </div>
             </>

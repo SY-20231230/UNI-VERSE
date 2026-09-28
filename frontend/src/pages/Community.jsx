@@ -32,8 +32,8 @@ export default function Community() {
           page: 0,
           size: 20
         });
-        setList(res.data.content);
-        setTotalElements(res.data.totalElements);
+        setList(res.content);
+        setTotalElements(res.totalElements);
       } catch (err) {
         console.error('Failed to fetch posts', err);
       }

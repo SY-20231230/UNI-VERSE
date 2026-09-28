@@ -94,9 +94,9 @@ export default function MarketDetail() {
     async function load() {
       try {
         const res = await marketApi.getItem(id);
-        setListing(res.data);
+        setListing(res);
         const relRes = await marketApi.getItems({ sort: 'popular', size: 5 });
-        setRelated(relRes.data.content.filter(x => x.id != id));
+        setRelated(relRes.content.filter(x => x.itemId != id));
       } catch (err) {
         console.error(err);
       }
@@ -113,7 +113,7 @@ export default function MarketDetail() {
   }
 
   const seller = { id: listing.sellerId, name: listing.sellerNickname, dept: listing.schoolName, color: '#2F6FED', trades: 0 };
-  const isMine = listing.sellerId === (state.user ? state.users[state.user]?.id : null);
+  const isMine = listing.sellerId === state.me?.userId;
 
   async function toggleLike() {
     try {
