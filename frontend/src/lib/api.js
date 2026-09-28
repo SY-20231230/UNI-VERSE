@@ -54,11 +54,12 @@ export function createTransport({
 
   async function send(path, { method, body, signal, query }, token) {
     try {
+      const isFormData = body instanceof FormData;
       return await fetchImpl(root + path + queryString(query), {
         method, signal, credentials: 'omit', redirect: 'error',
         headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
-        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+          ...(body !== undefined && !isFormData ? { 'Content-Type': 'application/json' } : {}) },
+        ...(body !== undefined ? { body: isFormData ? body : JSON.stringify(body) } : {}),
       });
     } catch (error) {
       if (error.name === 'AbortError') throw error;

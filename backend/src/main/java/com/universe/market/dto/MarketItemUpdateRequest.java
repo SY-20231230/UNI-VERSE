@@ -27,4 +27,6 @@ public class MarketItemUpdateRequest {
     
     @NotBlank
     private String description;
+
+    private java.util.List<String> images;
 }

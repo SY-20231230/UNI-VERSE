@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
       // 개발 중 /api 요청을 로컬 백엔드로 넘긴다 (CORS 설정 없이 같은 출처처럼 호출).
       proxy: {
         '/api': { target: env.VITE_PROXY_TARGET || 'http://localhost:8080', changeOrigin: true },
+        '/uploads': { target: env.VITE_PROXY_TARGET || 'http://localhost:8080', changeOrigin: true },
       },
     },
   }

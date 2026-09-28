@@ -62,6 +62,9 @@ public class MarketItem {
     @Column(name = "ai_status", length = 20)
     private AiAnalysisResult aiStatus;
 
+    @OneToMany(mappedBy = "item", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<MarketItemImage> images = new java.util.ArrayList<>();
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

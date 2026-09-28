@@ -21,6 +21,7 @@ public class MarketItemListResponse {
     private LocalDateTime createdAt;
     private String sellerNickname;
     private String schoolName;
+    private String thumbnail;
 
     public MarketItemListResponse(MarketItem item) {
         this.id = item.getId();
@@ -32,5 +33,8 @@ public class MarketItemListResponse {
         this.createdAt = item.getCreatedAt();
         this.sellerNickname = item.getSeller().getNickname();
         this.schoolName = item.getSchool().getSchoolName();
+        if (item.getImages() != null && !item.getImages().isEmpty()) {
+            this.thumbnail = item.getImages().get(0).getImageUrl();
+        }
     }
 }
