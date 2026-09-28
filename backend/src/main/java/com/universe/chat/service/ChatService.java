@@ -70,7 +70,24 @@ public class ChatService {
         ChatMember member2 = ChatMember.builder().room(room).user(receiver).build();
         chatMemberRepository.saveAll(List.of(member1, member2));
 
-        messagingTemplate.convertAndSend("/sub/chat/user/" + receiver.getId(), "{\"type\":\"NEW_ROOM\"}");
+        String initialMessageText = "안녕하세요! \"" + (item != null ? item.getTitle() : "상품") + "\" 구매하고 싶습니다.";
+        Message initialMessage = Message.builder()
+                .room(room)
+                .sender(requester)
+                .messageType(MessageType.TEXT)
+                .content(initialMessageText)
+                .build();
+        messageRepository.save(initialMessage);
+
+        Long receiverId = receiver.getId();
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+            new org.springframework.transaction.support.TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    messagingTemplate.convertAndSend("/sub/chat/user/" + receiverId, "{\"type\":\"NEW_ROOM\"}");
+                }
+            }
+        );
 
         return new ChatRoomDto(room, receiver.getId(), receiver.getNickname());
     }

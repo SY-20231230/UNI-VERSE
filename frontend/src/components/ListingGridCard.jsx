@@ -27,6 +27,7 @@ export default function ListingGridCard({ listing }) {
           </div>
         )}
         {status === '거래완료' && <div className="status-flag">거래완료</div>}
+        {status === '거래중' && <div className="status-flag" style={{ background: 'rgba(30, 158, 107, 0.75)' }}>거래중</div>}
       </div>
       <div className="lg-body">
         <div className="lg-title">{listing.title}</div>

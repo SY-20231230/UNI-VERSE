@@ -116,7 +116,19 @@ export function AppProvider({ children }) {
             }))
           };
         }
-        setState(s => ({ ...s, chats: chatDict }));
+        setState(s => {
+          const newChats = { ...chatDict };
+          // Preserve unread status from existing state
+          for (const cid in newChats) {
+            const isFromThem = newChats[cid].messages.length > 0 && newChats[cid].messages[newChats[cid].messages.length - 1].from === 'them';
+            if (s.chats[cid]?.unread !== undefined) {
+              newChats[cid].unread = s.chats[cid].unread;
+            } else if (isFromThem) {
+              newChats[cid].unread = true;
+            }
+          }
+          return { ...s, chats: newChats };
+        });
       } catch (e) {
         console.error('Failed to load chats', e);
       }
@@ -151,7 +163,18 @@ export function AppProvider({ children }) {
           }))
         };
       }
-      setState(s => ({ ...s, chats: chatDict }));
+      setState(s => {
+        const newChats = { ...chatDict };
+        for (const cid in newChats) {
+          const isFromThem = newChats[cid].messages.length > 0 && newChats[cid].messages[newChats[cid].messages.length - 1].from === 'them';
+          if (s.chats[cid]?.unread !== undefined) {
+            newChats[cid].unread = s.chats[cid].unread;
+          } else if (isFromThem) {
+            newChats[cid].unread = true;
+          }
+        }
+        return { ...s, chats: newChats };
+      });
       
       return profile;
     } catch (error) {
@@ -360,7 +383,7 @@ export function AppProvider({ children }) {
             anonymous: mode === 'anon',
             showSafety: true,
             status: 'accepted',
-            messages: [{ from: 'them', text: `안녕하세요! "${listing.title}" 문의 주셔서 감사해요 :)`, time: Date.now() }],
+            messages: [{ from: 'me', text: `안녕하세요! "${listing.title}" 구매하고 싶습니다.`, time: Date.now() }],
           },
         }
       }));
@@ -405,6 +428,7 @@ export function AppProvider({ children }) {
           ...s.chats,
           [chatId]: {
             ...s.chats[chatId],
+            unread: from === 'them' ? true : s.chats[chatId].unread,
             messages: [...s.chats[chatId].messages, newMsg],
           },
         },
@@ -420,26 +444,36 @@ export function AppProvider({ children }) {
     if (session.isActive()) {
       authApi.me().then(profile => {
         chatApi.getMyRooms().then(async rooms => {
-          const chatDict = {};
-          const myId = profile?.userId ?? null;
+          // We need to fetch messages outside of setState because it's async
+          const roomData = [];
           for (const r of rooms) {
-            const cid = String(r.roomId);
             const msgs = await chatApi.getMessages(r.roomId);
-            chatDict[cid] = {
-              listingId: r.itemId,
-              partnerId: r.partnerId || 'unknown',
-              partnerName: r.partnerName,
-              anonymous: r.profileMode === 'ANONYMOUS',
-              showSafety: true,
-              status: 'accepted',
-              messages: msgs.map(m => ({
-                from: myId && String(m.senderId) === String(myId) ? 'me' : 'them',
-                text: m.content,
-                time: new Date(m.createdAt).getTime()
-              }))
-            };
+            roomData.push({ r, msgs });
           }
-          setState(s => ({ ...s, chats: chatDict }));
+          
+          setState(s => {
+            const chatDict = { ...s.chats }; // copy existing
+            const myId = profile?.userId ?? null;
+            for (const { r, msgs } of roomData) {
+              const cid = String(r.roomId);
+              const existingChat = s.chats[cid];
+              chatDict[cid] = {
+                listingId: r.itemId,
+                partnerId: r.partnerId || 'unknown',
+                partnerName: r.partnerName,
+                anonymous: r.profileMode === 'ANONYMOUS',
+                showSafety: existingChat ? existingChat.showSafety : true,
+                status: existingChat ? existingChat.status : 'accepted',
+                unread: existingChat ? existingChat.unread : true, // mark new rooms as unread
+                messages: msgs.map(m => ({
+                  from: myId && String(m.senderId) === String(myId) ? 'me' : 'them',
+                  text: m.content,
+                  time: new Date(m.createdAt).getTime()
+                }))
+              };
+            }
+            return { ...s, chats: chatDict };
+          });
         });
       }).catch(() => {});
     }
@@ -474,6 +508,16 @@ export function AppProvider({ children }) {
       console.error('Failed to delete chat room', e);
       throw e;
     }
+  }, []);
+
+  const markChatRead = useCallback((chatId) => {
+    setState((s) => {
+      if (!s.chats[chatId] || !s.chats[chatId].unread) return s;
+      return {
+        ...s,
+        chats: { ...s.chats, [chatId]: { ...s.chats[chatId], unread: false } },
+      };
+    });
   }, []);
 
   const dismissSafety = useCallback((chatId) => {
@@ -582,6 +626,7 @@ export function AppProvider({ children }) {
     sendChatRequest,
     sendChatMessage,
     receiveChatMessage,
+    markChatRead,
     acceptChatRequest,
     declineChatRequest,
     deleteChatRoom,

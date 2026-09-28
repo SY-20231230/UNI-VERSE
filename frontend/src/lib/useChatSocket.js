@@ -41,7 +41,7 @@ export function useGlobalChatSocket(userId, chatIds, onMessageReceived, onNewRoo
         subsRef.current.add(String(id));
       });
 
-      // Subscribe to user-specific events (e.g. NEW_ROOM)
+      // Subscribe to user-specific events (e.g. NEW_ROOM, TRADE_UPDATE)
       if (userId) {
         client.subscribe(`/sub/chat/user/${userId}`, (msg) => {
           if (msg.body) {
@@ -49,6 +49,8 @@ export function useGlobalChatSocket(userId, chatIds, onMessageReceived, onNewRoo
               const data = JSON.parse(msg.body);
               if (data.type === 'NEW_ROOM') {
                 if (newRoomCallbackRef.current) newRoomCallbackRef.current();
+              } else if (data.type === 'TRADE_UPDATE') {
+                window.dispatchEvent(new CustomEvent('trade_update', { detail: data.itemId }));
               }
             } catch (e) { console.error('Failed to parse user event', e); }
           }
