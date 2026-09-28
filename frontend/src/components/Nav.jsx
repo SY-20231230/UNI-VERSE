@@ -25,7 +25,7 @@ function activeRoot(pathname) {
 export default function Nav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { state, userOf } = useApp();
+  const { state, userOf, setCommunityFilter, setMarketFilter, setMarketStatusFilter } = useApp();
   const root = activeRoot(location.pathname);
   const tabs = state.isAdmin ? [...NAV_TABS, ADMIN_TAB] : NAV_TABS;
 
@@ -81,7 +81,12 @@ export default function Nav() {
         </Link>
         <nav className="nav-links">
           {tabs.map((t) => (
-            <Link key={t.k} className={'navlink' + (root === t.k ? ' active' : '')} to={t.path}>
+            <Link key={t.k} className={'navlink' + (root === t.k ? ' active' : '')} to={t.path}
+              onClick={() => {
+                // 상단 메뉴로 들어오면 항상 '전체'부터 보여준다.
+                if (t.k === 'community') setCommunityFilter('전체');
+                if (t.k === 'market') { setMarketFilter('전체'); setMarketStatusFilter('전체'); }
+              }}>
               <Icon name={t.icon} size={17} />
               <span className="lbl">{t.label}</span>
             </Link>

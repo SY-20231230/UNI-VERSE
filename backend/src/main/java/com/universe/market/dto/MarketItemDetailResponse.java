@@ -29,6 +29,7 @@ public class MarketItemDetailResponse {
     private String schoolName;
     private long sellerTrades;
     private java.util.List<String> images;
+    private int viewCount;
     private long likeCount;
     private boolean isLiked;
 
@@ -50,6 +51,7 @@ public class MarketItemDetailResponse {
         this.schoolId = item.getSchool().getId();
         this.schoolName = item.getSchool().getSchoolName();
         this.sellerTrades = sellerTrades;
+        this.viewCount = item.getViewCount() == null ? 0 : item.getViewCount();
         if (item.getImages() != null) {
             this.images = item.getImages().stream().map(com.universe.market.entity.MarketItemImage::getImageUrl).toList();
         }
