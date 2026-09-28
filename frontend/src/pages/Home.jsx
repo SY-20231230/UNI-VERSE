@@ -49,7 +49,7 @@ export default function Home() {
             </div>
             <div className="row g10" style={{ marginTop: 14 }}>
               <span style={{ fontSize: 13, color: 'rgba(255,255,255,.82)' }}>
-                {me.dept} · {me.year}
+                {[me.school, me.dept].filter(Boolean).join(' · ')}
               </span>
               <VerifiedChip level={me.verified} score={me.trustScore} light />
             </div>

@@ -43,6 +43,10 @@ public class School {
         this.status = SchoolStatus.ACTIVE;
     }
 
+    public void rename(String schoolName) {
+        this.schoolName = schoolName;
+    }
+
     public void changeStatus(SchoolStatus status) {
         this.status = status;
     }

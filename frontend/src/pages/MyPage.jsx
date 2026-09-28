@@ -38,11 +38,13 @@ export default function MyPage() {
   // 실제 로그인이면 서버 데이터, 데모 모드면 기존 목업 데이터를 보여준다.
   const server = useMyPage();
   const summary = server.summary;
+  // 1줄: 학교 · 학과 · 인증 상태 / 2줄: 학교 이메일 (서버·데모 동일한 형식)
   const profileLine = server.enabled
     ? summary
-      ? [summary.schoolName || '학교 미등록', summary.schoolVerified ? '학교 인증 완료' : '학교 인증 필요', summary.email].join(' · ')
+      ? [summary.schoolName || '학교 미등록', me.dept, summary.schoolVerified ? '학교 인증 완료' : '학교 인증 필요'].filter(Boolean).join(' · ')
       : server.error || '불러오는 중…'
-    : `${me.dept} · ${me.studentNo} · ${me.joined} 가입`;
+    : [me.school, me.dept, '학교 인증 완료'].filter(Boolean).join(' · ');
+  const profileEmail = server.enabled ? summary?.email : me.email;
   const stats = server.enabled
     ? [
         { label: '신뢰점수', value: summary ? `${summary.trustScore}점` : '–', accent: true },
@@ -114,13 +116,18 @@ export default function MyPage() {
             </button>
             <input ref={fileRef} type="file" accept="image/*" hidden onChange={handlePhotoPick} />
           </div>
-          <div style={{ flex: 1, minWidth: 200 }}>
+          <div className="profile-info">
             <div className="row g8">
               <span className="h2">{me.name}</span>
             </div>
             <div className="faint" style={{ fontSize: 12.5, marginTop: 5 }}>
               {profileLine}
             </div>
+            {profileEmail && (
+              <div className="faint" style={{ fontSize: 12.5, marginTop: 3 }}>
+                {profileEmail}
+              </div>
+            )}
             {me.avatarUrl && (
               <button className="link" style={{ marginTop: 6, fontSize: 11.5 }} onClick={removeProfilePhoto}>
                 기본 이미지로 되돌리기
