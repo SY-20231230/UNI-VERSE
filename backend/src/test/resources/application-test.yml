@@ -21,7 +21,8 @@ jwt:
   secret-key: test-secret-key-that-is-at-least-32-characters-long
 
 ai:
-  server-url: http://localhost:8000
+  server:
+    base-url: http://localhost:8000
 
 app:
   mail:
