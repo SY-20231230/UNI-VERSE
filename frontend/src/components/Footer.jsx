@@ -11,7 +11,7 @@ export default function Footer() {
             UNI<span style={{ color: 'var(--accent)' }}>:</span>VERSE
           </div>
           <div className="muted" style={{ fontSize: 12.5, marginTop: 10, lineHeight: 1.7 }}>
-            같은 학교, 더 가까운 커뮤니티, 더 안전한 거래.
+            우리 학교에서, 더 가벼운 소통 더 안전한 거래
             <br />
             학교 인증 기반 캠퍼스 플랫폼
           </div>
