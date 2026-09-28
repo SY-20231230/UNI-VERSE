@@ -17,9 +17,14 @@ export default function ListingGridCard({ listing }) {
   
   return (
     <Link className="listing-grid-card" to={`/market/${id}`}>
-      <div className="thumb" style={{ background: tint.bg, color: tint.ink }}>
-        {/* Placeholder if no image, otherwise we could render an img tag here */}
-        <Icon name={meta.icon || 'box'} size={30} />
+      <div className="thumb" style={{ background: tint.bg, color: tint.ink, padding: 0 }}>
+        {listing.thumbnail ? (
+          <img src={listing.thumbnail} alt="매물 썸네일" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name={meta.icon || 'box'} size={30} />
+          </div>
+        )}
         {status === '거래완료' && <div className="status-flag">거래완료</div>}
       </div>
       <div className="lg-body">

@@ -200,12 +200,26 @@ export default function MarketDetail() {
         </div>
         <div className="market-detail-layout" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 30 }}>
           <div>
-            <div className="thumb" style={{ width: '100%', aspectRatio: '4/3' }}>
-              <Icon name="box" size={64} />
+            <div className="thumb" style={{ width: '100%', aspectRatio: '4/3', overflowX: 'auto', display: 'flex', snapType: 'x mandatory', padding: 0 }}>
+              {listing.images && listing.images.length > 0 ? (
+                listing.images.map((url, i) => (
+                  <img key={i} src={url} alt={`매물 이미지 ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', flexShrink: 0, scrollSnapAlign: 'start' }} />
+                ))
+              ) : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="box" size={64} />
+                </div>
+              )}
               {statusLabel === '거래완료' && <div className="status-flag" style={{ fontSize: 16 }}>거래완료</div>}
-              <span className="chip" style={{ position: 'absolute', left: 14, bottom: 14, background: 'rgba(0,0,0,.55)', color: '#fff' }}>
-                1 / 1
-              </span>
+              {listing.images && listing.images.length > 0 ? (
+                <span className="chip" style={{ position: 'absolute', left: 14, bottom: 14, background: 'rgba(0,0,0,.55)', color: '#fff' }}>
+                  {listing.images.length}장 (스크롤)
+                </span>
+              ) : (
+                <span className="chip" style={{ position: 'absolute', left: 14, bottom: 14, background: 'rgba(0,0,0,.55)', color: '#fff' }}>
+                  1 / 1
+                </span>
+              )}
             </div>
             <div className="info-grid" style={{ marginTop: 16 }}>
               <div>
