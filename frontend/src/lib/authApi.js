@@ -34,7 +34,17 @@ export function createAuthApi(options = {}) {
       return request('/auth/signup', { method: 'POST', auth: false, body: {
         email: email(input.email), password: input.password,
         name: field(input.name, '이름', 50), nickname: field(input.nickname, '닉네임', 50),
+        department: field(input.department, '학과', 50),
       } });
+    },
+    sendEmailCode(value) {
+      return request('/auth/email-verifications', { method: 'POST', auth: false, body: { email: email(value) } });
+    },
+    confirmEmailCode(value, code) {
+      const trimmed = typeof code === 'string' ? code.trim() : '';
+      if (!/^\d{6}$/.test(trimmed)) invalid('인증번호 6자리를 입력해주세요.');
+      return request('/auth/email-verifications/confirm', { method: 'POST', auth: false,
+        body: { email: email(value), code: trimmed } });
     },
     logout: (options = {}) => request('/auth/logout', { ...options, method: 'POST' }),
     me: (options = {}) => request('/users/me', options),

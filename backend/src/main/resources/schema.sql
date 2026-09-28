@@ -26,6 +26,7 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     name VARCHAR(50) NOT NULL,
     nickname VARCHAR(50) NOT NULL,
+    department VARCHAR(50) NULL,
     school_verified BOOLEAN NOT NULL DEFAULT FALSE,
     role VARCHAR(20) NOT NULL DEFAULT 'USER',
     account_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',

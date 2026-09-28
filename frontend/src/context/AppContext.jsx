@@ -56,7 +56,17 @@ export function AppProvider({ children }) {
       user: 'me',
       isAdmin: profile.role === 'ADMIN',
       authMode: 'server',
-      users: { ...s.users, me: { ...s.users.me, name: profile.nickname, trustScore: profile.trustScore } },
+      users: {
+        ...s.users,
+        me: {
+          ...s.users.me,
+          name: profile.nickname,
+          trustScore: profile.trustScore,
+          dept: profile.department || '',
+          school: profile.schoolName || '',
+          year: undefined,
+        },
+      },
     }));
   }, []);
 
@@ -98,6 +108,9 @@ export function AppProvider({ children }) {
     await authApi.signup(input);
     return login({ email: input.email, password: input.password });
   }, [login]);
+
+  const sendEmailCode = useCallback((email) => authApi.sendEmailCode(email), []);
+  const confirmEmailCode = useCallback((email, code) => authApi.confirmEmailCode(email, code), []);
 
   const loginDemo = useCallback(() => {
     setState((s) => ({ ...s, user: 'me', isAdmin: false, authMode: 'demo' }));
@@ -415,6 +428,8 @@ export function AppProvider({ children }) {
     userOf,
     login,
     signup,
+    sendEmailCode,
+    confirmEmailCode,
     loginDemo,
     loginDemoAdmin,
     logout,
