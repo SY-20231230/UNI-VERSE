@@ -12,6 +12,10 @@ public class ChatRoomDto {
     private ChatRoomStatus status;
     private Long partnerId;
     private String partnerName;
+    /** 내가 아직 읽지 않은 상대 메시지 수 */
+    private long unreadCount;
+    /** 상대가 마지막으로 읽은 메시지 ID (내 메시지의 읽음 표시에 사용, 없으면 null) */
+    private Long partnerLastReadMessageId;
     
     public ChatRoomDto(ChatRoom room, Long pId, String pName) {
         this.roomId = room.getId();
@@ -20,5 +24,11 @@ public class ChatRoomDto {
         this.status = room.getRoomStatus();
         this.partnerId = pId;
         this.partnerName = pName;
+    }
+
+    public ChatRoomDto(ChatRoom room, Long pId, String pName, long unreadCount, Long partnerLastReadMessageId) {
+        this(room, pId, pName);
+        this.unreadCount = unreadCount;
+        this.partnerLastReadMessageId = partnerLastReadMessageId;
     }
 }

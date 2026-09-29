@@ -14,6 +14,9 @@ __pycache__/
 univenv/
 venv/
 ai-server/models/*.pkl
+!ai-server/models/tfidf_vectorizer.pkl
+!ai-server/models/fraud_classifier.pkl
+!ai-server/models/category_classifier.pkl
 ai-server/data/
 ai-server/reports/
 

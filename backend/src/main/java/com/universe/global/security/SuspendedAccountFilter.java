@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -24,6 +25,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 public class SuspendedAccountFilter extends OncePerRequestFilter {
     private static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");
+    // 채팅·알림 "읽음" 처리는 조회에 딸린 동작이라 정지 중에도 허용한다.
+    private static final Pattern READ_MARKS =
+            Pattern.compile("^/api/v1/(chat/rooms/\\d+/read|notifications/(\\d+/read|read-all))$");
     private static final DateTimeFormatter UNTIL = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm");
 
     private final UserRepository users;
@@ -32,7 +36,8 @@ public class SuspendedAccountFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return READ_METHODS.contains(request.getMethod()) || request.getRequestURI().startsWith("/api/v1/auth/");
+        return READ_METHODS.contains(request.getMethod()) || request.getRequestURI().startsWith("/api/v1/auth/")
+                || READ_MARKS.matcher(request.getRequestURI()).matches();
     }
 
     @Override
