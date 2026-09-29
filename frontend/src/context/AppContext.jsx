@@ -91,7 +91,8 @@ export function AppProvider({ children }) {
     setState((s) => ({
       ...s,
       user: 'me',
-      isAdmin: profile.role === 'ADMIN',
+      isAdmin: profile.role === 'ADMIN' || profile.role === 'SCHOOL_ADMIN',
+      isSchoolAdmin: profile.role === 'SCHOOL_ADMIN',
       authMode: 'server',
       users: {
         ...s.users,
