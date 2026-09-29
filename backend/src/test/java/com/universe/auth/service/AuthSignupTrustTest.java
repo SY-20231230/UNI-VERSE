@@ -6,6 +6,7 @@ import com.universe.global.exception.ErrorCode;
 import com.universe.global.security.JwtTokenProvider;
 import com.universe.school.service.SchoolEmailPolicy;
 import com.universe.global.security.TokenSessionService;
+import com.universe.notification.service.NotificationService;
 import com.universe.trust.repository.TrustHistoryRepository;
 import com.universe.trust.service.TrustScorePolicy;
 import com.universe.trust.service.TrustScoreService;
@@ -36,6 +37,7 @@ class AuthSignupTrustTest {
     @MockitoBean JwtTokenProvider jwt;
     @MockitoBean TokenSessionService sessions;
     @MockitoBean EmailVerificationService emailVerification;
+    @MockitoBean NotificationService notifications;
 
     static class Config {
         @Bean PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
