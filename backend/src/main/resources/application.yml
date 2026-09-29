@@ -31,6 +31,17 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
 jwt:
   secret-key: ${JWT_SECRET_KEY}
 
