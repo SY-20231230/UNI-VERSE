@@ -1,0 +1,30 @@
+name: AI Server CI
+
+on:
+  push:
+    paths:
+      - 'ai-server/**'
+  pull_request:
+    paths:
+      - 'ai-server/**'
+  workflow_dispatch:
+
+jobs:
+  ai-server:
+    name: AI Server checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-server
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
