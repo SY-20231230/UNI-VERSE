@@ -72,12 +72,13 @@ test('login and signup never send a bearer token and trim input', async () => {
     return Response.json({ success: true, data: tokens(1), error: null });
   } });
   await api.login({ email: ' a@test.example ', password: 'pw' });
-  await api.signup({ email: 'a@test.example', password: 'password1', name: ' 이름 ', nickname: '닉' });
+  await api.signup({ email: 'a@test.example', password: 'password1', name: ' 이름 ', nickname: '닉', department: ' 컴퓨터공학과 ' });
   assert.equal(calls[0].url, '/api/v1/auth/login');
   assert.equal(calls[0].headers.Authorization, undefined);
   assert.deepEqual(JSON.parse(calls[0].body), { email: 'a@test.example', password: 'pw' });
   assert.equal(calls[1].headers.Authorization, undefined);
   assert.equal(JSON.parse(calls[1].body).name, '이름');
+  assert.equal(JSON.parse(calls[1].body).department, '컴퓨터공학과');
 });
 
 test('auth input is validated before any request', () => {

@@ -23,6 +23,14 @@ export default function Market() {
   
   const [list, setList] = useState([]);
   const [totalElements, setTotalElements] = useState(0);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+
+  // 필터가 바뀌면 페이지와 목록을 초기화합니다.
+  useEffect(() => {
+    setPage(0);
+    setList([]);
+  }, [state.marketFilter, state.marketStatusFilter, debouncedQ, sort]);
 
   useEffect(() => {
     async function fetchItems() {
@@ -42,18 +50,24 @@ export default function Market() {
           keyword: debouncedQ || undefined,
           sort: sortParam,
           status: statusParam,
-          page: 0,
+          page: page,
           size: 20
         });
         
-        setList(res.content || []);
+        if (page === 0) {
+          setList(res.content || []);
+        } else {
+          setList(prev => [...prev, ...(res.content || [])]);
+        }
+        
         setTotalElements(res.totalElements || (res.content || []).length);
+        setHasMore(!res.last && (res.content || []).length > 0);
       } catch (err) {
         console.error('Failed to fetch market items', err);
       }
     }
     fetchItems();
-  }, [state.marketFilter, state.marketStatusFilter, debouncedQ, sort]);
+  }, [state.marketFilter, state.marketStatusFilter, debouncedQ, sort, page]);
 
   return (
     <div className="container fade-enter">
@@ -116,11 +130,20 @@ export default function Market() {
             </div>
           )}
           {list.length ? (
-            <div className="card-grid">
-              {list.map((l) => (
-                <ListingGridCard key={l.id} listing={l} />
-              ))}
-            </div>
+            <>
+              <div className="card-grid">
+                {list.map((l) => (
+                  <ListingGridCard key={l.id} listing={l} />
+                ))}
+              </div>
+              {hasMore && (
+                <div style={{ textAlign: 'center', marginTop: 32, marginBottom: 40 }}>
+                  <button className="btn btn-outline" style={{ padding: '0 40px', borderRadius: 20 }} onClick={() => setPage(p => p + 1)}>
+                    더보기
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="empty">
               <div className="empty-icon">
