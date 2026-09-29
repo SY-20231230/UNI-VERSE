@@ -409,16 +409,11 @@ export default function Chat() {
                 <Avatar user={partner2} size={40} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="name" style={!activeChat.anonymous ? { '&:hover': { textDecoration: 'underline' } } : undefined}>{partner2.name}</div>
-                {listing2 && (
-                  <div className="faint" style={{ fontSize: 11.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {listing2.title} · {won(listing2.listedPrice !== undefined ? listing2.listedPrice : listing2.price)} · 중고거래
-                  </div>
-                )}
               </div>
               </div>
               {listing2 && (
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <Link className="btn btn-outline btn-sm chat-room-head-cta" to={`/market/${listing2.id}`}>
+                  <Link className="btn btn-outline btn-sm chat-room-head-cta" to={`/market/${listing2.id}?from=chat&chatId=${activeId}`}>
                     상품 보기
                   </Link>
                   {activeChat?.listingId && (!trade || tradeStatus === 'CANCELLED') && !isSeller && (
