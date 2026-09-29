@@ -11,5 +11,6 @@ import java.util.List;
 public interface ChatMemberRepository extends JpaRepository<ChatMember, ChatMemberId> {
     List<ChatMember> findByUserId(Long userId);
     List<ChatMember> findByRoomId(Long roomId);
+    java.util.Optional<ChatMember> findByRoomIdAndUserId(Long roomId, Long userId);
     void deleteByRoomId(Long roomId);
 }

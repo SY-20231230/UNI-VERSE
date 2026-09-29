@@ -4,6 +4,7 @@ import com.universe.chat.dto.ChatMessageRequest;
 import com.universe.chat.dto.ChatMessageResponse;
 import com.universe.chat.dto.ChatRoomCreateRequest;
 import com.universe.chat.dto.ChatRoomDto;
+import com.universe.chat.dto.ChatReadResponse;
 import com.universe.chat.entity.*;
 import com.universe.chat.repository.ChatMemberRepository;
 import com.universe.chat.repository.ChatRequestRepository;
@@ -103,15 +104,18 @@ public class ChatService {
         List<ChatMember> memberships = chatMemberRepository.findByUserId(userId);
         return memberships.stream().map(m -> {
             ChatRoom room = m.getRoom();
-            User partner = chatMemberRepository.findByRoomId(room.getId()).stream()
+            ChatMember partnerMember = chatMemberRepository.findByRoomId(room.getId()).stream()
                     .filter(cm -> !cm.getUser().getId().equals(userId))
-                    .map(ChatMember::getUser)
                     .findFirst().orElse(null);
+            User partner = partnerMember != null ? partnerMember.getUser() : null;
             
             Long pId = partner != null ? partner.getId() : null;
             String pName = partner != null ? partner.getNickname() : "알 수 없음";
+            long unread = messageRepository.countUnread(room.getId(), userId, lastReadId(m));
+            Long partnerLastRead = partnerMember != null && partnerMember.getLastReadMessage() != null
+                    ? partnerMember.getLastReadMessage().getId() : null;
             
-            return new ChatRoomDto(room, pId, pName);
+            return new ChatRoomDto(room, pId, pName, unread, partnerLastRead);
         }).collect(Collectors.toList());
     }
 
@@ -135,6 +139,41 @@ public class ChatService {
                 .content(request.getContent())
                 .build();
         return new ChatMessageResponse(messageRepository.save(message));
+    }
+
+    /**
+     * 방의 최신 메시지까지 읽음으로 저장하고, 상대에게 READ 이벤트를 보낸다 (상대 화면의 "1" 표시 제거용).
+     * 읽음 위치는 앞으로만 움직인다.
+     */
+    @Transactional
+    public ChatReadResponse markRead(Long roomId, Long userId) {
+        ChatMember me = chatMemberRepository.findByRoomIdAndUserId(roomId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN));
+        Message latest = messageRepository.findFirstByRoomIdOrderByIdDesc(roomId).orElse(null);
+        if (latest == null || lastReadId(me) >= latest.getId()) {
+            return new ChatReadResponse(roomId, me.getLastReadMessage() != null ? me.getLastReadMessage().getId() : null);
+        }
+        me.updateLastReadMessage(latest);
+
+        Long lastReadMessageId = latest.getId();
+        List<Long> partnerIds = chatMemberRepository.findByRoomId(roomId).stream()
+                .map(cm -> cm.getUser().getId())
+                .filter(id -> !id.equals(userId))
+                .toList();
+        String event = "{\"type\":\"READ\",\"roomId\":" + roomId + ",\"lastReadMessageId\":" + lastReadMessageId + "}";
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+            new org.springframework.transaction.support.TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    partnerIds.forEach(id -> messagingTemplate.convertAndSend("/sub/chat/user/" + id, event));
+                }
+            }
+        );
+        return new ChatReadResponse(roomId, lastReadMessageId);
+    }
+
+    private static long lastReadId(ChatMember member) {
+        return member.getLastReadMessage() != null ? member.getLastReadMessage().getId() : 0L;
     }
 
     @Transactional
