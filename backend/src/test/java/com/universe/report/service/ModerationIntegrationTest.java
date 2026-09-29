@@ -122,11 +122,13 @@ class ModerationIntegrationTest {
         assertThat(seller.getTrustScore()).isEqualTo(54);
     }
 
-    @Test void suspensionCannotBeReleasedBeforeEnd() {
-        adminSanctions.create(admin.getId(), seller.getId(), new UserSanctionCreateRequest(
+    @Test void adminCanReleaseSuspensionBeforeEnd() {
+        var response = adminSanctions.create(admin.getId(), seller.getId(), new UserSanctionCreateRequest(
                 SanctionType.SUSPENSION, "temporary", LocalDateTime.now().plusDays(3), null));
-        assertThatThrownBy(() -> adminUsers.updateStatus(admin.getId(), seller.getId(),
-                new UserStatusUpdateRequest(AccountStatus.ACTIVE))).isInstanceOf(ModerationException.class);
+        adminUsers.updateStatus(admin.getId(), seller.getId(), new UserStatusUpdateRequest(AccountStatus.ACTIVE)); em.flush();
+        assertThat(seller.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
+        assertThat(sanctions.findById(response.sanctionId()).orElseThrow().getEndAt()).isBeforeOrEqualTo(LocalDateTime.now());
+        assertThat(sanctions.hasActive(seller.getId(), SanctionType.SUSPENSION, LocalDateTime.now())).isFalse();
     }
 
     @Test void expiryQueryAndReleaseAreIdempotent() {

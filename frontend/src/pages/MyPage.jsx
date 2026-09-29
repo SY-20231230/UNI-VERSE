@@ -59,7 +59,7 @@ export default function MyPage() {
         { label: '내 신고', value: state.reports || 0 },
       ];
   const counts = server.enabled
-    ? { posts: summary?.postCount ?? 0, listings: summary?.marketItemCount ?? 0, liked: server.favorites?.length ?? 0 }
+    ? { posts: summary?.postCount ?? 0, listings: summary?.marketItemCount ?? 0, liked: server.favorites.totalElements }
     : tabCounts;
 
   function setTab(k) {
@@ -155,7 +155,7 @@ export default function MyPage() {
       </div>
 
       {server.enabled ? (
-        <ServerTabs tab={tab} posts={server.posts} items={server.items} loading={server.loading} favorites={server.favorites} />
+        <ServerTabs tab={tab} posts={server.posts} items={server.items} favorites={server.favorites} />
       ) : (
       <div style={{ marginTop: 4 }}>
         {tab === 'posts' && (
@@ -250,82 +250,77 @@ function Empty({ icon, text }) {
   );
 }
 
-// 커뮤니티·중고거래 상세 화면이 아직 목업이라 서버 목록은 링크 없이 보여준다.
-function ServerTabs({ tab, posts, items, loading, favorites }) {
-  if (loading) return <div className="empty">불러오는 중…</div>;
+function Pager({ list }) {
+  if (list.totalPages <= 1) return null;
+  function go(page) {
+    list.goPage(page);
+    // 새 페이지를 위에서부터 보도록 탭 줄로 스크롤한다 (고정 헤더 높이만큼 여유).
+    const tabs = document.querySelector('.tab-row-plain');
+    if (tabs) window.scrollTo({ top: tabs.getBoundingClientRect().top + window.scrollY - 90, behavior: 'smooth' });
+  }
+  return (
+    <nav className="row between mypage-pagination" aria-label="목록 페이지">
+      <button className="btn btn-outline btn-sm" type="button" disabled={list.loading || list.page === 0} onClick={() => go(list.page - 1)}>이전</button>
+      <span className="tnum">{list.page + 1} / {list.totalPages}</span>
+      <button className="btn btn-outline btn-sm" type="button" disabled={list.loading || list.page + 1 >= list.totalPages} onClick={() => go(list.page + 1)}>다음</button>
+    </nav>
+  );
+}
 
-  if (tab === 'posts') {
-    if (!posts.length) return <Empty icon="board" text="아직 작성한 글이 없어요" />;
+function ItemRows({ items }) {
+  return items.map((item) => {
+    const id = item.itemId || item.id;
+    const status = TRADE_STATUS_LABELS[item.tradeStatus] || { label: item.tradeStatus, variant: 'outline' };
     return (
-      <div style={{ maxWidth: 760, marginTop: 4 }}>
-        {posts.map((p) => {
-          const meta = POST_CATEGORY_LABELS[p.category] || { label: p.category, variant: 'outline' };
-          return (
-            <div className="mypage-post-row" key={p.postId}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="row g6">
-                  <span className={'chip ' + meta.variant}>{meta.label}</span>
-                  {p.isAnonymous && <span className="chip outline">익명</span>}
-                </div>
-                <Link className="title" to={`/community/${p.postId}`}>{p.title}</Link>
-                <div className="meta">
-                  {formatDate(p.createdAt)} · 조회 {p.viewCount}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="mypage-post-row" key={id}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="row g6">
+            <span className={'chip ' + status.variant}>{status.label}</span>
+          </div>
+          <Link className="title" to={`/market/${id}`}>{item.title}</Link>
+          <div className="meta">
+            {won(item.listedPrice || item.price)} · {formatDate(item.createdAt)}
+          </div>
+        </div>
       </div>
     );
+  });
+}
+
+// 목록은 페이지당 MYPAGE_PAGE_SIZE개씩 서버에서 받아 온다.
+function ServerTabs({ tab, posts, items, favorites }) {
+  const list = tab === 'posts' ? posts : tab === 'listings' ? items : tab === 'liked' ? favorites : null;
+  if (!list) return null;
+  if (list.loading && !list.content.length) return <div className="empty">불러오는 중…</div>;
+
+  if (!list.content.length) {
+    if (tab === 'posts') return <Empty icon="board" text="아직 작성한 글이 없어요" />;
+    if (tab === 'listings') return <Empty icon="tag" text="아직 등록한 거래가 없어요" />;
+    return <Empty icon="heart" text="아직 찜한 거래가 없어요" />;
   }
 
-  if (tab === 'listings') {
-    if (!items.length) return <Empty icon="tag" text="아직 등록한 거래가 없어요" />;
-    return (
-      <div style={{ maxWidth: 760, marginTop: 4 }}>
-        {items.map((item) => {
-          const status = TRADE_STATUS_LABELS[item.tradeStatus] || { label: item.tradeStatus, variant: 'outline' };
-          return (
-            <div className="mypage-post-row" key={item.itemId}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="row g6">
-                  <span className={'chip ' + status.variant}>{status.label}</span>
-                </div>
-                <Link className="title" to={`/market/${item.itemId}`}>{item.title}</Link>
-                <div className="meta">
-                  {won(item.listedPrice)} · {formatDate(item.createdAt)}
+  return (
+    <div style={{ maxWidth: 760, marginTop: 4, opacity: list.loading ? 0.6 : 1 }}>
+      {tab === 'posts'
+        ? list.content.map((p) => {
+            const meta = POST_CATEGORY_LABELS[p.category] || { label: p.category, variant: 'outline' };
+            return (
+              <div className="mypage-post-row" key={p.postId}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="row g6">
+                    <span className={'chip ' + meta.variant}>{meta.label}</span>
+                    {p.isAnonymous && <span className="chip outline">익명</span>}
+                  </div>
+                  <Link className="title" to={`/community/${p.postId}`}>{p.title}</Link>
+                  <div className="meta">
+                    {formatDate(p.createdAt)} · 조회 {p.viewCount}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  if (tab === 'liked') {
-    if (!favorites || !favorites.length) return <Empty icon="heart" text="아직 찜한 거래가 없어요" />;
-    return (
-      <div style={{ maxWidth: 760, marginTop: 4 }}>
-        {favorites.map((item) => {
-          const status = TRADE_STATUS_LABELS[item.tradeStatus] || { label: item.tradeStatus, variant: 'outline' };
-          return (
-            <div className="mypage-post-row" key={item.itemId || item.id}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="row g6">
-                  <span className={'chip ' + status.variant}>{status.label}</span>
-                </div>
-                <Link className="title" to={`/market/${item.itemId || item.id}`}>{item.title}</Link>
-                <div className="meta">
-                  {won(item.listedPrice || item.price)} · {formatDate(item.createdAt)}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  return null;
+            );
+          })
+        : <ItemRows items={list.content} />}
+      <Pager list={list} />
+    </div>
+  );
 }

@@ -62,4 +62,9 @@ public class UserSanction {
         this.startAt = startAt != null ? startAt : LocalDateTime.now();
         this.endAt = endAt;
     }
+
+    /** 관리자가 기간 전에 정지를 풀 때 종료 시각을 앞당긴다. 이미 끝난 제재는 건드리지 않는다. */
+    public void endEarly(LocalDateTime now) {
+        if (endAt == null || endAt.isAfter(now)) this.endAt = now;
+    }
 }

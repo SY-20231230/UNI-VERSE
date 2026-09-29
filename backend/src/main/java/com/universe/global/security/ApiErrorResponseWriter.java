@@ -16,9 +16,13 @@ public class ApiErrorResponseWriter {
     private final ObjectMapper objectMapper;
 
     public void write(HttpServletResponse response, ErrorCode errorCode) throws IOException {
+        write(response, errorCode, errorCode.getMessage());
+    }
+
+    public void write(HttpServletResponse response, ErrorCode errorCode, String message) throws IOException {
         response.setStatus(errorCode.getStatus().value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
-        objectMapper.writeValue(response.getOutputStream(), ApiResponse.error(errorCode.getCode(), errorCode.getMessage()));
+        objectMapper.writeValue(response.getOutputStream(), ApiResponse.error(errorCode.getCode(), message));
     }
 }

@@ -41,7 +41,7 @@ class MyPageControllerTest {
     }
 
     @Test void summaryUsesAuthenticatedIdentityAndRealSharedResponse() throws Exception {
-        when(service.getSummary(42L)).thenReturn(new MyPageResponse(42L, "a@test.example", "name", "nick", "dept", null, null, false, 50, 1, 2, 3));
+        when(service.getSummary(42L)).thenReturn(new MyPageResponse(42L, "a@test.example", "name", "nick", "dept", null, null, false, 50, 1, 2, 3, "ACTIVE", null, null, null));
         mvc.perform(get("/api/v1/mypage").with(user("42")).param("userId", "999"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.userId").value(42))
                 .andExpect(jsonPath("$.data.trustScore").value(50)).andExpect(jsonPath("$.success").value(true));
