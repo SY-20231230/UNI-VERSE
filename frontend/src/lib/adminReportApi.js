@@ -79,6 +79,10 @@ export function createAdminReportApi(options = {}) {
       const page = normalizePage(await request('/admin/users', { ...options, query: { accountStatus, page: 0, size: 50 } }), 0);
       return page.content;
     },
+    /** 정지 즉시 해제 (기간이 남아 있어도 지금 끝낸다) */
+    releaseSuspension(userId, options = {}) {
+      return request(`/admin/users/${requireId(userId)}/status`, { ...options, method: 'PATCH', body: { accountStatus: 'ACTIVE' } });
+    },
     async latestSanction(userId, options = {}) {
       const page = normalizePage(await request(`/admin/users/${requireId(userId)}/sanctions`, { ...options, query: { page: 0, size: 1 } }), 0);
       return page.content[0] || null;

@@ -2,6 +2,8 @@ package com.universe.global.security;
 
 import lombok.RequiredArgsConstructor;
 import com.universe.global.exception.ErrorCode;
+import com.universe.report.repository.UserSanctionRepository;
+import com.universe.user.repository.UserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -22,6 +24,8 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtFilter;
     private final ApiAuthenticationEntryPoint authenticationEntryPoint;
     private final ApiErrorResponseWriter errorResponseWriter;
+    private final UserRepository users;
+    private final UserSanctionRepository sanctions;
 
     @Bean PasswordEncoder passwordEncoder(){return new BCryptPasswordEncoder();}
 
@@ -65,6 +69,7 @@ public class SecurityConfig {
                 .accessDeniedHandler((req, res, ex) -> errorResponseWriter.write(res, ErrorCode.FORBIDDEN))
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(new SuspendedAccountFilter(users, sanctions, errorResponseWriter), JwtAuthenticationFilter.class)
             .build();
     }
 }

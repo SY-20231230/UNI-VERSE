@@ -1,5 +1,8 @@
 export const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || '/api/v1';
 
+// 정지·비활성 계정 응답은 서버 메시지(정지 기한 등)를 그대로 보여준다.
+const ACCOUNT_STATE_CODES = new Set(['ACCOUNT_SUSPENDED', 'INACTIVE_ACCOUNT']);
+
 export class ApiError extends Error {
   constructor(message, code, status = 0) {
     super(message);
@@ -87,7 +90,7 @@ export function createTransport({
     if (!response.ok || envelope?.success !== true) {
       const serverMessage = envelope?.error?.message || envelope?.message;
       const message = response.status === 401 && auth ? '로그인이 만료되었거나 인증되지 않았습니다. 다시 로그인해주세요.'
-        : response.status === 403 && auth ? '이 기능을 사용할 권한이 없습니다.'
+        : response.status === 403 && auth && !ACCOUNT_STATE_CODES.has(envelope?.error?.code) ? '이 기능을 사용할 권한이 없습니다.'
         : serverMessage || '요청을 처리하지 못했습니다. 다시 시도해주세요.';
       throw new ApiError(message, envelope?.error?.code || envelope?.code || 'REQUEST_FAILED', response.status);
     }

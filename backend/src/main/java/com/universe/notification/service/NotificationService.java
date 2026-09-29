@@ -51,6 +51,12 @@ public class NotificationService {
         return new UnreadCountResponse(0);
     }
 
+    /** 로그아웃할 때 읽은 알림만 정리한다. 안 읽은 알림은 남긴다. */
+    @Transactional
+    public int deleteRead(Long userId) {
+        return notificationRepository.deleteReadByReceiverId(userId);
+    }
+
     @Transactional
     public void delete(Long userId, Long notificationId) {
         notificationRepository.delete(findOwned(userId, notificationId));
