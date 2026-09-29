@@ -60,20 +60,9 @@ public class MarketItemService {
     }
     private final ApplicationEventPublisher eventPublisher;
 
-    public Page<MarketItemListResponse> searchItems(Long schoolId, String category, String keyword, String sort, Pageable pageable) {
-        Page<MarketItem> items = itemRepository.searchItems(schoolId, category, keyword, sort, pageable);
-        List<Long> itemIds = items.getContent().stream()
-                .map(MarketItem::getId)
-                .toList();
-        Map<Long, Long> favoriteCounts = itemIds.isEmpty()
-                ? Map.of()
-                : favoriteRepository.countByItemIds(itemIds).stream()
-                        .collect(Collectors.toMap(ItemFavoriteCount::itemId, ItemFavoriteCount::favoriteCount));
-
-        return items.map(item -> new MarketItemListResponse(
-                item,
-                favoriteCounts.getOrDefault(item.getId(), 0L)
-        ));
+    public Page<MarketItemListResponse> searchItems(Long schoolId, String category, String keyword, String sort, String status, Pageable pageable) {
+        return itemRepository.searchItems(schoolId, category, keyword, sort, status, pageable)
+                .map(MarketItemListResponse::new);
     }
 
     public MarketItemDetailResponse getItemDetail(Long itemId) {

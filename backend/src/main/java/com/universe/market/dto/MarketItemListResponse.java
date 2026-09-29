@@ -26,10 +26,6 @@ public class MarketItemListResponse {
     private long likeCount;
 
     public MarketItemListResponse(MarketItem item) {
-        this(item, 0L);
-    }
-
-    public MarketItemListResponse(MarketItem item, long likeCount) {
         this.id = item.getId();
         this.title = item.getTitle();
         this.category = item.getCategory();
@@ -40,7 +36,7 @@ public class MarketItemListResponse {
         this.sellerNickname = item.getSeller().getNickname();
         this.schoolName = item.getSchool().getSchoolName();
         this.viewCount = item.getViewCount() == null ? 0 : item.getViewCount();
-        this.likeCount = likeCount;
+        this.likeCount = item.getLikeCount() == null ? 0L : item.getLikeCount();
         if (item.getImages() != null && !item.getImages().isEmpty()) {
             this.thumbnail = item.getImages().get(0).getImageUrl();
         }

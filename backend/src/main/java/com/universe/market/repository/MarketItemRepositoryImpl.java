@@ -22,7 +22,7 @@ public class MarketItemRepositoryImpl implements MarketItemRepositoryCustom {
     }
 
     @Override
-    public Page<MarketItem> searchItems(Long schoolId, String category, String keyword, String sort, Pageable pageable) {
+    public Page<MarketItem> searchItems(Long schoolId, String category, String keyword, String sort, String status, Pageable pageable) {
         BooleanBuilder builder = new BooleanBuilder()
                 .and(marketItem.school.id.eq(schoolId));
 
@@ -35,16 +35,26 @@ public class MarketItemRepositoryImpl implements MarketItemRepositoryCustom {
                     .or(marketItem.description.containsIgnoreCase(keyword)));
         }
 
+        if (status != null && !status.isBlank()) {
+            if ("TRADING".equalsIgnoreCase(status)) {
+                builder.and(marketItem.tradeStatus.in(TradeStatus.REQUESTED, TradeStatus.TRADING));
+            } else {
+                builder.and(marketItem.tradeStatus.stringValue().equalsIgnoreCase(status));
+            }
+        }
+
         var query = queryFactory.selectFrom(marketItem)
                 .join(marketItem.seller).fetchJoin()
                 .join(marketItem.school).fetchJoin()
                 .where(builder);
 
         OrderSpecifier<?> orderSpecifier = new OrderSpecifier<>(Order.DESC, marketItem.createdAt);
-        if ("price_asc".equalsIgnoreCase(sort)) {
+        if ("listedPrice,asc".equalsIgnoreCase(sort) || "price_asc".equalsIgnoreCase(sort)) {
             orderSpecifier = new OrderSpecifier<>(Order.ASC, marketItem.listedPrice);
         } else if ("price_desc".equalsIgnoreCase(sort)) {
             orderSpecifier = new OrderSpecifier<>(Order.DESC, marketItem.listedPrice);
+        } else if ("popular".equalsIgnoreCase(sort)) {
+            orderSpecifier = new OrderSpecifier<>(Order.DESC, marketItem.likeCount);
         }
 
         var list = query.orderBy(orderSpecifier)

@@ -40,28 +40,14 @@ export default function Market() {
         const res = await marketApi.getItems({
           category: catParam,
           keyword: debouncedQ || undefined,
-          // Since the controller doesn't explicitly expose status parameter, we might have to wait for backend updates or just rely on keyword. 
-          // Wait, MarketItemController searchItems doesn't have status param!
-          // We will omit status for now or assume the backend uses it.
           sort: sortParam,
+          status: statusParam,
           page: 0,
           size: 20
         });
         
-        // Temporary client side filtering for status if backend doesn't support it yet
-        let dataList = res.content || [];
-        if (state.marketStatusFilter !== '전체') {
-           if (state.marketStatusFilter === '판매중') {
-             dataList = dataList.filter(item => item.tradeStatus === 'SELLING');
-           } else if (state.marketStatusFilter === '거래완료') {
-             dataList = dataList.filter(item => item.tradeStatus === 'COMPLETED');
-           } else if (state.marketStatusFilter === '거래중') {
-             dataList = dataList.filter(item => item.tradeStatus === 'REQUESTED' || item.tradeStatus === 'TRADING');
-           }
-        }
-        
-        setList(dataList);
-        setTotalElements(res.totalElements || dataList.length);
+        setList(res.content || []);
+        setTotalElements(res.totalElements || (res.content || []).length);
       } catch (err) {
         console.error('Failed to fetch market items', err);
       }

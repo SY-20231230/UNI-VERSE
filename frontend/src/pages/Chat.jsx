@@ -159,14 +159,20 @@ export default function Chat() {
     }
   }, [activeId, activeChat?.messages.length]);
 
+  const [serverListing, setServerListing] = useState(null);
+
   // 채팅방 변경시 거래 정보 로드 및 STOMP 이벤트 수신
   const fetchTrade = useCallback(() => {
     if (!activeId || !activeChat?.listingId || !session.isActive()) return;
     tradeApi.getTradeByItem(activeChat.listingId).then(setTrade).catch(() => setTrade(null));
+    import('../lib/marketApi').then(({ marketApi }) => {
+      marketApi.getItem(activeChat.listingId).then(res => setServerListing(res)).catch(() => setServerListing(null));
+    });
   }, [activeId, activeChat?.listingId]);
 
   useEffect(() => {
     setTrade(null);
+    setServerListing(null);
     setMenuOpen(false);
     fetchTrade();
   }, [activeId, fetchTrade]);
@@ -199,7 +205,6 @@ export default function Chat() {
       const tradeId = await tradeApi.proposeTrade(activeChat.listingId);
       const t = tradeId ? await tradeApi.getTradeDetail(tradeId) : await tradeApi.getTradeByItem(activeChat.listingId);
       setTrade(t);
-      if (t) announceTrade(t, 'self');
     } catch (e) {
       toast(e?.message || '거래 요청에 실패했어요. 이미 진행 중인 거래가 있거나 판매 완료된 상품이에요.');
     } finally {
@@ -214,7 +219,6 @@ export default function Chat() {
       await tradeApi.acceptTrade(tradeId);
       const t = await tradeApi.getTradeDetail(tradeId);
       setTrade(t);
-      announceTrade(t, 'self');
     } catch (e) {
       toast(e?.message || '거래 수락에 실패했어요.');
     } finally {
@@ -244,7 +248,6 @@ export default function Chat() {
       await tradeApi.promiseTrade(tradeId);
       const t = await tradeApi.getTradeDetail(tradeId);
       setTrade(t);
-      announceTrade(t, 'self');
     } catch (e) {
       toast('오류가 발생했어요.');
     } finally {
@@ -259,7 +262,6 @@ export default function Chat() {
       await tradeApi.confirmTrade(tradeId);
       const t = await tradeApi.getTradeDetail(tradeId);
       setTrade(t);
-      announceTrade(t, 'self');
     } catch (e) {
       toast('오류가 발생했어요.');
     } finally {
@@ -312,14 +314,16 @@ export default function Chat() {
     );
   }
 
-  const listing2 = activeChat ? state.listings.find((x) => x.id === activeChat.listingId) : null;
+  const listing2 = serverListing || (activeChat ? state.listings.find((x) => x.id === activeChat.listingId) : null);
   const partner2 = activeChat ? (activeChat.anonymous ? { name: '익명 사용자', color: '#9195A6' } : userOf(activeChat.partnerId, activeChat.partnerName)) : null;
   const myServerId = state.users?.me?.serverId;
-  const isSeller = trade && myServerId && String(trade.sellerId) === String(myServerId);
-  const isBuyer = trade && myServerId && String(trade.buyerId) === String(myServerId);
+  const isSeller = (trade && myServerId && String(trade.sellerId) === String(myServerId)) || 
+                   (listing2?.sellerId && myServerId && String(listing2.sellerId) === String(myServerId));
+  const isBuyer = (trade && myServerId && String(trade.buyerId) === String(myServerId)) || 
+                  (!isSeller && myServerId);
   const myConfirmed = isSeller ? trade?.sellerConfirmed : (isBuyer ? trade?.buyerConfirmed : false);
   const myPromised = isSeller ? trade?.sellerPromised : (isBuyer ? trade?.buyerPromised : false);
-  const tradeStatus = trade?.status; // TRADING | COMPLETED | CANCELLED | null
+  const tradeStatus = trade?.status || 'NOT_REQUESTED'; // TRADING | COMPLETED | CANCELLED | NOT_REQUESTED
   const itemTradeCompleted = tradeStatus === 'COMPLETED';
   // 상품이 거래완료면 메시지 입력 차단
   const chatBlocked = itemTradeCompleted;
@@ -407,15 +411,26 @@ export default function Chat() {
                   <div className="name" style={!activeChat.anonymous ? { '&:hover': { textDecoration: 'underline' } } : undefined}>{partner2.name}</div>
                 {listing2 && (
                   <div className="faint" style={{ fontSize: 11.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {listing2.title} · {won(listing2.price)} · 중고거래
+                    {listing2.title} · {won(listing2.listedPrice !== undefined ? listing2.listedPrice : listing2.price)} · 중고거래
                   </div>
                 )}
               </div>
               </div>
               {listing2 && (
-                <Link className="btn btn-outline btn-sm chat-room-head-cta" to={`/market/${listing2.id}`}>
-                  상품 보기
-                </Link>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Link className="btn btn-outline btn-sm chat-room-head-cta" to={`/market/${listing2.id}`}>
+                    상품 보기
+                  </Link>
+                  {activeChat?.listingId && (!trade || tradeStatus === 'CANCELLED') && !isSeller && (
+                    <button 
+                      className="btn btn-primary btn-sm chat-room-head-cta" 
+                      onClick={handleProposeTrade}
+                      disabled={tradeLoading}
+                    >
+                      🤝 거래 요청하기
+                    </button>
+                  )}
+                </div>
               )}
               <div style={{ position: 'relative' }} ref={menuRef}>
                 <button
@@ -432,18 +447,7 @@ export default function Chat() {
                     borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,.12)',
                     minWidth: 160, zIndex: 100, overflow: 'hidden'
                   }}>
-                    {/* 거래 요청 버튼 - 상품 ID가 있고 거래가 없을 때 표시 (취소된 경우 포함) */}
-                    {activeChat?.listingId && (!trade || tradeStatus === 'CANCELLED') && !isSeller && (
-                      <button
-                        style={{ width: '100%', padding: '12px 16px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ink)' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                        onClick={handleProposeTrade}
-                        disabled={tradeLoading}
-                      >
-                        🤝 거래 요청하기
-                      </button>
-                    )}
+                    {/* 거래 요청 버튼 삭제 - 위젯으로 이동됨 */}
                     {/* 거래 약속 버튼 - 거래중이고 아직 내가 약속 안 했을 때 */}
                     {trade && tradeStatus === 'TRADING' && !myPromised && (
                       <button
@@ -493,9 +497,7 @@ export default function Chat() {
               </div>
             </div>
             {/* 거래 상태 배너 */}
-            {trade && (() => {
-              if (tradeStatus === 'CANCELLED') return null;
-              
+            {activeChat?.listingId && (() => {
               const steps = ['거래 시작', '거래 중', '약속 확정', '거래 완료'];
               let activeIdx = 0;
               if (tradeStatus === 'TRADING') activeIdx = 1;
@@ -524,20 +526,26 @@ export default function Chat() {
                         </div>
                         <div className="stack g4" style={{ minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>
-                            {tradeStatus === 'REQUESTED' ? '거래 요청이 도착했어요' :
+                            {tradeStatus === 'NOT_REQUESTED' || tradeStatus === 'CANCELLED' ? '거래를 시작해 보세요' :
+                             tradeStatus === 'REQUESTED' ? '거래 요청이 도착했어요' :
                              tradeStatus === 'TRADING' ? '거래 중이에요' :
                              tradeStatus === 'PROMISED' ? '약속이 확정됐어요' :
                              '거래가 완료됐어요'}
                           </div>
                           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {listing2?.title || trade.listingTitle || '상품 정보 없음'}
+                            {listing2?.title || trade?.listingTitle || '상품 정보 없음'}
                           </div>
                           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>
-                            {listing2 ? won(listing2.price) : '0원'}
+                            {listing2 ? won(listing2.listedPrice !== undefined ? listing2.listedPrice : listing2.price) : '0원'}
                           </div>
                         </div>
                       </div>
                       <div style={{ marginLeft: 16, flexShrink: 0 }}>
+                        {(tradeStatus === 'NOT_REQUESTED' || tradeStatus === 'CANCELLED') && isSeller && (
+                          <div style={{ fontSize: 13, color: 'var(--ink-soft)', background: 'var(--surface-2)', padding: '6px 12px', borderRadius: 6 }}>
+                            ⏳ 요청 대기 중
+                          </div>
+                        )}
                         {tradeStatus === 'REQUESTED' && isSeller && (
                           <div className="row g8">
                             <button
