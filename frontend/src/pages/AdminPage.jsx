@@ -54,13 +54,19 @@ function useServerDashboard(api, enabled, revision) {
   return data;
 }
 
+import SchoolAdminPage from './SchoolAdminPage';
+
 export default function AdminPage() {
   const { state, liftSuspension } = useApp();
   const { toast, openModal, closeOverlay } = useUI();
   const reportApi = useAdminReportApi();
-  const isServer = state.authMode === 'server';
+  const isServer = state.authMode === 'server' && !state.isSchoolAdmin;
   const [revision, setRevision] = useState(0);
   const server = useServerDashboard(reportApi, isServer, revision);
+
+  if (state.isSchoolAdmin) {
+    return <SchoolAdminPage />;
+  }
 
   const records = [...(state.reportRecords || [])].sort((a, b) => b.time - a.time);
   const demoSuspended = Object.values(state.users).filter(
