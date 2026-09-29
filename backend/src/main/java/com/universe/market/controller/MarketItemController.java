@@ -33,6 +33,7 @@ public class MarketItemController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String sort,
+            @RequestParam(required = false) String status,
             Pageable pageable) {
         
         Long userId = SecurityUtil.getCurrentUserId();
@@ -44,7 +45,7 @@ public class MarketItemController {
         }
         
         Long schoolId = user.getSchool().getId();
-        Page<MarketItemListResponse> page = marketItemService.searchItems(schoolId, category, keyword, sort, pageable);
+        Page<MarketItemListResponse> page = marketItemService.searchItems(schoolId, category, keyword, sort, status, pageable);
         return ApiResponse.success(new PageResponse<>(page));
     }
 

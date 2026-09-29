@@ -65,6 +65,9 @@ public class MarketItem {
     @Column(name = "view_count", nullable = false, columnDefinition = "int not null default 0")
     private Integer viewCount = 0;
 
+    @org.hibernate.annotations.Formula("(SELECT COUNT(*) FROM market_item_favorites f WHERE f.item_id = item_id)")
+    private Long likeCount;
+
     @OneToMany(mappedBy = "item", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<MarketItemImage> images = new java.util.ArrayList<>();
 

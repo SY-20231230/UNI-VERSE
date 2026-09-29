@@ -23,6 +23,7 @@ public class MarketItemListResponse {
     private String schoolName;
     private String thumbnail;
     private int viewCount;
+    private long likeCount;
 
     public MarketItemListResponse(MarketItem item) {
         this.id = item.getId();
@@ -35,6 +36,7 @@ public class MarketItemListResponse {
         this.sellerNickname = item.getSeller().getNickname();
         this.schoolName = item.getSchool().getSchoolName();
         this.viewCount = item.getViewCount() == null ? 0 : item.getViewCount();
+        this.likeCount = item.getLikeCount() == null ? 0L : item.getLikeCount();
         if (item.getImages() != null && !item.getImages().isEmpty()) {
             this.thumbnail = item.getImages().get(0).getImageUrl();
         }

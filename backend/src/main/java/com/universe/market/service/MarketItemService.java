@@ -57,8 +57,8 @@ public class MarketItemService {
     }
     private final ApplicationEventPublisher eventPublisher;
 
-    public Page<MarketItemListResponse> searchItems(Long schoolId, String category, String keyword, String sort, Pageable pageable) {
-        return itemRepository.searchItems(schoolId, category, keyword, sort, pageable)
+    public Page<MarketItemListResponse> searchItems(Long schoolId, String category, String keyword, String sort, String status, Pageable pageable) {
+        return itemRepository.searchItems(schoolId, category, keyword, sort, status, pageable)
                 .map(MarketItemListResponse::new);
     }
 

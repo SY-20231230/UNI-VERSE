@@ -5,5 +5,5 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface MarketItemRepositoryCustom {
-    Page<MarketItem> searchItems(Long schoolId, String category, String keyword, String sort, Pageable pageable);
+    Page<MarketItem> searchItems(Long schoolId, String category, String keyword, String sort, String status, Pageable pageable);
 }
