@@ -20,6 +20,13 @@ export default function Community() {
   const [sort, setSort] = useState('latest');
   const [list, setList] = useState([]);
   const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [page, setPage] = useState(0);
+
+  // 필터가 변경되면 페이지를 0으로 초기화
+  useEffect(() => {
+    setPage(0);
+  }, [state.communityFilter, debouncedQ, sort]);
 
   useEffect(() => {
     async function fetchPosts() {
@@ -29,17 +36,84 @@ export default function Community() {
           category: catParam,
           keyword: debouncedQ || undefined,
           sort: sort,
-          page: 0,
-          size: 20
+          page: page,
+          size: 10
         });
         setList(res.content);
         setTotalElements(res.totalElements);
+        setTotalPages(res.totalPages);
       } catch (err) {
         console.error('Failed to fetch posts', err);
       }
     }
     fetchPosts();
-  }, [state.communityFilter, debouncedQ, sort]);
+  }, [state.communityFilter, debouncedQ, sort, page]);
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    
+    // 10개 단위 블록 계산
+    const startPage = Math.floor(page / 10) * 10;
+    const endPage = Math.min(startPage + 10, totalPages);
+    
+    const pages = [];
+    for (let i = startPage; i < endPage; i++) {
+      pages.push(i);
+    }
+
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 32, marginBottom: 40, alignItems: 'center' }}>
+        <button 
+          className="btn btn-outline btn-sm" 
+          disabled={startPage === 0} 
+          onClick={() => setPage(startPage - 1)}
+          title="이전 10페이지"
+          style={{ padding: '0 8px' }}
+        >
+          &lt;&lt;
+        </button>
+        <button 
+          className="btn btn-outline btn-sm" 
+          disabled={page === 0} 
+          onClick={() => setPage(page - 1)}
+          title="이전 페이지"
+          style={{ padding: '0 10px' }}
+        >
+          &lt;
+        </button>
+        
+        {pages.map(p => (
+          <button 
+            key={p} 
+            className={`btn btn-sm ${p === page ? 'btn-primary' : 'btn-outline'}`} 
+            style={{ width: 34, padding: 0, fontWeight: p === page ? 700 : 500 }}
+            onClick={() => setPage(p)}
+          >
+            {p + 1}
+          </button>
+        ))}
+
+        <button 
+          className="btn btn-outline btn-sm" 
+          disabled={page === totalPages - 1} 
+          onClick={() => setPage(page + 1)}
+          title="다음 페이지"
+          style={{ padding: '0 10px' }}
+        >
+          &gt;
+        </button>
+        <button 
+          className="btn btn-outline btn-sm" 
+          disabled={startPage + 10 >= totalPages} 
+          onClick={() => setPage(startPage + 10)}
+          title="다음 10페이지"
+          style={{ padding: '0 8px' }}
+        >
+          &gt;&gt;
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="container fade-enter">
@@ -87,7 +161,10 @@ export default function Community() {
             </div>
           )}
           {list.length ? (
-            list.map((p) => <PostCard key={p.postId} post={p} />)
+            <>
+              {list.map((p) => <PostCard key={p.postId} post={p} />)}
+              {renderPagination()}
+            </>
           ) : (
             <div className="empty">
               <div className="empty-icon">
