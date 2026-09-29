@@ -63,6 +63,7 @@ export default function AdminPage() {
   const isServer = state.authMode === 'server' && !state.isSchoolAdmin;
   const [revision, setRevision] = useState(0);
   const server = useServerDashboard(reportApi, isServer, revision);
+  const [releasing, setReleasing] = useState(null);
 
   if (state.isSchoolAdmin) {
     return <SchoolAdminPage />;
@@ -91,7 +92,6 @@ export default function AdminPage() {
     toast(u.name + '님의 정지를 해제했습니다');
   }
 
-  const [releasing, setReleasing] = useState(null);
   function askRelease(u) {
     openModal(
       <ConfirmModal
