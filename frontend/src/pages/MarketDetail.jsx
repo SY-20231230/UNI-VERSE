@@ -83,8 +83,9 @@ export default function MarketDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fromAdmin = searchParams.get('from') === 'admin';
-  const backTo = fromAdmin ? '/admin' : '/market';
-  const backLabel = fromAdmin ? '관리자' : '중고거래';
+  const fromChatId = searchParams.get('from') === 'chat' ? searchParams.get('chatId') : null;
+  const backTo = fromAdmin ? '/admin' : fromChatId ? `/chat/${fromChatId}` : '/market';
+  const backLabel = fromAdmin ? '관리자' : fromChatId ? '채팅' : '중고거래';
 
   const [listing, setListing] = useState(null);
   const [liked, setLiked] = useState(false);
