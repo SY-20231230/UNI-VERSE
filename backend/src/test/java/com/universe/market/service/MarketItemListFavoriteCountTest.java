@@ -53,12 +53,12 @@ class MarketItemListFavoriteCountTest {
         when(item.getImages()).thenReturn(List.of());
         when(seller.getNickname()).thenReturn("seller");
         when(school.getSchoolName()).thenReturn("school");
-        when(itemRepository.searchItems(1L, null, null, "latest", pageable))
+        when(itemRepository.searchItems(1L, null, null, "latest", null, pageable))
                 .thenReturn(new PageImpl<>(List.of(item), pageable, 1));
         when(favoriteRepository.countByItemIds(List.of(11L)))
                 .thenReturn(List.of(new ItemFavoriteCount(11L, 3L)));
 
-        Page<MarketItemListResponse> result = service.searchItems(1L, null, null, "latest", pageable);
+        Page<MarketItemListResponse> result = service.searchItems(1L, null, null, "latest", null, pageable);
 
         assertThat(result.getContent()).singleElement()
                 .extracting(MarketItemListResponse::getLikeCount)
