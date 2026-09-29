@@ -9,6 +9,38 @@ import { useGlobalChatSocket } from '../lib/useChatSocket';
 export const authApi = createAuthApi(sessionApiOptions);
 const chatApi = createChatApi(sessionApiOptions);
 
+// 서버의 채팅방·메시지를 화면용 채팅 상태로 바꾼다. 안 읽은 수와 상대의 읽음 위치는 서버 값을 쓴다.
+function toChat(room, msgs, myId, existing) {
+  const unreadCount = room.unreadCount ?? 0;
+  return {
+    listingId: room.itemId,
+    partnerId: room.partnerId || 'unknown',
+    partnerName: room.partnerName,
+    anonymous: room.profileMode === 'ANONYMOUS',
+    showSafety: existing ? existing.showSafety : true,
+    status: existing ? existing.status : 'accepted',
+    unreadCount,
+    unread: unreadCount > 0,
+    partnerLastReadId: room.partnerLastReadMessageId ?? null,
+    messages: msgs.map((m) => ({
+      id: m.messageId,
+      from: myId && String(m.senderId) === String(myId) ? 'me' : 'them',
+      text: m.content,
+      time: new Date(m.createdAt).getTime(),
+    })),
+  };
+}
+
+async function fetchChats(myId, existingChats = {}) {
+  const rooms = await chatApi.getMyRooms();
+  const chats = {};
+  for (const r of rooms) {
+    const cid = String(r.roomId);
+    chats[cid] = toChat(r, await chatApi.getMessages(r.roomId), myId, existingChats[cid]);
+  }
+  return chats;
+}
+
 const LS_KEY = 'universe_state_v10';
 const AppContext = createContext(null);
 
@@ -96,39 +128,8 @@ export function AppProvider({ children }) {
     // Load chats from backend
     async function loadChats(myProfile) {
       try {
-        const rooms = await chatApi.getMyRooms();
-        const chatDict = {};
-        const myId = myProfile?.userId ?? null;
-        for (const r of rooms) {
-          const cid = String(r.roomId);
-          const msgs = await chatApi.getMessages(r.roomId);
-          chatDict[cid] = {
-            listingId: r.itemId,
-            partnerId: r.partnerId || 'unknown',
-            partnerName: r.partnerName,
-            anonymous: r.profileMode === 'ANONYMOUS',
-            showSafety: true,
-            status: 'accepted',
-            messages: msgs.map(m => ({
-              from: myId && String(m.senderId) === String(myId) ? 'me' : 'them',
-              text: m.content,
-              time: new Date(m.createdAt).getTime()
-            }))
-          };
-        }
-        setState(s => {
-          const newChats = { ...chatDict };
-          // Preserve unread status from existing state
-          for (const cid in newChats) {
-            const isFromThem = newChats[cid].messages.length > 0 && newChats[cid].messages[newChats[cid].messages.length - 1].from === 'them';
-            if (s.chats[cid]?.unread !== undefined) {
-              newChats[cid].unread = s.chats[cid].unread;
-            } else if (isFromThem) {
-              newChats[cid].unread = true;
-            }
-          }
-          return { ...s, chats: newChats };
-        });
+        const chats = await fetchChats(myProfile?.userId ?? null);
+        setState((s) => ({ ...s, chats }));
       } catch (e) {
         console.error('Failed to load chats', e);
       }
@@ -144,37 +145,8 @@ export function AppProvider({ children }) {
       const myId = profile.userId;
       
       // Load chats on login
-      const rooms = await chatApi.getMyRooms();
-      const chatDict = {};
-      for (const r of rooms) {
-        const cid = String(r.roomId);
-        const msgs = await chatApi.getMessages(r.roomId);
-        chatDict[cid] = {
-          listingId: r.itemId,
-          partnerId: r.partnerId || 'unknown',
-          partnerName: r.partnerName,
-          anonymous: r.profileMode === 'ANONYMOUS',
-          showSafety: true,
-          status: 'accepted',
-          messages: msgs.map(m => ({
-            from: myId && String(m.senderId) === String(myId) ? 'me' : 'them',
-            text: m.content,
-            time: new Date(m.createdAt).getTime()
-          }))
-        };
-      }
-      setState(s => {
-        const newChats = { ...chatDict };
-        for (const cid in newChats) {
-          const isFromThem = newChats[cid].messages.length > 0 && newChats[cid].messages[newChats[cid].messages.length - 1].from === 'them';
-          if (s.chats[cid]?.unread !== undefined) {
-            newChats[cid].unread = s.chats[cid].unread;
-          } else if (isFromThem) {
-            newChats[cid].unread = true;
-          }
-        }
-        return { ...s, chats: newChats };
-      });
+      const chats = await fetchChats(myId);
+      setState((s) => ({ ...s, chats }));
       
       return profile;
     } catch (error) {
@@ -418,6 +390,7 @@ export function AppProvider({ children }) {
       const myId = s.users?.me?.serverId ?? null;
       const from = myId && String(data.senderId) === String(myId) ? 'me' : 'them';
       const newMsg = {
+        id: data.messageId,
         from,
         text: data.content,
         time: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
@@ -429,6 +402,7 @@ export function AppProvider({ children }) {
           [chatId]: {
             ...s.chats[chatId],
             unread: from === 'them' ? true : s.chats[chatId].unread,
+            unreadCount: (s.chats[chatId].unreadCount || 0) + (from === 'them' ? 1 : 0),
             messages: [...s.chats[chatId].messages, newMsg],
           },
         },
@@ -444,43 +418,30 @@ export function AppProvider({ children }) {
     window.dispatchEvent(new Event('notifications:refresh'));
     if (session.isActive()) {
       authApi.me().then(profile => {
-        chatApi.getMyRooms().then(async rooms => {
-          // We need to fetch messages outside of setState because it's async
-          const roomData = [];
-          for (const r of rooms) {
-            const msgs = await chatApi.getMessages(r.roomId);
-            roomData.push({ r, msgs });
+        fetchChats(profile?.userId ?? null).then((chats) => setState((s) => {
+          // 안전 안내를 닫은 상태 등 화면 설정은 기존 값을 유지한다.
+          const merged = { ...s.chats };
+          for (const [cid, chat] of Object.entries(chats)) {
+            const existing = s.chats[cid];
+            merged[cid] = existing ? { ...chat, showSafety: existing.showSafety, status: existing.status } : chat;
           }
-          
-          setState(s => {
-            const chatDict = { ...s.chats }; // copy existing
-            const myId = profile?.userId ?? null;
-            for (const { r, msgs } of roomData) {
-              const cid = String(r.roomId);
-              const existingChat = s.chats[cid];
-              chatDict[cid] = {
-                listingId: r.itemId,
-                partnerId: r.partnerId || 'unknown',
-                partnerName: r.partnerName,
-                anonymous: r.profileMode === 'ANONYMOUS',
-                showSafety: existingChat ? existingChat.showSafety : true,
-                status: existingChat ? existingChat.status : 'accepted',
-                unread: existingChat ? existingChat.unread : true, // mark new rooms as unread
-                messages: msgs.map(m => ({
-                  from: myId && String(m.senderId) === String(myId) ? 'me' : 'them',
-                  text: m.content,
-                  time: new Date(m.createdAt).getTime()
-                }))
-              };
-            }
-            return { ...s, chats: chatDict };
-          });
-        });
+          return { ...s, chats: merged };
+        })).catch(() => {});
       }).catch(() => {});
     }
   }, []);
 
-  const { connected: stompConnected, sendMessage: publishMessage } = useGlobalChatSocket(myServerId, allChatIds, receiveChatMessage, handleNewRoom);
+  // 상대가 내 메시지를 읽었다는 소켓 이벤트 (READ)
+  const handlePartnerRead = useCallback(({ roomId, lastReadMessageId }) => {
+    setState((s) => {
+      const cid = String(roomId);
+      const chat = s.chats[cid];
+      if (!chat || (chat.partnerLastReadId ?? 0) >= lastReadMessageId) return s;
+      return { ...s, chats: { ...s.chats, [cid]: { ...chat, partnerLastReadId: lastReadMessageId } } };
+    });
+  }, []);
+
+  const { connected: stompConnected, sendMessage: publishMessage } = useGlobalChatSocket(myServerId, allChatIds, receiveChatMessage, handleNewRoom, handlePartnerRead);
 
   const acceptChatRequest = useCallback((chatId) => {
     setState((s) => ({
@@ -516,9 +477,11 @@ export function AppProvider({ children }) {
       if (!s.chats[chatId] || !s.chats[chatId].unread) return s;
       return {
         ...s,
-        chats: { ...s.chats, [chatId]: { ...s.chats[chatId], unread: false } },
+        chats: { ...s.chats, [chatId]: { ...s.chats[chatId], unread: false, unreadCount: 0 } },
       };
     });
+    // 서버에 읽음 위치를 저장하면 상대 화면의 "1" 표시가 지워진다.
+    if (session.isActive() && /^\d+$/.test(String(chatId))) chatApi.markRead(chatId).catch(() => {});
   }, []);
 
   const dismissSafety = useCallback((chatId) => {

@@ -137,9 +137,10 @@ export default function Market() {
                 ))}
               </div>
               {hasMore && (
-                <div style={{ textAlign: 'center', marginTop: 32, marginBottom: 40 }}>
-                  <button className="btn btn-outline" style={{ padding: '0 40px', borderRadius: 20 }} onClick={() => setPage(p => p + 1)}>
+                <div className="load-more">
+                  <button type="button" className="load-more-btn" onClick={() => setPage(p => p + 1)}>
                     더보기
+                    <Icon name="chev" size={14} />
                   </button>
                 </div>
               )}

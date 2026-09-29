@@ -3,17 +3,19 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client/dist/sockjs';
 import { session } from './session';
 
-export function useGlobalChatSocket(userId, chatIds, onMessageReceived, onNewRoom) {
+export function useGlobalChatSocket(userId, chatIds, onMessageReceived, onNewRoom, onRead) {
   const [connected, setConnected] = useState(false);
   const clientRef = useRef(null);
   const subsRef = useRef(new Set());
   const callbackRef = useRef(onMessageReceived);
   const newRoomCallbackRef = useRef(onNewRoom);
+  const readCallbackRef = useRef(onRead);
 
   useEffect(() => {
     callbackRef.current = onMessageReceived;
     newRoomCallbackRef.current = onNewRoom;
-  }, [onMessageReceived, onNewRoom]);
+    readCallbackRef.current = onRead;
+  }, [onMessageReceived, onNewRoom, onRead]);
 
   useEffect(() => {
     if (!session.isActive()) return;
@@ -49,6 +51,8 @@ export function useGlobalChatSocket(userId, chatIds, onMessageReceived, onNewRoo
               const data = JSON.parse(msg.body);
               if (data.type === 'NEW_ROOM') {
                 if (newRoomCallbackRef.current) newRoomCallbackRef.current();
+              } else if (data.type === 'READ') {
+                if (readCallbackRef.current) readCallbackRef.current(data);
               } else if (data.type === 'TRADE_UPDATE') {
                 window.dispatchEvent(new CustomEvent('trade_update', { detail: data.itemId }));
               }

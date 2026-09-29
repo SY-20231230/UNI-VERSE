@@ -33,6 +33,12 @@ public class ChatApiController {
         return ApiResponse.success(chatService.getRoomMessages(roomId, userId));
     }
 
+    @PatchMapping("/rooms/{roomId}/read")
+    public ApiResponse<com.universe.chat.dto.ChatReadResponse> markRead(@PathVariable Long roomId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        return ApiResponse.success(chatService.markRead(roomId, userId));
+    }
+
     @DeleteMapping("/rooms/{roomId}")
     public ApiResponse<Void> deleteRoom(@PathVariable Long roomId) {
         Long userId = SecurityUtil.getCurrentUserId();
