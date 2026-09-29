@@ -53,6 +53,7 @@ class TrustScorePolicyTest {
         assertThatIllegalArgumentException().isThrownBy(() -> policy.afterSafeTrade(-1, 1, NORMAL));
         assertThatIllegalArgumentException().isThrownBy(() -> policy.afterSafeTrade(101, 1, NORMAL));
         assertThatIllegalArgumentException().isThrownBy(() -> policy.afterSafeTrade(50, 0, NORMAL));
+        assertThatIllegalArgumentException().isThrownBy(() -> policy.afterSafeTrade(50, 1, null));
         assertThatIllegalArgumentException().isThrownBy(() -> policy.afterSafeTrade(30, 11, REPORT_RECOVERY));
     }
 }
