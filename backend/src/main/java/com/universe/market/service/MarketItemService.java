@@ -11,6 +11,7 @@ import com.universe.market.entity.MarketItem;
 import com.universe.market.entity.MarketItemImage;
 import com.universe.market.repository.MarketItemRepository;
 import com.universe.market.repository.MarketItemImageRepository;
+import com.universe.market.repository.ItemFavoriteCount;
 import com.universe.notification.event.MarketItemPriceChangedEvent;
 import com.universe.trade.repository.TradeRepository;
 import com.universe.market.entity.MarketItemFavorite;
@@ -26,7 +27,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor

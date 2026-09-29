@@ -14,6 +14,10 @@ public interface MarketItemFavoriteRepository extends JpaRepository<MarketItemFa
     void deleteByItemIdAndUserId(Long itemId, Long userId);
     long countByItemId(Long itemId);
 
+    @Query("select new com.universe.market.repository.ItemFavoriteCount(f.item.id, count(f)) " +
+            "from MarketItemFavorite f where f.item.id in :itemIds group by f.item.id")
+    List<ItemFavoriteCount> countByItemIds(@Param("itemIds") List<Long> itemIds);
+
     @Query("select f.user.id from MarketItemFavorite f where f.item.id = :itemId")
     List<Long> findUserIdsByItemId(@Param("itemId") Long itemId);
 }
