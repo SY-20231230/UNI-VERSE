@@ -1,0 +1,7 @@
+// Verification-only dependency; the team's shared build.gradle remains unchanged.
+// Use together with report-contract.init.gradle; that script blocks runtime/packaging.
+allprojects {
+    afterEvaluate {
+        dependencies { implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta' }
+    }
+}

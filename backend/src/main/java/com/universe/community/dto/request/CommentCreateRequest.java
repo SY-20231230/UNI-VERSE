@@ -1,0 +1,1 @@
+package com.universe.community.dto.request; import jakarta.validation.constraints.NotBlank; import jakarta.validation.constraints.NotNull; import lombok.Getter; @Getter public class CommentCreateRequest { @NotBlank private String content; @NotNull private Boolean isAnonymous; private Long parentCommentId; }

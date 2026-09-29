@@ -1,0 +1,62 @@
+.admin-reports{padding:24px;min-width:0;}
+.admin-report-filters{margin:16px 0 8px;}
+.admin-report-filters fieldset{border:0;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.admin-report-filters .field,.admin-report-decision .field{font-size:13px;font-weight:600;}
+.admin-report-filters .input{min-width:0;box-sizing:border-box;}
+/* 자주 쓰는 필터(상태·유형)와 조회 버튼을 한 줄에, 나머지는 접어 둔다 */
+.admin-report-filters .admin-report-filter-main{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:end;}
+.admin-report-filter-actions{padding-bottom:4px;}
+.admin-report-more{margin-top:10px;}
+.admin-report-more summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink-soft);padding:6px 0;}
+.admin-report-more[open] summary{margin-bottom:10px;}
+.admin-report-count{font-size:12.5px;margin:12px 0 8px;}
+/* 신고 목록: 한 줄짜리 행, 행 전체를 눌러 상세 열기 */
+.admin-report-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.admin-rpt-item{width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border-soft);border-radius:12px;background:var(--surface);color:var(--ink);text-align:left;cursor:pointer;transition:border-color .12s ease,background .12s ease;}
+.admin-rpt-item:hover:not(:disabled),.admin-rpt-item.on{border-color:var(--accent);background:var(--surface-sunken);}
+.admin-rpt-item .chip{flex:none;}
+.admin-rpt-item-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:13px;}
+.admin-rpt-item-main strong{font-size:13.5px;}
+.admin-rpt-item-main .faint{font-size:12px;}
+.admin-rpt-item-date{flex:none;font-size:12px;}
+.admin-rpt-item-go{flex:none;font-size:18px;color:var(--ink-faint);}
+/* 상세: 목록 아래가 아니라 오른쪽 사이드 패널로 연다 */
+.admin-report-drawer-backdrop{position:fixed;inset:0;z-index:60;background:rgba(15,16,22,.38);display:flex;justify-content:flex-end;}
+.admin-report-drawer{width:min(520px,100%);height:100%;overflow-y:auto;background:var(--surface);box-shadow:var(--shadow);padding:24px;animation:admin-drawer-in .18s ease;}
+@keyframes admin-drawer-in{from{transform:translateX(24px);opacity:0;}to{transform:none;opacity:1;}}
+.admin-report-pagination{margin:20px 0;gap:10px;}
+.admin-report-detail{overflow-wrap:anywhere;}
+.admin-report-detail h4{font-size:14px;margin:20px 0 8px;}
+.admin-report-facts{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;margin:20px 0;font-size:13px;}
+.admin-report-facts dt{color:var(--ink-soft);}
+.admin-report-facts dd{margin:0;}
+.admin-report-text{white-space:pre-wrap;line-height:1.7;}
+.admin-report-decision{display:grid;gap:18px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border-soft);}
+.admin-report-confirm{background:var(--surface-sunken);border-radius:12px;padding:16px 18px;line-height:1.7;display:grid;gap:12px;}
+.admin-report-confirm p{margin:0;font-size:13.5px;}
+.admin-reports button:disabled,.admin-report-drawer button:disabled{opacity:.55;cursor:not-allowed;}
+.admin-reports [role=alert],.admin-report-drawer [role=alert]{color:var(--ink);background:var(--surface-sunken);padding:12px;border-radius:10px;}
+@media(max-width:540px){.admin-reports{padding:16px;}.admin-report-filters fieldset,.admin-report-filters .admin-report-filter-main{grid-template-columns:1fr;}.admin-rpt-item-date{display:none;}.admin-report-drawer{padding:18px;}.admin-report-facts{grid-template-columns:90px minmax(0,1fr);}}
+
+/* 제재 선택: 드롭다운 대신 버튼형 선택지 */
+.admin-rpt-label{font-size:13px;font-weight:600;}
+.admin-rpt-options{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.admin-rpt-option{padding:8px 14px;border-radius:99px;border:1px solid var(--border);background:var(--surface);color:var(--ink-soft);font-size:13px;font-weight:600;}
+.admin-rpt-option:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.admin-rpt-option.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+.admin-rpt-option.danger.on{background:var(--danger);border-color:var(--danger);color:#fff;}
+.admin-rpt-days{padding:14px;border-radius:12px;background:var(--surface-sunken);}
+.admin-rpt-custom{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink-soft);}
+.admin-rpt-custom .input{width:76px;padding:8px 10px;text-align:right;background:var(--surface);border:1px solid var(--border);border-radius:99px;}
+.admin-rpt-hint{font-size:12px;}
+.admin-rpt-actions{margin-top:2px;}
+.admin-rpt-summary{margin:0;padding:12px 14px;border-radius:12px;background:var(--surface-sunken);font-size:12.5px;line-height:1.7;color:var(--ink-soft);}
+.admin-rpt-id{display:block;margin-top:2px;font-size:12px;color:var(--ink-faint);}
+/* 신고된 상품·게시글 미리보기 */
+.admin-rpt-content{border:1px solid var(--border-soft);border-radius:14px;padding:14px;display:grid;gap:6px;}
+.admin-rpt-content-images{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
+.admin-rpt-content-images img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border-soft);display:block;}
+.admin-rpt-content-title{font-size:14px;}
+.admin-rpt-content-meta{font-size:12px;}
+.admin-rpt-content-body{margin:4px 0 0;font-size:13px;max-height:160px;overflow-y:auto;}
+.admin-rpt-content-link{font-size:12.5px;justify-self:start;margin-top:4px;}

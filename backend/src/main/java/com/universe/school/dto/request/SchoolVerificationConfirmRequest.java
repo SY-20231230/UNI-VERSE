@@ -1,0 +1,1 @@
+package com.universe.school.dto.request; import jakarta.validation.constraints.NotBlank; import lombok.Getter; @Getter public class SchoolVerificationConfirmRequest { @NotBlank private String verificationCode; }

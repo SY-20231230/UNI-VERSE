@@ -1,0 +1,16 @@
+// Explicit verification of report code against assumed shared response contracts.
+// Never use this init script for bootRun, bootJar, jar or deployment.
+allprojects {
+    afterEvaluate {
+        layout.buildDirectory = layout.projectDirectory.dir('build/report-contract')
+        ['ApiResponse', 'PageResponse'].each { type ->
+            if (file("src/main/java/com/universe/global/common/${type}.java").exists()) {
+                throw new GradleException('Real common responses are present. Remove test contracts and run normal tests.')
+            }
+        }
+        sourceSets.main.java.srcDir('src/test/contracts/java')
+        tasks.matching { it.name in ['bootRun', 'bootJar', 'jar', 'assemble', 'build', 'publish', 'publishToMavenLocal'] }.configureEach {
+            doFirst { throw new GradleException('Report contract fixtures are for compile/test verification only, not runtime or packaging.') }
+        }
+    }
+}

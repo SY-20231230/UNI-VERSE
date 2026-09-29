@@ -1,0 +1,6 @@
+// Isolated verification dependency; the shared build.gradle is not changed.
+allprojects {
+    afterEvaluate {
+        dependencies { testRuntimeOnly 'com.h2database:h2' }
+    }
+}
