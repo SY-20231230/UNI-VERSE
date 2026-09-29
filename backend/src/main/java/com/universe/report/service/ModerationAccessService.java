@@ -20,6 +20,15 @@ public class ModerationAccessService {
         return user;
     }
 
+    /** 조회 전용 기능(마이페이지 등)은 정지 기간에도 허용한다. */
+    public User requireReadableUser(Long authenticatedUserId) {
+        if (authenticatedUserId == null) throw new ModerationException(FORBIDDEN);
+        User user = users.findById(authenticatedUserId).orElseThrow(() -> new ModerationException(USER_NOT_FOUND));
+        if (user.getAccountStatus() != AccountStatus.ACTIVE && user.getAccountStatus() != AccountStatus.SUSPENDED)
+            throw new ModerationException(FORBIDDEN);
+        return user;
+    }
+
     public User requireAdmin(Long authenticatedUserId) {
         User user = requireActiveUser(authenticatedUserId);
         if (user.getRole() != UserRole.ADMIN) throw new ModerationException(FORBIDDEN);

@@ -67,6 +67,10 @@ public class AdminUserService {
             throw new ModerationException(INVALID_ACCOUNT_TRANSITION);
         LocalDateTime now = LocalDateTime.now();
         if (next == AccountStatus.ACTIVE) {
+            // 관리자 즉시 해제: 진행 중인 일시정지를 지금 끝내고 기간 만료와 같은 경로로 풀어 준다.
+            if (user.getAccountStatus() == AccountStatus.SUSPENDED)
+                sanctions.findFirstByUserIdAndSanctionTypeOrderByStartAtDescIdDesc(userId, SanctionType.SUSPENSION)
+                        .ifPresent(s -> s.endEarly(now));
             if (!release.releaseIfExpired(userId, now)) throw new ModerationException(INVALID_ACCOUNT_TRANSITION);
         } else {
             // Punitive states require an auditable sanction with a reason and duration.

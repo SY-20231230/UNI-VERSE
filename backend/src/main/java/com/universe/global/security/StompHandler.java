@@ -2,6 +2,8 @@ package com.universe.global.security;
 
 import com.universe.global.exception.BusinessException;
 import com.universe.global.exception.ErrorCode;
+import com.universe.user.entity.AccountStatus;
+import com.universe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Component;
 public class StompHandler implements ChannelInterceptor {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository users;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -41,6 +44,12 @@ public class StompHandler implements ChannelInterceptor {
                         // Ignore, let controller handle unauthorized
                     }
                 }
+            }
+            // 정지 등으로 활성 상태가 아닌 회원의 채팅 전송은 버린다 (HTTP 쓰기는 SuspendedAccountFilter가 막는다).
+            if (StompCommand.SEND.equals(accessor.getCommand()) && accessor.getSessionAttributes() != null
+                    && accessor.getSessionAttributes().get("USER_ID") instanceof Long userId
+                    && users.findById(userId).map(u -> u.getAccountStatus() != AccountStatus.ACTIVE).orElse(false)) {
+                return null;
             }
         }
         

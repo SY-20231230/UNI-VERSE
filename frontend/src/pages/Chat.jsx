@@ -13,6 +13,7 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client/dist/sockjs';
 import { session } from '../lib/session';
 import { tradeApi } from '../lib/tradeApi';
+import useSuspension from '../lib/useSuspension';
 
 function dateLabel(ts) {
   const d = new Date(ts);
@@ -35,6 +36,7 @@ export default function Chat() {
     }
   }, [activeId, state.chats, markChatRead]);
   const { openModal, closeOverlay, toast } = useUI();
+  const suspension = useSuspension();
   const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [query, setQuery] = useState('');
@@ -660,6 +662,12 @@ export default function Chat() {
                     수락하기
                   </button>
                 </div>
+              </div>
+            ) : suspension ? (
+              <div className="chatinput" style={{ justifyContent: 'center', opacity: 0.7 }}>
+                <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
+                  이용 정지 기간{suspension.until ? `(${formatDate(suspension.until)} ${hm(suspension.until)}까지)` : ''}에는 메시지를 보낼 수 없어요.
+                </span>
               </div>
             ) : chatBlocked ? (
               <div className="chatinput" style={{ justifyContent: 'center', opacity: 0.6 }}>

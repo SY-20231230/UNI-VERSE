@@ -95,7 +95,7 @@ class AdminUserServiceTest {
         verifyNoInteractions(release, sanctions);
     }
 
-    @Test void onlyExpiredSuspensionCanTransitionBackToActive() {
+    @Test void activeTransitionFailsWhenReleaseIsRefused() {
         target.updateAccountStatus(AccountStatus.SUSPENDED);
         when(access.requireAdmin(1L)).thenReturn(admin);
         when(users.findLockedById(2L)).thenReturn(Optional.of(target));
@@ -112,6 +112,24 @@ class AdminUserServiceTest {
         assertThat(service.updateStatus(1L, 2L, new UserStatusUpdateRequest(AccountStatus.ACTIVE)).accountStatus())
                 .isEqualTo(AccountStatus.ACTIVE);
         verify(release, times(2)).releaseIfExpired(eq(2L), any(LocalDateTime.class));
+    }
+
+    @Test void adminCanReleaseSuspensionBeforeItsEnd() {
+        target.updateAccountStatus(AccountStatus.SUSPENDED);
+        UserSanction suspension = UserSanction.builder().user(target).admin(admin).sanctionType(SanctionType.SUSPENSION)
+                .reason("욕설").startAt(LocalDateTime.now().minusDays(1)).endAt(LocalDateTime.now().plusDays(6)).build();
+        when(access.requireAdmin(1L)).thenReturn(admin);
+        when(users.findLockedById(2L)).thenReturn(Optional.of(target));
+        when(sanctions.findFirstByUserIdAndSanctionTypeOrderByStartAtDescIdDesc(2L, SanctionType.SUSPENSION))
+                .thenReturn(Optional.of(suspension));
+        when(release.releaseIfExpired(eq(2L), any(LocalDateTime.class))).thenAnswer(call -> {
+            target.updateAccountStatus(AccountStatus.ACTIVE);
+            return true;
+        });
+
+        assertThat(service.updateStatus(1L, 2L, new UserStatusUpdateRequest(AccountStatus.ACTIVE)).accountStatus())
+                .isEqualTo(AccountStatus.ACTIVE);
+        assertThat(suspension.getEndAt()).isBeforeOrEqualTo(LocalDateTime.now());
     }
 
     @Test void punitiveStatusRequiresMatchingActiveSanction() {
