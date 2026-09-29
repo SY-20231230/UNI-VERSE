@@ -11,6 +11,7 @@ import com.universe.report.service.ModerationAccessService;
 import com.universe.school.entity.School;
 import com.universe.trust.entity.TrustHistory;
 import com.universe.trust.repository.TrustHistoryRepository;
+import com.universe.report.repository.UserSanctionRepository;
 import com.universe.user.dto.response.MarketItemListResponse;
 import com.universe.user.entity.User;
 import com.universe.user.repository.MyPageItemRepository;
@@ -41,6 +42,7 @@ class MyPageServiceTest {
     @Mock MyPageItemRepository items;
     @Mock MyPageTradeRepository trades;
     @Mock TrustHistoryRepository histories;
+    @Mock UserSanctionRepository sanctions;
     @InjectMocks MyPageService service;
 
     @Test void summaryUsesAuthenticatedUserAndCountsVisibleActivity() {
@@ -48,7 +50,7 @@ class MyPageServiceTest {
         ReflectionTestUtils.setField(school, "id", 10L);
         User user = user(42L);
         user.verifySchool(school);
-        when(access.requireActiveUser(42L)).thenReturn(user);
+        when(access.requireReadableUser(42L)).thenReturn(user);
         when(posts.countByUserIdAndStatusNot(42L, PostStatus.DELETED)).thenReturn(3L);
         when(items.countBySellerId(42L)).thenReturn(4L);
         when(trades.countCompleted(42L)).thenReturn(5L);
@@ -77,7 +79,7 @@ class MyPageServiceTest {
 
         assertThat(response.getTotalElements()).isEqualTo(11);
         assertThat(response.getContent()).extracting("postId").containsExactly(7L);
-        verify(access).requireActiveUser(42L);
+        verify(access).requireReadableUser(42L);
     }
 
     @Test void itemSearchWithoutStatusUsesAuthenticatedSeller() {
@@ -99,7 +101,7 @@ class MyPageServiceTest {
 
         assertThat(service.findItems(42L, TradeStatus.SELLING, page)).isEmpty();
 
-        verify(access).requireActiveUser(42L);
+        verify(access).requireReadableUser(42L);
         verify(items).findBySellerIdAndTradeStatus(42L, TradeStatus.SELLING, page);
     }
 
@@ -118,16 +120,16 @@ class MyPageServiceTest {
             assertThat(result.afterScore()).isEqualTo(50);
             assertThat(result.reason()).isEqualTo("SAFE_TRADE:5");
         });
-        verify(access).requireActiveUser(42L);
+        verify(access).requireReadableUser(42L);
     }
 
     @Test void accessFailureStopsEveryRepositoryCall() {
         RuntimeException denied = new RuntimeException("denied");
-        when(access.requireActiveUser(42L)).thenThrow(denied);
+        when(access.requireReadableUser(42L)).thenThrow(denied);
 
         assertThatThrownBy(() -> service.getSummary(42L)).isSameAs(denied);
 
-        verifyNoInteractions(posts, items, trades, histories);
+        verifyNoInteractions(posts, items, trades, histories, sanctions);
     }
 
     @Test void itemResponseCannotExposePurchasePrice() {

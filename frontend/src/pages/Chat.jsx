@@ -13,6 +13,7 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client/dist/sockjs';
 import { session } from '../lib/session';
 import { tradeApi } from '../lib/tradeApi';
+import useSuspension from '../lib/useSuspension';
 
 function dateLabel(ts) {
   const d = new Date(ts);
@@ -35,6 +36,7 @@ export default function Chat() {
     }
   }, [activeId, state.chats, markChatRead]);
   const { openModal, closeOverlay, toast } = useUI();
+  const suspension = useSuspension();
   const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [query, setQuery] = useState('');
@@ -69,12 +71,7 @@ export default function Chat() {
     const partner = c.anonymous ? { name: '익명 사용자', color: '#9195A6' } : userOf(c.partnerId, c.partnerName);
     const last = c.messages[c.messages.length - 1];
     
-    // Check if the chat has an unread message
-    // If the last message is from 'them' and there's no read receipt logic, we'll assume it's unread if we haven't visited this chat
-    // For simplicity, we consider it unread if activeId !== cid and the last message is from 'them'
-    // Alternatively, we can check if `c.hasUnread` is true (needs to be managed in AppContext).
-    // I'll add a simple unread dot if it's from 'them' and activeId !== cid.
-    // Better yet: AppContext adds `unread: true` to the chat when receiving a message.
+    // 안 읽은 수는 서버(unreadCount)가 기준. 지금 보고 있는 방은 곧 읽음 처리되므로 표시하지 않는다.
     const isUnread = c.unread && cid !== activeId;
 
     return (
@@ -84,7 +81,6 @@ export default function Chat() {
           <div className="row between">
             <b style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
               {partner.name}
-              {isUnread && <span style={{ width: 6, height: 6, borderRadius: 3, background: 'var(--accent)' }}></span>}
             </b>
             <span className="faint" style={{ fontSize: 11 }}>
               {last ? timeAgo(last.time) : ''}
@@ -98,6 +94,11 @@ export default function Chat() {
               {last ? last.text : '대화를 시작해보세요'}
             </div>
             {l && <span className="chat-row-price tnum">{won(l.price)}</span>}
+            {isUnread && (
+              <span className="chat-unread-badge tnum" aria-label={`안 읽은 메시지 ${c.unreadCount || 1}개`}>
+                {c.unreadCount > 99 ? '99+' : c.unreadCount || 1}
+              </span>
+            )}
           </div>
         </div>
       </Link>
@@ -249,7 +250,7 @@ export default function Chat() {
       const t = await tradeApi.getTradeDetail(tradeId);
       setTrade(t);
     } catch (e) {
-      toast('오류가 발생했어요.');
+      toast(e?.message || '거래 약속에 실패했어요.');
     } finally {
       setTradeLoading(false);
     }
@@ -263,7 +264,7 @@ export default function Chat() {
       const t = await tradeApi.getTradeDetail(tradeId);
       setTrade(t);
     } catch (e) {
-      toast('오류가 발생했어요.');
+      toast(e?.message || '거래 완료 확인에 실패했어요.');
     } finally {
       setTradeLoading(false);
     }
@@ -422,7 +423,7 @@ export default function Chat() {
                       onClick={handleProposeTrade}
                       disabled={tradeLoading}
                     >
-                      🤝 거래 요청하기
+                      거래 요청하기
                     </button>
                   )}
                 </div>
@@ -452,7 +453,7 @@ export default function Chat() {
                         onClick={() => { setMenuOpen(false); handlePromiseTrade(); }}
                         disabled={tradeLoading}
                       >
-                        🤝 거래 약속
+                        거래 약속
                       </button>
                     )}
                     {/* 거래 완료 확인 버튼 - 약속확정이고 아직 내가 확인 안 했을 때 */}
@@ -464,7 +465,7 @@ export default function Chat() {
                         onClick={() => { setMenuOpen(false); handleConfirmTrade(); }}
                         disabled={tradeLoading}
                       >
-                        ✅ 거래 완료 확인
+                        거래 완료 확인
                       </button>
                     )}
                     <button
@@ -485,7 +486,7 @@ export default function Chat() {
                       onMouseLeave={e => e.currentTarget.style.background = 'none'}
                       onClick={() => { setMenuOpen(false); handleDeleteRoom(); }}
                     >
-                      🗑️ 채팅방 삭제
+                      채팅방 삭제
                     </button>
                   </div>
                 )}
@@ -500,45 +501,47 @@ export default function Chat() {
               if (tradeStatus === 'COMPLETED') activeIdx = 3;
 
               return (
-                <div style={{ padding: '20px 20px 10px' }}>
+                <div style={{ padding: '14px 20px 0' }}>
                   <div style={{
                     background: 'var(--surface)',
                     border: '1px solid var(--border)',
                     borderRadius: 12,
-                    padding: '20px',
+                    padding: '16px 20px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 24,
+                    gap: 16,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div className="row g16" style={{ flex: 1, minWidth: 0 }}>
+                      <div className="row g12" style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
-                          width: 48, height: 48, borderRadius: 8, background: 'var(--accent-soft)',
+                          width: 44, height: 44, borderRadius: 10, background: 'var(--accent-soft)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0
                         }}>
-                          <Icon name="book" size={24} />
+                          <Icon name="book" size={22} />
                         </div>
-                        <div className="stack g4" style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>
+                        <div className="stack" style={{ minWidth: 0, gap: 4 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)' }}>
                             {tradeStatus === 'NOT_REQUESTED' || tradeStatus === 'CANCELLED' ? '거래를 시작해 보세요' :
                              tradeStatus === 'REQUESTED' ? '거래 요청이 도착했어요' :
                              tradeStatus === 'TRADING' ? '거래 중이에요' :
                              tradeStatus === 'PROMISED' ? '약속이 확정됐어요' :
                              '거래가 완료됐어요'}
                           </div>
-                          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {listing2?.title || trade?.listingTitle || '상품 정보 없음'}
-                          </div>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>
-                            {listing2 ? won(listing2.listedPrice !== undefined ? listing2.listedPrice : listing2.price) : '0원'}
+                          <div className="row g8" style={{ minWidth: 0, alignItems: 'baseline' }}>
+                            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+                              {listing2?.title || trade?.listingTitle || '상품 정보 없음'}
+                            </span>
+                            <span style={{ flex: 'none', fontSize: 13, fontWeight: 700, color: 'var(--ink-soft)' }}>
+                              {listing2 ? won(listing2.listedPrice !== undefined ? listing2.listedPrice : listing2.price) : '0원'}
+                            </span>
                           </div>
                         </div>
                       </div>
                       <div style={{ marginLeft: 16, flexShrink: 0 }}>
                         {(tradeStatus === 'NOT_REQUESTED' || tradeStatus === 'CANCELLED') && isSeller && (
                           <div style={{ fontSize: 13, color: 'var(--ink-soft)', background: 'var(--surface-2)', padding: '6px 12px', borderRadius: 6 }}>
-                            ⏳ 요청 대기 중
+                            요청 대기 중
                           </div>
                         )}
                         {tradeStatus === 'REQUESTED' && isSeller && (
@@ -570,7 +573,7 @@ export default function Chat() {
                         )}
                         {tradeStatus === 'TRADING' && myPromised && (
                           <div style={{ fontSize: 13, color: 'var(--ink-soft)', background: 'var(--surface-2)', padding: '6px 12px', borderRadius: 6 }}>
-                            ⏳ 상대방의 수락을 기다리는 중...
+                            상대방의 수락을 기다리는 중
                           </div>
                         )}
                         {tradeStatus === 'PROMISED' && !myConfirmed && (
@@ -584,14 +587,14 @@ export default function Chat() {
                         )}
                         {tradeStatus === 'PROMISED' && myConfirmed && (
                           <div style={{ fontSize: 13, color: 'var(--ink-soft)', background: 'var(--surface-2)', padding: '6px 12px', borderRadius: 6 }}>
-                            ⏳ 상대방의 확인을 기다리는 중...
+                            상대방의 확인을 기다리는 중
                           </div>
                         )}
                       </div>
                     </div>
 
                     {/* PROGRESS BAR */}
-                    <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', padding: '0 10px', marginTop: 10 }}>
+                    <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', padding: '0 10px' }}>
                       <div style={{ position: 'absolute', top: 6, left: 40, right: 40, height: 2, background: 'var(--border)', zIndex: 0 }} />
                       <div style={{ position: 'absolute', top: 6, left: 40, width: `calc((100% - 80px) * ${activeIdx / 3})`, height: 2, background: 'var(--accent)', zIndex: 0, transition: 'width 0.3s ease' }} />
                       
@@ -599,7 +602,7 @@ export default function Chat() {
                         const isPast = idx < activeIdx;
                         const isActive = idx === activeIdx;
                         return (
-                          <div key={step} className="stack" style={{ alignItems: 'center', gap: 10, zIndex: 1, width: 60 }}>
+                          <div key={step} className="stack" style={{ alignItems: 'center', gap: 8, zIndex: 1, width: 60 }}>
                             <div style={{
                               width: 14, height: 14, borderRadius: '50%', background: 'var(--surface)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -623,7 +626,7 @@ export default function Chat() {
               );
             })()}
             {activeChat.showSafety !== false && (
-              <div style={{ padding: '12px 20px 0' }}>
+              <div style={{ padding: '8px 20px 0' }}>
                 <SafetyBanner onClose={() => dismissSafety(activeId)} />
               </div>
             )}
@@ -633,13 +636,20 @@ export default function Chat() {
                 const next = activeChat.messages[i + 1];
                 const showTime = !next || next.from !== m.from;
                 const showDate = !prev || dateLabel(prev.time) !== dateLabel(m.time);
+                // 상대가 아직 읽지 않은 내 메시지에 "1" 표시 (서버 메시지 ID가 있을 때만)
+                const unreadByPartner = m.from === 'me' && m.id != null && m.id > (activeChat.partnerLastReadId ?? 0);
                 return (
-                  <div key={i}>
+                  <div key={m.id ?? i}>
                     {showDate && <div className="chat-date-sep">{dateLabel(m.time)}</div>}
                     <div className={'bubble-row ' + m.from}>
                       <div className="bubble-row-inner">
                         <div className="bubble">{m.text}</div>
-                        {showTime && <span className="bubble-time">{hm(m.time)}</span>}
+                        {(showTime || unreadByPartner) && (
+                          <span className="bubble-meta">
+                            {unreadByPartner && <span className="bubble-read">1</span>}
+                            {showTime && <span className="bubble-time">{hm(m.time)}</span>}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -661,9 +671,15 @@ export default function Chat() {
                   </button>
                 </div>
               </div>
+            ) : suspension ? (
+              <div className="chatinput" style={{ justifyContent: 'center', opacity: 0.7 }}>
+                <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
+                  이용 정지 기간{suspension.until ? `(${formatDate(suspension.until)} ${hm(suspension.until)}까지)` : ''}에는 메시지를 보낼 수 없어요.
+                </span>
+              </div>
             ) : chatBlocked ? (
               <div className="chatinput" style={{ justifyContent: 'center', opacity: 0.6 }}>
-                <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>🎉 거래가 완료된 채팅방입니다. 메시지를 보낼 수 없어요.</span>
+                <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>거래가 완료된 채팅방입니다. 메시지를 보낼 수 없어요.</span>
               </div>
             ) : (
               <div className="chatinput">

@@ -6,6 +6,7 @@ import { useApp } from '../context/AppContext';
 import { timeAgo, won } from '../lib/format';
 import useNotifications from '../lib/useNotifications';
 import { notificationMeta } from '../lib/notificationApi';
+import usePendingReportNotice from '../lib/usePendingReportNotice';
 
 const NAV_TABS = [
   { k: 'home', icon: 'home', label: '홈', path: '/' },
@@ -51,9 +52,16 @@ export default function Nav() {
     .map(([cid, c]) => ({ cid, ...c }))
     .sort((a, b) => (b.messages[b.messages.length - 1]?.time || 0) - (a.messages[a.messages.length - 1]?.time || 0));
 
-  const pendingReportCount = state.isAdmin ? (state.reportRecords || []).filter((r) => r.status === '대기중').length : 0;
+  // 신고 처리 후 페이지를 옮기거나 알림창을 열 때 대기 건수를 다시 받는다.
+  const reportNotice = usePendingReportNotice(`${location.pathname}:${notifOpen}`);
+  const pendingReportCount = reportNotice.count;
+  const { markSeen: markReportsSeen } = reportNotice;
+  // 관리자 페이지에 들어가면 대기 신고를 확인한 것으로 본다.
+  useEffect(() => {
+    if (root === 'admin') markReportsSeen();
+  }, [root, markReportsSeen]);
 
-  const notifCount = pendingChats.length + (pendingReportCount > 0 ? 1 : 0) + server.unreadCount;
+  const notifCount = pendingChats.length + (reportNotice.unseen ? 1 : 0) + server.unreadCount;
   const listCount = pendingChats.length + (pendingReportCount > 0 ? 1 : 0) + server.items.length;
 
   function goTo(path) {
@@ -114,7 +122,8 @@ export default function Nav() {
                 ) : (
                   <div className="notif-list">
                     {pendingReportCount > 0 && (
-                      <button type="button" className="notif-item" onClick={() => goTo('/admin')}>
+                      <button type="button" className={'notif-item' + (reportNotice.unseen ? ' unread' : '')}
+                        onClick={() => { markReportsSeen(); goTo('/admin'); }}>
                         <div className="notif-item-icon">
                           <Icon name="flag" size={15} />
                         </div>

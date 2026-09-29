@@ -10,6 +10,8 @@ import { useMouseGlow } from '../lib/useMouseGlow';
 import { POST_CATEGORY_META, postCategoryToApi } from '../lib/category';
 import { communityApi } from '../lib/communityApi';
 import { marketApi } from '../lib/marketApi';
+import { useSuspensionState } from '../lib/useSuspension';
+import SuspensionNotice from '../components/SuspensionNotice';
 
 const HOME_BOARD_CATS = ['자유', '수업/학점', '학교생활', '시설/환경', '기숙사', '취업/진로', '기타'];
 const CAMPUS_NOTICES = [
@@ -23,6 +25,7 @@ export default function Home() {
   const navigate = useNavigate();
   const me = userOf('me');
   const heroRef = useMouseGlow();
+  const { suspension, release } = useSuspensionState();
   // 실제 로그인이면 서버의 인기글·새 매물·게시판별 글 수를, 데모 모드면 목업 데이터를 보여준다.
   const isServer = state.authMode === 'server';
   const [server, setServer] = useState({ posts: [], listings: [], counts: {} });
@@ -69,6 +72,7 @@ export default function Home() {
   return (
     <>
       <div className="container fade-enter">
+        <SuspensionNotice suspension={suspension} release={release} style={{ marginBottom: 16 }} />
         <div className="hero-banner" ref={heroRef}>
           <div className="hero-dots"></div>
           <div style={{ position: 'relative', maxWidth: 480 }}>
@@ -82,7 +86,7 @@ export default function Home() {
               </span>
               <VerifiedChip level={me.verified} score={me.trustScore} light />
             </div>
-            <div className="row g8" style={{ marginTop: 24 }}>
+            {!suspension && <div className="row g8" style={{ marginTop: 24 }}>
               <Link className="chip" style={{ background: 'rgba(255,255,255,.16)', color: '#fff', border: '1px solid rgba(255,255,255,.4)' }} to="/market/write">
                 <Icon name="plus" size={13} />
                 중고거래 등록
@@ -91,7 +95,7 @@ export default function Home() {
                 <Icon name="edit" size={13} />
                 커뮤니티 글쓰기
               </Link>
-            </div>
+            </div>}
           </div>
           <div className="hero-portrait">
             <Avatar user={me} size={104} />

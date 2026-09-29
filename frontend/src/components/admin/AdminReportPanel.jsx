@@ -18,6 +18,9 @@ const VIEW_KEY = 'universe_admin_report_view';
 function loadView() {
   try { return JSON.parse(sessionStorage.getItem(VIEW_KEY) || 'null') || {}; } catch { return {}; }
 }
+function clearView() {
+  try { sessionStorage.removeItem(VIEW_KEY); } catch { /* storage unavailable */ }
+}
 function saveView(view) {
   try { sessionStorage.setItem(VIEW_KEY, JSON.stringify(view)); } catch { /* storage unavailable */ }
 }
@@ -44,7 +47,11 @@ export default function AdminReportPanel({ api, onNotice = () => {}, onChanged =
   // 스크롤할 때마다 저장하면 버벅이므로, 화면 상태는 바뀔 때만·스크롤 위치는 페이지를 떠날 때 한 번만 저장한다.
   const view = useRef({ draft, query, selected });
   useEffect(() => { view.current = { draft, query, selected }; }, [draft, query, selected]);
-  useEffect(() => () => saveView({ ...view.current, scrollY: window.scrollY }), []);
+  // 복원한 뒤에는 지운다. 남겨 두면 닫은 신고가 새로고침 때 다시 열린다.
+  useEffect(() => {
+    clearView();
+    return () => saveView({ ...view.current, scrollY: window.scrollY });
+  }, []);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -112,7 +119,7 @@ export default function AdminReportPanel({ api, onNotice = () => {}, onChanged =
                 aria-pressed={selected === report.reportId} aria-label={`신고 #${report.reportId} 상세 보기`} onClick={() => setSelected(report.reportId)}>
                 <span className={'chip ' + statusClass(report.status)}>{REPORT_STATUS[report.status] || report.status}</span>
                 <span className="admin-rpt-item-main">
-                  <strong>#{report.reportId} {REPORT_TYPES[report.reportType] || report.reportType}</strong>
+                  <strong>{REPORT_TYPES[report.reportType] || report.reportType}</strong>
                   <span className="faint">{report.reporterNickname || '알 수 없음'} → {report.targetNickname || '알 수 없음'}</span>
                 </span>
                 <span className="faint admin-rpt-item-date">{date(report.createdAt).slice(0, 16)}</span>
@@ -180,7 +187,7 @@ function AdminReportDetail({ id, api, revision, onBusy, onProcessed, onRefresh, 
   }
 
   return <section className="admin-report-detail" aria-label={`신고 ${id} 상세`}>
-    <div className="row between g8"><h3 className="h3" ref={heading} tabIndex={-1}>신고 #{id} 상세</h3>
+    <div className="row between g8"><h3 className="h3" ref={heading} tabIndex={-1}>신고 상세</h3>
       <button className="btn btn-outline btn-sm" type="button" onClick={onClose} disabled={busy}>닫기</button></div>
     {loading && <p role="status">상세 정보를 불러오는 중…</p>}
     {error && <div role="alert"><p>{error}</p><button className="btn btn-outline btn-sm" type="button" onClick={() => setRefresh((value) => value + 1)}>상세 다시 불러오기</button></div>}

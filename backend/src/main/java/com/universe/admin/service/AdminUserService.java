@@ -12,6 +12,7 @@ import com.universe.report.service.*;
 import com.universe.trust.service.TrustScoreService;
 import com.universe.user.entity.*;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -65,8 +66,14 @@ public class AdminUserService {
         if (user.getAccountStatus() == next) return AdminUserResponse.from(user);
         if (user.getAccountStatus() == AccountStatus.BANNED || user.getAccountStatus() == AccountStatus.DELETED)
             throw new ModerationException(INVALID_ACCOUNT_TRANSITION);
-        LocalDateTime now = LocalDateTime.now();
+        // user_sanctions.end_at은 초 단위 DATETIME이라 DB가 소수점 초를 반올림한다.
+        // 즉시 해제로 저장한 종료 시각이 다음 초로 올라가 "아직 정지 중"이 되지 않도록 초 단위로 맞춘다.
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         if (next == AccountStatus.ACTIVE) {
+            // 관리자 즉시 해제: 진행 중인 일시정지를 지금 끝내고 기간 만료와 같은 경로로 풀어 준다.
+            if (user.getAccountStatus() == AccountStatus.SUSPENDED)
+                sanctions.findFirstByUserIdAndSanctionTypeOrderByStartAtDescIdDesc(userId, SanctionType.SUSPENSION)
+                        .ifPresent(s -> s.endEarly(now));
             if (!release.releaseIfExpired(userId, now)) throw new ModerationException(INVALID_ACCOUNT_TRANSITION);
         } else {
             // Punitive states require an auditable sanction with a reason and duration.

@@ -6,6 +6,7 @@ import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
 import { formatDate } from '../lib/format';
 import AdminReportPanel from '../components/admin/AdminReportPanel';
+import ConfirmModal from '../components/ConfirmModal';
 import useAdminReportApi from '../lib/useAdminReportApi';
 import { REPORT_TYPES } from '../lib/reportLabels';
 
@@ -53,13 +54,20 @@ function useServerDashboard(api, enabled, revision) {
   return data;
 }
 
+import SchoolAdminPage from './SchoolAdminPage';
+
 export default function AdminPage() {
   const { state, liftSuspension } = useApp();
-  const { toast } = useUI();
+  const { toast, openModal, closeOverlay } = useUI();
   const reportApi = useAdminReportApi();
-  const isServer = state.authMode === 'server';
+  const isServer = state.authMode === 'server' && !state.isSchoolAdmin;
   const [revision, setRevision] = useState(0);
   const server = useServerDashboard(reportApi, isServer, revision);
+  const [releasing, setReleasing] = useState(null);
+
+  if (state.isSchoolAdmin) {
+    return <SchoolAdminPage />;
+  }
 
   const records = [...(state.reportRecords || [])].sort((a, b) => b.time - a.time);
   const demoSuspended = Object.values(state.users).filter(
@@ -82,6 +90,24 @@ export default function AdminPage() {
   function unsuspend(u) {
     liftSuspension(u.id);
     toast(u.name + '님의 정지를 해제했습니다');
+  }
+
+  function askRelease(u) {
+    openModal(
+      <ConfirmModal
+        title={`${u.name}님의 정지를 해제할까요?`}
+        desc="남은 정지 기간과 관계없이 바로 모든 기능을 다시 쓸 수 있게 돼요."
+        confirmLabel="정지 해제"
+        onClose={closeOverlay}
+        onConfirm={() => {
+          setReleasing(u.id);
+          reportApi.releaseSuspension(u.id)
+            .then(() => { toast(u.name + '님의 정지를 해제했습니다'); setRevision((v) => v + 1); })
+            .catch((error) => toast(error.message || '정지를 해제하지 못했습니다'))
+            .finally(() => setReleasing(null));
+        }}
+      />
+    );
   }
 
   const untilText = (u) => {
@@ -142,10 +168,7 @@ export default function AdminPage() {
                         <span>{u.name}</span>
                       </Link>
                     ) : (
-                      <div className="row between g8">
-                        <strong style={{ fontSize: 13.5 }}>{u.name}</strong>
-                        <span className="faint" style={{ fontSize: 11.5 }}>회원 #{u.id}</span>
-                      </div>
+                      <strong style={{ fontSize: 13.5 }}>{u.name}</strong>
                     )}
                     <div className="row g6 wrap" style={{ marginTop: 8 }}>
                       <span className={'chip ' + (u.permanent ? 'danger' : 'warn')}>{untilText(u)}</span>
@@ -156,9 +179,15 @@ export default function AdminPage() {
                         정지 해제
                       </button>
                     )}
+                    {isServer && !u.permanent && (
+                      <button className="btn btn-outline btn-sm btn-full" style={{ marginTop: 10 }} disabled={releasing === u.id}
+                        onClick={() => askRelease(u)}>
+                        {releasing === u.id ? '해제 중…' : '정지 해제'}
+                      </button>
+                    )}
                   </div>
                 ))}
-                {isServer && <p className="faint" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.6 }}>일시정지는 기간이 끝나면 자동으로 해제돼요.</p>}
+                {isServer && <p className="faint" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.6 }}>일시정지는 기간이 끝나면 자동으로 해제되고, 필요하면 바로 해제할 수도 있어요.</p>}
               </div>
             )}
           </div>
