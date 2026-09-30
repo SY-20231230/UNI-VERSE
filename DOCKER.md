@@ -33,7 +33,7 @@ The Compose frontend target runs Vite for development. Build the production fron
 ```sh
 docker build -f frontend/Dockerfile --target production -t universe-frontend:local frontend
 docker build -f backend/Dockerfile -t universe-backend:local backend
-docker build -f ai-server/Dockerfile -t universe-ai-server:local ai-server
+docker build -f ai-server/Dockerfile -t universe-ai:local ai-server
 ```
 
 ## Before ECS
