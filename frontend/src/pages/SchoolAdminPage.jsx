@@ -3,8 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
 import { session } from '../lib/session';
 import Icon from '../lib/icons';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+import { API_BASE_URL } from '../lib/api';
 
 export default function SchoolAdminPage() {
   const { state } = useApp();
@@ -13,7 +12,7 @@ export default function SchoolAdminPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_BASE}/admin/school/dashboard`, {
+    fetch(`${API_BASE_URL}/admin/school/dashboard`, {
       headers: {
         'Authorization': `Bearer ${session.getAccessToken()}`
       }

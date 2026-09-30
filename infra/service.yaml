@@ -1,0 +1,335 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'UNI:VERSE ECS Services (Frontend, Backend, AI)'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: universe
+  Environment:
+    Type: String
+    Default: prod
+  FrontendImageUri:
+    Type: String
+    Description: ECR URI for frontend image
+  BackendImageUri:
+    Type: String
+    Description: ECR URI for backend image
+  AiImageUri:
+    Type: String
+    Description: ECR URI for AI image
+  
+  # Inject outputs from Foundation stack
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet::Id
+  ALBSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  EcsSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  ECSClusterName:
+    Type: String
+  CloudMapNamespaceId:
+    Type: String
+  EcsTaskExecutionRoleArn:
+    Type: String
+  RdsEndpoint:
+    Type: String
+  S3BucketName:
+    Type: String
+
+Resources:
+  # ---------------------------------------------------------
+  # 1. ALB & Target Groups
+  # ---------------------------------------------------------
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${ProjectName}-alb
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref ALBSecurityGroupId
+      Scheme: internet-facing
+
+  FrontendTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${ProjectName}-frontend-tg
+      Port: 8080
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: ip
+      HealthCheckPath: /health
+
+  BackendTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${ProjectName}-backend-tg
+      Port: 8080
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: ip
+      HealthCheckPath: /actuator/health/readiness
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref FrontendTargetGroup
+
+  # Backend Routing Rules (/api/* and /ws-stomp/*)
+  BackendListenerRuleApi:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref ALBListener
+      Priority: 10
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values:
+              - /api/*
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref BackendTargetGroup
+
+  BackendListenerRuleWs:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref ALBListener
+      Priority: 20
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values:
+              - /ws-stomp*
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref BackendTargetGroup
+
+  # ---------------------------------------------------------
+  # 2. IAM Roles (Task Roles)
+  # ---------------------------------------------------------
+  BackendTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3AccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:DeleteObject
+                Resource: !Sub arn:aws:s3:::${S3BucketName}/*
+
+  # ---------------------------------------------------------
+  # 3. ECS Services (AI Server) - Internal only
+  # ---------------------------------------------------------
+  AiCloudMapService:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: ai-server
+      DnsConfig:
+        NamespaceId: !Ref CloudMapNamespaceId
+        DnsRecords:
+          - Type: A
+            TTL: 60
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+
+  AiTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${ProjectName}-ai
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: 512
+      Memory: 1024
+      ExecutionRoleArn: !Ref EcsTaskExecutionRoleArn
+      ContainerDefinitions:
+        - Name: ai-container
+          Image: !Ref AiImageUri
+          PortMappings:
+            - ContainerPort: 8000
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub /ecs/${ProjectName}-ai
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+
+  AiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${ProjectName}-ai
+      RetentionInDays: 7
+
+  AiService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ECSClusterName
+      ServiceName: ai-service
+      TaskDefinition: !Ref AiTaskDefinition
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PublicSubnet1
+            - !Ref PublicSubnet2
+          SecurityGroups:
+            - !Ref EcsSecurityGroupId
+      ServiceRegistries:
+        - RegistryArn: !GetAtt AiCloudMapService.Arn
+
+  # ---------------------------------------------------------
+  # 4. ECS Services (Backend)
+  # ---------------------------------------------------------
+  BackendTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${ProjectName}-backend
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: 512
+      Memory: 1024
+      ExecutionRoleArn: !Ref EcsTaskExecutionRoleArn
+      TaskRoleArn: !GetAtt BackendTaskRole.Arn
+      ContainerDefinitions:
+        - Name: backend-container
+          Image: !Ref BackendImageUri
+          PortMappings:
+            - ContainerPort: 8080
+          Environment:
+            # We assume secrets like DB_PASSWORD are in Parameter Store or Secrets Manager
+            - Name: DB_URL
+              Value: !Sub jdbc:mysql://${RdsEndpoint}:3306/${ProjectName}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+            - Name: DB_USERNAME
+              Value: universe
+            - Name: AI_SERVER_BASE_URL
+              Value: !Sub http://ai-server.${ProjectName}.local:8000
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: S3_ENABLED
+              Value: 'true'
+            - Name: S3_BUCKET_NAME
+              Value: !Ref S3BucketName
+          Secrets:
+            - Name: DB_PASSWORD
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ProjectName}/${Environment}/db_password
+            - Name: JWT_SECRET_KEY
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ProjectName}/${Environment}/jwt_secret
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub /ecs/${ProjectName}-backend
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+
+  BackendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${ProjectName}-backend
+      RetentionInDays: 7
+
+  BackendService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ECSClusterName
+      ServiceName: backend-service
+      TaskDefinition: !Ref BackendTaskDefinition
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PublicSubnet1
+            - !Ref PublicSubnet2
+          SecurityGroups:
+            - !Ref EcsSecurityGroupId
+      LoadBalancers:
+        - ContainerName: backend-container
+          ContainerPort: 8080
+          TargetGroupArn: !Ref BackendTargetGroup
+
+  # ---------------------------------------------------------
+  # 5. ECS Services (Frontend)
+  # ---------------------------------------------------------
+  FrontendTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${ProjectName}-frontend
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: !Ref EcsTaskExecutionRoleArn
+      ContainerDefinitions:
+        - Name: frontend-container
+          Image: !Ref FrontendImageUri
+          PortMappings:
+            - ContainerPort: 8080
+          # VITE environment variables are injected at BUILD time, so no runtime environment required here!
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub /ecs/${ProjectName}-frontend
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+
+  FrontendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${ProjectName}-frontend
+      RetentionInDays: 7
+
+  FrontendService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ECSClusterName
+      ServiceName: frontend-service
+      TaskDefinition: !Ref FrontendTaskDefinition
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PublicSubnet1
+            - !Ref PublicSubnet2
+          SecurityGroups:
+            - !Ref EcsSecurityGroupId
+      LoadBalancers:
+        - ContainerName: frontend-container
+          ContainerPort: 8080
+          TargetGroupArn: !Ref FrontendTargetGroup
+
+Outputs:
+  AlbDnsName:
+    Value: !GetAtt ApplicationLoadBalancer.DNSName

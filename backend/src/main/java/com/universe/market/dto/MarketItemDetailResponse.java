@@ -5,6 +5,7 @@ import com.universe.market.entity.ItemCategory;
 import com.universe.market.entity.ItemCondition;
 import com.universe.market.entity.MarketItem;
 import com.universe.market.entity.TradeStatus;
+import com.universe.file.service.FileService;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -59,5 +60,14 @@ public class MarketItemDetailResponse {
         }
         this.likeCount = likeCount;
         this.isLiked = isLiked;
+    }
+
+    public MarketItemDetailResponse(MarketItem item, long sellerTrades, long likeCount, boolean isLiked, FileService fileService) {
+        this(item, sellerTrades, likeCount, isLiked);
+        if (item.getImages() != null) {
+            this.images = item.getImages().stream()
+                    .map(img -> fileService.getFileUrl(img.getImageUrl()))
+                    .toList();
+        }
     }
 }

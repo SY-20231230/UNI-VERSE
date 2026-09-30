@@ -18,19 +18,27 @@ services:
       retries: 20
 
   ai-server:
+    image: universe-ai:latest
     build:
       context: ./ai-server
       dockerfile: Dockerfile
     ports:
       - "${AI_HOST_PORT:-8000}:8000"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
       start_period: 20s
 
   backend:
+    image: universe-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -38,34 +46,45 @@ services:
       DB_URL: jdbc:mysql://mysql:3306/universe?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       DB_USERNAME: universe
       DB_PASSWORD: ${MYSQL_PASSWORD:-universe-dev}
+
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-development-only-change-this-secret-key}
+
       AI_SERVER_BASE_URL: http://ai-server:8000
+
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-}
+
     depends_on:
       mysql:
         condition: service_healthy
       ai-server:
         condition: service_healthy
+
     ports:
       - "${BACKEND_HOST_PORT:-8080}:8080"
+
     volumes:
       - backend_uploads:/app/uploads
 
   frontend:
+    image: universe-frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
       target: development
+
     environment:
       VITE_PROXY_TARGET: http://backend:8080
+
     depends_on:
       - backend
+
     ports:
       - "${FRONTEND_HOST_PORT:-5173}:5173"
+
     volumes:
       - ./frontend:/app
       - /app/node_modules

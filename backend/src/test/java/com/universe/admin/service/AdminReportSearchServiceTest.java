@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.*;
 class AdminReportSearchServiceTest {
     @Mock ModerationAccessService access;
     @Mock AdminReportRepository searchReports;
+    @Mock com.universe.file.service.FileService fileService;
     @InjectMocks AdminReportService service;
     final AdminReportSearchCondition condition = new AdminReportSearchCondition(null, null, null, null, null);
     final Pageable pageable = PageRequest.of(0, 20);

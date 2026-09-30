@@ -16,6 +16,10 @@ public class ImageController {
 
     @PostMapping
     public ApiResponse<String> uploadImage(@RequestParam("file") MultipartFile file) throws IOException {
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("Only image files are allowed");
+        }
         String url = fileService.uploadFile(file);
         return ApiResponse.success(url);
     }
