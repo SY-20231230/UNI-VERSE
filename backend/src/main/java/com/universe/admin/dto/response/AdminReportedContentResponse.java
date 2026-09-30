@@ -3,6 +3,7 @@ package com.universe.admin.dto.response;
 import com.universe.community.entity.CommunityPost;
 import com.universe.market.entity.MarketItem;
 import com.universe.market.entity.MarketItemImage;
+import com.universe.file.service.FileService;
 
 import java.util.List;
 
@@ -14,6 +15,12 @@ public record AdminReportedContentResponse(String kind, Long id, String title, S
         return new AdminReportedContentResponse("ITEM", item.getId(), item.getTitle(), item.getDescription(),
                 item.getListedPrice(), item.getTradeStatus() == null ? null : item.getTradeStatus().name(),
                 item.getImages().stream().map(MarketItemImage::getImageUrl).toList());
+    }
+
+    public static AdminReportedContentResponse from(MarketItem item, FileService fileService) {
+        return new AdminReportedContentResponse("ITEM", item.getId(), item.getTitle(), item.getDescription(),
+                item.getListedPrice(), item.getTradeStatus() == null ? null : item.getTradeStatus().name(),
+                item.getImages().stream().map(img -> fileService.getFileUrl(img.getImageUrl())).toList());
     }
 
     public static AdminReportedContentResponse from(CommunityPost post) {

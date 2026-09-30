@@ -42,6 +42,7 @@ class ModerationIntegrationTest {
     @Autowired UserSanctionRepository sanctions;
     @Autowired MyPageService myPage;
     @Autowired SuspensionReleaseService suspensionRelease;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean com.universe.file.service.FileService fileService;
     User seller, buyer, admin;
     School school;
 
