@@ -10,7 +10,7 @@ D:\AI\UNI-VERSE\BACKEND_ECS_DEPLOYMENT_GUIDE.md# UNI-VERSE 백엔드 ECS 배포 
 |---|---|
 | `[확인됨: 파일 경로]` | 저장소 파일에서 직접 확인한 사실 |
 | `[가정 - 확인 필요]` | 일반적인 동작이나 추정. 배포 전에 확인해야 함 |
-| `[결정 필요]` | 팀이 정해야 하는 항목. [ARCHITECTURE.md 6장](ARCHITECTURE.md#6-결정이-필요한-항목) 참고 |
+| `[결정 필요]` | 팀이 정해야 하는 항목. [ARCHITECTURE.md 8장](ARCHITECTURE.md#8-운영-전-확인이-필요한-항목) 참고 |
 
 ### 명령어 표기 규칙
 
@@ -122,7 +122,7 @@ D:\AI\UNI-VERSE\BACKEND_ECS_DEPLOYMENT_GUIDE.md# UNI-VERSE 백엔드 ECS 배포 
 - `DROP` 구문과 `INSERT`(초기 데이터)는 없습니다. → `schools` 테이블이 비어 있어 학교 인증을 쓰려면 학교 데이터를 따로 넣어야 합니다. `[가정 - 확인 필요]`
 - `spring.sql.init` 설정이 운영 설정에 없으므로 Spring이 이 파일을 자동 실행하지 않습니다. 로컬에서는 Compose가 MySQL 컨테이너 초기화에만 사용합니다. `[확인됨: application.yml, compose.yaml]`
 - ⚠ **백엔드를 처음 띄우기 전에 `schema.sql`을 먼저 적용해야 합니다.** `ddl-auto: update` 때문에 백엔드가 먼저 뜨면 테이블을 자동으로 만들고, 그 뒤에 `schema.sql`을 적용하면 `CREATE TABLE`이 실패합니다. `[가정 - 확인 필요]`
-- 적용 방법은 [ARCHITECTURE.md 4장](ARCHITECTURE.md#4-rds-설정)을 참고하세요. `[결정 필요]`
+- 적용 방법은 [ARCHITECTURE.md 6장](ARCHITECTURE.md#6-rds-및-비밀값)을 참고하세요. `[결정 필요]`
 
 ### 1-9. 업로드 파일
 
@@ -208,8 +208,8 @@ D:\AI\UNI-VERSE\BACKEND_ECS_DEPLOYMENT_GUIDE.md# UNI-VERSE 백엔드 ECS 배포 
 
 ### 2-3. 선행 작업 순서
 
-1. VPC, 서브넷, 보안 그룹 준비 → [ARCHITECTURE.md 3장](ARCHITECTURE.md#3-보안-그룹-연결표)
-2. RDS 생성 → **`schema.sql` 적용** → 앱 전용 DB 사용자 생성 → [ARCHITECTURE.md 4장](ARCHITECTURE.md#4-rds-설정)
+1. VPC, 서브넷, 보안 그룹 준비 → [ARCHITECTURE.md 5장](ARCHITECTURE.md#5-보안-그룹-연결표)
+2. RDS 생성 → **`schema.sql` 적용** → 앱 전용 DB 사용자 생성 → [ARCHITECTURE.md 6장](ARCHITECTURE.md#6-rds-및-비밀값)
 3. AI 서버 ECS Service 실행 (백엔드가 AI 주소를 알아야 함) `[결정 필요: 담당자]`
 4. Secrets Manager에 비밀값 저장 (5장)
 5. 백엔드 이미지 push → Task Definition → Target Group → ALB 규칙 → Service (4~8장)
@@ -372,7 +372,7 @@ Secrets Manager(비밀번호·키를 암호화해 보관하고 권한 있는 대
 | 이름 | 설명 | 비밀 여부 | 값의 출처 | 주입 방식 |
 |---|---|---|---|---|
 | `DB_URL` | JDBC 접속 주소. `jdbc:mysql://<RDS_ENDPOINT>:3306/universe?useSSL=true&serverTimezone=UTC` 형태 `[확인됨: ECS_DEPLOYMENT_GUIDE.md]` | 아니오 (주소만 담김) | RDS 콘솔 → 연결 및 보안 → 엔드포인트 | `environment` |
-| `DB_USERNAME` | 앱 전용 DB 사용자 이름. 관리자(master) 계정은 쓰지 않는 것을 권장 `[결정 필요]` | 예 | RDS에 직접 만든 앱 사용자 ([ARCHITECTURE.md 4장](ARCHITECTURE.md#4-rds-설정)) | `secrets` |
+| `DB_USERNAME` | 앱 전용 DB 사용자 이름. 관리자(master) 계정은 쓰지 않는 것을 권장 `[결정 필요]` | 예 | RDS에 직접 만든 앱 사용자 ([ARCHITECTURE.md 6장](ARCHITECTURE.md#6-rds-및-비밀값)) | `secrets` |
 | `DB_PASSWORD` | 앱 전용 DB 사용자 비밀번호 | 예 | 앱 사용자 생성 때 만든 무작위 값 | `secrets` |
 | `JWT_SECRET_KEY` | JWT 서명 키. 32바이트 이상 무작위 값 `[가정 - 확인 필요]` | 예 | 새로 생성 (Compose 기본값 사용 금지 `[확인됨: compose.yaml, ECS_DEPLOYMENT_GUIDE.md]`) | `secrets` |
 | `AI_SERVER_BASE_URL` | AI 서버 내부 주소. `http://<AI_SERVICE_NAME>:8000` | 아니오 | Service Connect / Cloud Map 이름 `[결정 필요]` | `environment` |
@@ -571,7 +571,7 @@ ECS Service(지정한 개수의 task를 항상 실행해 두고, 죽으면 다�
 | Task Definition | `universe-backend:<REVISION>` | |
 | 원하는 task 수 | **1** (메모리 브로커·로컬 업로드 때문) | `[가정 - 확인 필요]` `[결정 필요]` |
 | 서브넷 | `<PRIVATE_SUBNET_A>`, `<PRIVATE_SUBNET_C>` | `[결정 필요: 공개/비공개 배치]` |
-| 보안 그룹 | `<BACKEND_SG_ID>` (ALB에서 8080만 허용) | [ARCHITECTURE.md 3장](ARCHITECTURE.md#3-보안-그룹-연결표) |
+| 보안 그룹 | `<BACKEND_SG_ID>` (ALB에서 8080만 허용) | [ARCHITECTURE.md 5장](ARCHITECTURE.md#5-보안-그룹-연결표) |
 | 퍼블릭 IP | 끔 (비공개 서브넷 기준) | `[확인됨: ECS_DEPLOYMENT_GUIDE.md 6장]` |
 | 로드 밸런서 | ALB, 컨테이너 `backend:8080` → `universe-backend-tg` | |
 | 상태 확인 유예 기간 | `<HEALTH_CHECK_GRACE_PERIOD>`초 — Spring 시작 시간보다 길게 | `[가정 - 확인 필요]` |
@@ -754,7 +754,7 @@ aws ecs update-service \
 - 근본 대응:
   - **EFS**: `/app/uploads`에 EFS 마운트. 코드 수정 없음. 컨테이너가 `app` 사용자로 실행되므로 EFS 액세스 포인트의 소유자·권한 설정 필요 `[가정 - 확인 필요]` → [ECS EFS 볼륨 문서](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/efs-volumes.html)
   - **S3**: `FileService` 구현을 새로 만들고 URL 형식 변경 필요. 코드 수정 있음
-  - 비교는 [ARCHITECTURE.md 6장](ARCHITECTURE.md#6-결정이-필요한-항목)
+  - 비교는 [ARCHITECTURE.md 8장](ARCHITECTURE.md#8-운영-전-확인이-필요한-항목)
 
 ---
 
