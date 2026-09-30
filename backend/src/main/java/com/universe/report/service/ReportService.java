@@ -8,6 +8,7 @@ import com.universe.user.entity.User;
 import com.universe.trade.entity.Trade;
 import com.universe.market.entity.MarketItem;
 import com.universe.community.entity.CommunityPost;
+import com.universe.file.service.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class ReportService {
     private final ReportReferenceRepository references;
     private final ModerationAccessService access;
     private final ReportEvidencePolicy evidencePolicy;
+    private final FileService fileService;
 
     @Transactional
     public ReportResponse create(Long authenticatedUserId, ReportCreateRequest request) {
@@ -59,7 +61,9 @@ public class ReportService {
         Report report = reports.findById(reportId).orElseThrow(() -> new ModerationException(REPORT_NOT_FOUND));
         if (!Objects.equals(report.getReporter().getId(), authenticatedUserId)) throw new ModerationException(FORBIDDEN);
         return new ReportDetailResponse(ReportResponse.from(report), report.getDescription(),
-                evidences.findByReportIdOrderByIdAsc(reportId).stream().map(ReportEvidenceResponse::from).toList());
+                evidences.findByReportIdOrderByIdAsc(reportId).stream()
+                        .map(e -> ReportEvidenceResponse.from(e, fileService))
+                        .toList());
     }
 
     private void validateReferences(User reporter, User target, Trade trade, MarketItem item, CommunityPost post) {

@@ -12,6 +12,7 @@ import com.universe.market.entity.MarketItemImage;
 import com.universe.market.repository.MarketItemRepository;
 import com.universe.market.repository.MarketItemImageRepository;
 import com.universe.market.repository.ItemFavoriteCount;
+import com.universe.file.service.FileService;
 import com.universe.notification.event.MarketItemPriceChangedEvent;
 import com.universe.trade.repository.TradeRepository;
 import com.universe.market.entity.MarketItemFavorite;
@@ -42,6 +43,7 @@ public class MarketItemService {
     private final TradeRepository tradeRepository;
     private final MarketItemFavoriteRepository favoriteRepository;
     private final AiRiskService aiRiskService;
+    private final FileService fileService;
 
     /** 조회수 중복 방지: "회원:상품" → 마지막으로 센 시각(ms). 새로고침·개발모드 이중 호출로 부풀지 않게 한다. */
     private static final long VIEW_DEDUP_MILLIS = 30 * 60 * 1000L;
@@ -62,7 +64,7 @@ public class MarketItemService {
 
     public Page<MarketItemListResponse> searchItems(Long schoolId, String category, String keyword, String sort, String status, Pageable pageable) {
         return itemRepository.searchItems(schoolId, category, keyword, sort, status, pageable)
-                .map(MarketItemListResponse::new);
+                .map(item -> new MarketItemListResponse(item, fileService));
     }
 
     public MarketItemDetailResponse getItemDetail(Long itemId) {
@@ -81,7 +83,7 @@ public class MarketItemService {
         if (userId != null) {
             isLiked = favoriteRepository.existsByItemIdAndUserId(itemId, userId);
         }
-        return new MarketItemDetailResponse(item, sellerTrades, likeCount, isLiked);
+        return new MarketItemDetailResponse(item, sellerTrades, likeCount, isLiked, fileService);
     }
 
     @Transactional

@@ -1,5 +1,6 @@
 package com.universe.file.service;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -11,6 +12,7 @@ import java.nio.file.Paths;
 import java.util.UUID;
 
 @Service
+@ConditionalOnProperty(name = "app.s3.enabled", havingValue = "false", matchIfMissing = true)
 public class LocalFileService implements FileService {
 
     private final String uploadDir = "uploads";
@@ -34,6 +36,11 @@ public class LocalFileService implements FileService {
         Path targetPath = Paths.get(uploadDir, uniqueFilename);
         Files.copy(file.getInputStream(), targetPath);
         return "/uploads/" + uniqueFilename;
+    }
+
+    @Override
+    public String getFileUrl(String storedKey) {
+        return storedKey;
     }
 
     @Override
