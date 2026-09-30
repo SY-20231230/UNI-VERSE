@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">UNI-VERSE 백엔드 AWS 배포 아키텍처</title>
+  <desc id="desc">Spring Boot 백엔드를 중심으로 GitHub Actions, ECR, CloudFormation, ECS Fargate, ALB, RDS, AI API, Secrets Manager와 CloudWatch의 배포 및 요청 흐름을 나타냅니다.</desc>
+  <defs>
+    <linearGradient id="header" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#14324d"/><stop offset="1" stop-color="#176a83"/></linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f5f8fb"/><stop offset="1" stop-color="#eaf1f6"/></linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#43586b"/></marker>
+    <marker id="blueArrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#16789a"/></marker>
+    <style>
+      text{font-family:"Malgun Gothic","Noto Sans KR",sans-serif;fill:#183247}
+      .title{font-size:31px;font-weight:700;fill:#fff}.subtitle{font-size:14px;fill:#d9e8ef}
+      .section{font-size:18px;font-weight:700;fill:#173d59}.head{font-size:16px;font-weight:700}
+      .body{font-size:13px;fill:#455c70}.small{font-size:11px;fill:#52697b}.label{font-size:11px;font-weight:700;fill:#43586b}
+      .box{stroke-width:1.5}.flow{fill:none;stroke:#43586b;stroke-width:2.2;marker-end:url(#arrow)}
+      .data{fill:none;stroke:#16789a;stroke-width:2.4;marker-end:url(#blueArrow)}
+      .planned{fill:none;stroke:#718598;stroke-width:1.8;stroke-dasharray:6 5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+  <rect x="28" y="24" width="1544" height="92" rx="14" fill="url(#header)"/>
+  <text class="title" x="58" y="64">UNI-VERSE | 백엔드 AWS 배포 아키텍처</text>
+  <text class="subtitle" x="60" y="91">Spring Boot · ECS Fargate · ALB · RDS MySQL · Secrets Manager · CloudFormation</text>
+  <rect x="1300" y="48" width="240" height="36" rx="18" fill="#fff" opacity=".16"/>
+  <text x="1420" y="71" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">제출용 목표 아키텍처</text>
+
+  <rect x="28" y="134" width="1544" height="214" rx="12" fill="#fff" stroke="#bdcbd6"/>
+  <text class="section" x="52" y="168">1. 코드에서 백엔드 배포까지</text>
+  <text class="small" x="1545" y="167" text-anchor="end">점선: 추가 구현 예정</text>
+  <rect class="box" x="54" y="198" width="190" height="112" rx="9" fill="#f3f6f8" stroke="#8294a3"/>
+  <text class="head" x="76" y="231">GitHub</text><text class="body" x="76" y="258">소스 코드 · Pull Request</text><text class="small" x="76" y="285">배포 기준: Git commit SHA</text>
+  <path class="flow" d="M244 254H280"/>
+  <rect class="box" x="290" y="190" width="265" height="128" rx="9" fill="#eef4ff" stroke="#718cbb"/>
+  <text class="head" x="312" y="221">GitHub Actions</text><text class="body" x="312" y="247">현재: Frontend · Backend · AI 검사</text>
+  <rect x="307" y="260" width="231" height="44" rx="6" fill="#fff" stroke="#9aadc6" stroke-dasharray="5 4"/>
+  <text x="320" y="279" font-size="12" font-weight="700" fill="#345f9c">추가: backend Docker build</text><text x="320" y="296" font-size="11" fill="#52697b">OIDC 인증 · ECR push workflow</text>
+  <path class="planned" d="M555 254H590"/>
+  <rect class="box" x="600" y="198" width="205" height="112" rx="9" fill="#eef7ed" stroke="#76a071"/>
+  <text class="head" x="622" y="231">Amazon ECR</text><text class="body" x="622" y="258">frontend · backend · ai-server</text><text class="small" x="622" y="285">Git SHA 버전 태그 이미지</text>
+  <path class="planned" d="M805 254H840"/>
+  <rect class="box" x="850" y="198" width="250" height="112" rx="9" fill="#fff6e8" stroke="#d5a14e"/>
+  <text class="head" x="872" y="231">CloudFormation</text><text class="body" x="872" y="258">Task Definition 갱신</text><text class="small" x="872" y="285">ImageTag · 변경 세트</text>
+  <path class="planned" d="M1100 254H1135"/>
+  <rect class="box" x="1145" y="198" width="400" height="112" rx="9" fill="#f1eeff" stroke="#9181c6"/>
+  <text class="head" x="1168" y="231">Amazon ECS Fargate</text><text class="body" x="1168" y="258">Frontend · Backend · AI services rolling update</text><text class="small" x="1168" y="285">Health check 통과 후 완료 · 이전 버전으로 복구 가능</text>
+
+  <rect x="28" y="370" width="1544" height="578" rx="12" fill="#fff" stroke="#a9bdcd" stroke-width="1.5"/>
+  <text class="section" x="52" y="405">2. 백엔드 런타임 및 요청 흐름</text>
+  <rect x="1300" y="383" width="240" height="30" rx="15" fill="#edf3f7"/><text class="small" x="1420" y="403" text-anchor="middle">인터넷 공개 진입점: ALB</text>
+
+  <rect class="box" x="54" y="552" width="155" height="102" rx="9" fill="#f3f6f8" stroke="#899aa7"/>
+  <circle cx="95" cy="584" r="11" fill="#315d78"/><path d="M74 619Q95 590 116 619" fill="none" stroke="#315d78" stroke-width="6" stroke-linecap="round"/>
+  <text class="head" x="128" y="589">사용자</text><text class="small" x="128" y="613">브라우저</text><text class="small" x="74" y="642">HTTPS 요청</text>
+  <path class="flow" d="M209 603H252"/><text class="label" x="230" y="588" text-anchor="middle">443</text>
+  <rect class="box" x="262" y="532" width="225" height="142" rx="9" fill="#fff1ec" stroke="#d8876b"/>
+  <text class="head" x="284" y="567">Application Load</text><text class="head" x="284" y="590">Balancer</text>
+  <text class="body" x="284" y="620">HTTPS · ACM 인증서</text><text class="small" x="284" y="647">Public subnets</text>
+
+  <rect x="528" y="430" width="1016" height="492" rx="12" fill="#f8fbfd" stroke="#4f7fa2" stroke-width="2"/>
+  <text x="552" y="463" font-size="17" font-weight="700" fill="#285b7d">AWS VPC</text>
+  <text class="small" x="1518" y="462" text-anchor="end">Private subnets · 2개 이상 AZ · ECS task public IP 없음</text>
+  <rect x="552" y="480" width="970" height="347" rx="9" fill="#edf4f9" stroke="#9db6c8" stroke-dasharray="7 5"/>
+  <text class="small" x="572" y="504">Private subnets</text>
+
+  <path class="data" d="M487 576C523 576 532 544 572 544"/><text class="label" x="528" y="535" text-anchor="middle">기본 경로</text>
+  <path class="data" d="M487 626C529 626 538 675 572 675"/><text class="label" x="530" y="654" text-anchor="middle">API · WebSocket · 업로드</text>
+  <rect class="box" x="582" y="520" width="210" height="82" rx="8" fill="#eaf4ec" stroke="#77a17d"/>
+  <text class="head" x="602" y="552">Frontend Nginx</text><text class="body" x="602" y="578">ECS · TCP 8080</text>
+
+  <rect class="box" x="582" y="632" width="330" height="136" rx="9" fill="#eaf1ff" stroke="#6387c1" stroke-width="2"/>
+  <text x="605" y="668" font-size="19" font-weight="700" fill="#234f8a">Spring Boot Backend</text>
+  <text class="body" x="605" y="698">ECS Fargate · TCP 8080</text><text class="body" x="605" y="725">/actuator/health/readiness</text>
+  <text class="small" x="605" y="751">API 처리 및 내부 서비스 연동의 중심</text>
+
+  <rect class="box" x="1045" y="520" width="218" height="92" rx="8" fill="#edf5ff" stroke="#7194c5"/>
+  <text class="head" x="1065" y="554">Amazon RDS MySQL</text><text class="body" x="1065" y="582">Private · TCP 3306</text>
+  <path class="data" d="M912 674C972 674 984 566 1035 566"/>
+
+  <rect class="box" x="1290" y="520" width="200" height="92" rx="8" fill="#f2efff" stroke="#9383c5"/>
+  <text class="head" x="1310" y="554">AI API</text><text class="body" x="1310" y="582">FastAPI · TCP 8000</text>
+  <path class="data" d="M912 699C1040 699 1134 634 1280 568"/><text class="label" x="1110" y="660" text-anchor="middle">Service Connect / Cloud Map</text>
+
+  <rect class="box" x="1045" y="652" width="218" height="88" rx="8" fill="#fff0f1" stroke="#d68189"/>
+  <text class="head" x="1065" y="685">Secrets Manager</text><text class="body" x="1065" y="713">DB · JWT · SMTP</text>
+  <path class="planned" d="M912 735C965 735 987 696 1035 696"/><text class="small" x="974" y="748" text-anchor="middle">execution role</text>
+
+  <rect class="box" x="1290" y="652" width="200" height="88" rx="8" fill="#f2f5f7" stroke="#899aa7"/>
+  <text class="head" x="1310" y="685">CloudWatch Logs</text><text class="body" x="1310" y="713">컨테이너 로그</text>
+  <path class="planned" d="M912 752C1040 788 1150 790 1280 709"/>
+
+  <rect x="582" y="780" width="908" height="43" rx="6" fill="#fff7e8" stroke="#dfba72"/>
+  <text x="1036" y="798" text-anchor="middle" font-size="11" font-weight="700" fill="#77591e">파일: 상품 이미지·신고 증빙은 S3가 목표 · 현재 backend는 로컬 저장이므로 S3/EFS 연동 전까지 영속성 없음</text>
+  <text x="1036" y="815" text-anchor="middle" font-size="10" fill="#77591e">AI 모델은 현재 Docker image에 포함 · WebSocket Simple Broker 제약으로 backend desired count=1</text>
+  <rect x="552" y="844" width="970" height="51" rx="8" fill="#edf2f5"/>
+  <text x="1037" y="863" text-anchor="middle" font-size="11" font-weight="700" fill="#34516a">보안 그룹: ALB → Backend :8080 · Backend → AI :8000 · Backend → RDS :3306 · 필요한 inbound만 허용</text>
+  <text x="1037" y="883" text-anchor="middle" font-size="10" fill="#52697b">Private access: ECR API/DKR · Logs · Secrets Manager (Interface) · S3 (Gateway) · 외부 SMTP는 NAT 필요</text>
+
+  <line x1="54" y1="958" x2="1545" y2="958" stroke="#c3d0da"/>
+  <text class="small" x="58" y="978">현재: GitHub Actions는 CI 검사만 수행 · schema.sql은 backend 시작 전 RDS에 적용 · 운영 DB는 Retain / deletion protection 적용 권장</text>
+</svg>
