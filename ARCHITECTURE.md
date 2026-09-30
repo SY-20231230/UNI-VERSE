@@ -124,7 +124,7 @@ VPC endpoint의 보안 그룹은 ECS task 보안 그룹에서 오는 TCP `443`�
 |---|---|---:|---|---|
 | Frontend | `universe-frontend:<git-sha>` | 8080 | `GET /health` | ALB 경유 |
 | Backend | `universe-backend:<git-sha>` | 8080 | `GET /actuator/health/readiness` | ALB 및 내부 서비스 |
-| AI API | `universe-ai-server:<git-sha>` | 8000 | `GET /health` | VPC 내부 전용 |
+| AI API | `universe-ai:<git-sha>` | 8000 | `GET /health` | VPC 내부 전용 |
 
 세 이미지는 `linux/amd64`로 빌드하고 ECS Task Definition의 CPU architecture도 `X86_64`로 맞춥니다. ECS 서비스에는 재현과 롤백이 가능한 SHA 또는 release 태그를 지정하고 `latest`만 사용하지 않습니다.
 

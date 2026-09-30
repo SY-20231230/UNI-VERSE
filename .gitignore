@@ -22,3 +22,12 @@ ai-server/reports/
 
 # Backend Uploads
 backend/uploads/
+
+# Docker image exports; keep Dockerfiles, .dockerignore, and Compose files tracked.
+/docker-images/
+*-docker-images.tar*
+*-Docker-Images.tar*
+/UNI-VERSE-Docker-Images.tar.gz
+/universe-frontend.tar.gz
+/universe-backend.tar.gz
+/universe-ai.tar.gz

@@ -35,7 +35,7 @@ AWS 계정과 리전마다 한 번 실행합니다.
 ```sh
 aws ecr create-repository --repository-name universe-frontend --region "$AWS_REGION"
 aws ecr create-repository --repository-name universe-backend --region "$AWS_REGION"
-aws ecr create-repository --repository-name universe-ai-server --region "$AWS_REGION"
+aws ecr create-repository --repository-name universe-ai --region "$AWS_REGION"
 ```
 
 Bash 또는 Git Bash에서 다음 변수를 설정합니다. 실제 계정 ID와 리전을 입력하고, Git commit SHA처럼 변경되지 않는 태그를 사용하세요.
@@ -65,14 +65,14 @@ docker build --platform linux/amd64 \
 
 docker build --platform linux/amd64 \
   -f ai-server/Dockerfile \
-  -t "$ECR_REGISTRY/universe-ai-server:$IMAGE_TAG" ai-server
+  -t "$ECR_REGISTRY/universe-ai:$IMAGE_TAG" ai-server
 
 docker build --platform linux/amd64 \
   -f frontend/Dockerfile --target production \
   -t "$ECR_REGISTRY/universe-frontend:$IMAGE_TAG" frontend
 
 docker push "$ECR_REGISTRY/universe-backend:$IMAGE_TAG"
-docker push "$ECR_REGISTRY/universe-ai-server:$IMAGE_TAG"
+docker push "$ECR_REGISTRY/universe-ai:$IMAGE_TAG"
 docker push "$ECR_REGISTRY/universe-frontend:$IMAGE_TAG"
 ```
 
