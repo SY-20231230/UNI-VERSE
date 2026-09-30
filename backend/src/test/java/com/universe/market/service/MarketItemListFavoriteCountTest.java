@@ -38,6 +38,7 @@ class MarketItemListFavoriteCountTest {
     @Mock MarketItemFavoriteRepository favoriteRepository;
     @Mock AiRiskService aiRiskService;
     @Mock ApplicationEventPublisher eventPublisher;
+    @Mock com.universe.file.service.FileService fileService;
     @InjectMocks MarketItemService service;
 
     @Test

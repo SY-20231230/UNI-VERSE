@@ -26,6 +26,7 @@ class ReportServiceTest {
     @Mock ReportReferenceRepository references;
     @Mock ModerationAccessService access;
     @Mock ReportEvidencePolicy policy;
+    @Mock com.universe.file.service.FileService fileService;
     @InjectMocks ReportService service;
 
     User user(long id) {

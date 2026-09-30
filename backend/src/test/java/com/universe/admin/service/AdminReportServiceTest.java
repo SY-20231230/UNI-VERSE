@@ -48,6 +48,7 @@ class AdminReportServiceTest {
     @Mock AdminSanctionService sanctions;
     @Mock ReportSuspensionPolicy suspensionPolicy;
     @Mock ApplicationEventPublisher events;
+    @Mock com.universe.file.service.FileService fileService;
     @InjectMocks AdminReportService service;
 
     User admin;
@@ -70,6 +71,7 @@ class AdminReportServiceTest {
         when(access.requireAdmin(1L)).thenReturn(admin);
         when(reports.findById(7L)).thenReturn(Optional.of(report));
         when(evidences.findByReportIdOrderByIdAsc(7L)).thenReturn(List.of(evidence));
+        when(fileService.getFileUrl(anyString())).thenAnswer(inv -> inv.getArgument(0));
 
         var detail = service.getDetail(1L, 7L);
 
