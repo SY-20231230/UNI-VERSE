@@ -5,7 +5,7 @@ import { useUI } from '../context/UIContext';
 import { useMouseGlow } from '../lib/useMouseGlow';
 import Icon from '../lib/icons';
 
-const EMPTY_FORM = { school: '', email: '', password: '', name: '', nickname: '', department: '' };
+const EMPTY_FORM = { email: '', password: '', name: '', nickname: '', department: '', universityName: '' };
 // 인증 단계: idle(미발송) → sent(인증번호 발송됨) → verified(인증 완료)
 const EMPTY_VERIFY = { step: 'idle', code: '', devCode: '', sending: false, confirming: false };
 
@@ -75,8 +75,8 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (submitting) return;
-    if (isSignup && !form.school.trim()) {
-      setError('학교 이름을 입력해주세요.');
+    if (isSignup && !form.universityName.trim()) {
+      setError('대학교명을 입력해주세요.');
       return;
     }
     if (isSignup && !emailVerified) {
@@ -131,8 +131,8 @@ export default function Login() {
           </div>
           {isSignup && (
             <div className="field">
-              <input className="input" autoComplete="organization" placeholder="학교 이름" maxLength={100}
-                value={form.school} onChange={update('school')} required />
+              <input className="input" autoComplete="organization" placeholder="대학교명 (예: 명지전문대학)" maxLength={100}
+                value={form.universityName} onChange={update('universityName')} required />
             </div>
           )}
           {isSignup && (

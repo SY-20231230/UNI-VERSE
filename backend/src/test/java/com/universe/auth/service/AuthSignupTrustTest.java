@@ -11,6 +11,7 @@ import com.universe.trust.repository.TrustHistoryRepository;
 import com.universe.trust.service.TrustScorePolicy;
 import com.universe.trust.service.TrustScoreService;
 import com.universe.user.repository.UserRepository;
+import com.universe.user.dto.response.UserResponse;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +51,7 @@ class AuthSignupTrustTest {
         ReflectionTestUtils.setField(request, "name", "name");
         ReflectionTestUtils.setField(request, "nickname", "nick");
         ReflectionTestUtils.setField(request, "department", "컴퓨터공학과");
+        ReflectionTestUtils.setField(request, "universityName", "테스트대학교");
 
         Long userId = auth.signup(request).getUserId();
         em.flush(); em.clear();
@@ -65,6 +67,7 @@ class AuthSignupTrustTest {
         ReflectionTestUtils.setField(request, "name", "name");
         ReflectionTestUtils.setField(request, "nickname", "nick");
         ReflectionTestUtils.setField(request, "department", "컴퓨터공학과");
+        ReflectionTestUtils.setField(request, "universityName", "회원 입력 대학명");
 
         Long userId = auth.signup(request).getUserId();
         em.flush(); em.clear();
@@ -74,6 +77,8 @@ class AuthSignupTrustTest {
         assertThat(user.getSchoolVerified()).isTrue();
         assertThat(user.getSchool().getEmailDomain()).isEqualTo("mjc.ac.kr");
         assertThat(user.getSchool().getSchoolName()).isEqualTo("명지전문대학");
+        assertThat(user.getDisplayUniversityName()).isEqualTo("회원 입력 대학명");
+        assertThat(UserResponse.from(user).getSchoolName()).isEqualTo("회원 입력 대학명");
         assertThat(user.getDepartment()).isEqualTo("컴퓨터공학과");
         verify(emailVerification).consume("student@on.mjc.ac.kr");
     }
@@ -85,6 +90,7 @@ class AuthSignupTrustTest {
         ReflectionTestUtils.setField(request, "name", "name");
         ReflectionTestUtils.setField(request, "nickname", "nick");
         ReflectionTestUtils.setField(request, "department", "경영학과");
+        ReflectionTestUtils.setField(request, "universityName", "성균관대학교");
 
         Long userId = auth.signup(request).getUserId();
         em.flush(); em.clear();
@@ -99,6 +105,7 @@ class AuthSignupTrustTest {
         ReflectionTestUtils.setField(request, "name", "name");
         ReflectionTestUtils.setField(request, "nickname", "nick");
         ReflectionTestUtils.setField(request, "department", "경영학과");
+        ReflectionTestUtils.setField(request, "universityName", "대학교");
 
         assertThatThrownBy(() -> auth.signup(request))
                 .isInstanceOfSatisfying(BusinessException.class,
