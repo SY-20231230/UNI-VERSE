@@ -160,6 +160,7 @@ Resources:
 
   AiTaskDefinition:
     Type: AWS::ECS::TaskDefinition
+    DependsOn: AiLogGroup
     Properties:
       Family: !Sub ${ProjectName}-ai
       NetworkMode: awsvpc
@@ -218,6 +219,7 @@ Resources:
   # ---------------------------------------------------------
   BackendTaskDefinition:
     Type: AWS::ECS::TaskDefinition
+    DependsOn: BackendLogGroup
     Properties:
       Family: !Sub ${ProjectName}-backend
       NetworkMode: awsvpc
@@ -266,6 +268,9 @@ Resources:
 
   BackendService:
     Type: AWS::ECS::Service
+    DependsOn:
+      - BackendListenerRuleApi
+      - BackendListenerRuleWs
     Properties:
       Cluster: !Ref ECSClusterName
       ServiceName: backend-service
@@ -290,6 +295,7 @@ Resources:
   # ---------------------------------------------------------
   FrontendTaskDefinition:
     Type: AWS::ECS::TaskDefinition
+    DependsOn: FrontendLogGroup
     Properties:
       Family: !Sub ${ProjectName}-frontend
       NetworkMode: awsvpc
@@ -319,6 +325,7 @@ Resources:
 
   FrontendService:
     Type: AWS::ECS::Service
+    DependsOn: ALBListener
     Properties:
       Cluster: !Ref ECSClusterName
       ServiceName: frontend-service
