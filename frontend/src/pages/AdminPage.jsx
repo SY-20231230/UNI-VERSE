@@ -9,6 +9,8 @@ import AdminReportPanel from '../components/admin/AdminReportPanel';
 import ConfirmModal from '../components/ConfirmModal';
 import useAdminReportApi from '../lib/useAdminReportApi';
 import { REPORT_TYPES } from '../lib/reportLabels';
+import { API_BASE_URL } from '../lib/api';
+import { session } from '../lib/session';
 
 function isToday(ts) {
   const d = new Date(ts);
@@ -64,6 +66,7 @@ export default function AdminPage() {
   const [revision, setRevision] = useState(0);
   const server = useServerDashboard(reportApi, isServer, revision);
   const [releasing, setReleasing] = useState(null);
+  const [downloadingActivity, setDownloadingActivity] = useState(false);
 
   if (state.isSchoolAdmin) {
     return <SchoolAdminPage />;
@@ -110,6 +113,30 @@ export default function AdminPage() {
     );
   }
 
+  async function downloadSessionActivity() {
+    setDownloadingActivity(true);
+    try {
+      const exportEndpoint = `${API_BASE_URL}/admin/session-activities/export`;
+      const fetchFile = (token) => fetch(exportEndpoint, { headers: { Authorization: `Bearer ${token}` } });
+      let response = await fetchFile(session.getAccessToken());
+      if (response.status === 401) {
+        const renewedToken = await session.refreshAccessToken();
+        if (renewedToken) response = await fetchFile(renewedToken);
+      }
+      if (!response.ok) throw new Error('활동 기록 파일을 내려받지 못했습니다.');
+      const downloadUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = 'session-activity.csv';
+      link.click();
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      toast(error.message || '활동 기록 파일을 내려받지 못했습니다.');
+    } finally {
+      setDownloadingActivity(false);
+    }
+  }
+
   const untilText = (u) => {
     if (u.permanent) return '영구정지';
     if (!u.until) return '기간 확인 불가';
@@ -118,7 +145,12 @@ export default function AdminPage() {
 
   return (
     <div className="container fade-enter">
-      <h1 className="h1">관리자 대시보드</h1>
+      <div className="row between">
+        <h1 className="h1">관리자 대시보드</h1>
+        {isServer && <button className="btn btn-outline btn-sm" type="button" onClick={downloadSessionActivity} disabled={downloadingActivity}>
+          {downloadingActivity ? '파일 준비 중…' : '활동 기록 CSV 다운로드'}
+        </button>}
+      </div>
 
       <div className="admin-kpi-row" style={{ marginTop: 22 }}>
         <div className="admin-kpi-card highlight">
