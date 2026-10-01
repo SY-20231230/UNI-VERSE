@@ -1,6 +1,7 @@
 package com.universe.global.security;
 
 import com.universe.user.entity.UserRole;
+import com.universe.auth.service.LoginSessionService;
 import com.universe.global.exception.ErrorCode;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -15,12 +16,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    private final JwtTokenProvider jwt; private final TokenSessionService sessions; private final ApiErrorResponseWriter errorResponseWriter;
+    private final JwtTokenProvider jwt; private final TokenSessionService sessions; private final LoginSessionService loginSessions; private final ApiErrorResponseWriter errorResponseWriter;
     @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain)throws ServletException,IOException{
         String h=req.getHeader("Authorization");
         if(h!=null && h.startsWith("Bearer ")){
@@ -30,7 +32,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
                 Long id=Long.valueOf(claims.getSubject());
-                if(claims.getIssuedAt()==null||sessions.isInvalid(id,claims.getIssuedAt().toInstant())){
+                String sessionId=jwt.getSessionId(token);
+                if(claims.getIssuedAt()==null||sessions.isInvalid(id,claims.getIssuedAt().toInstant())
+                        ||!loginSessions.recordActivity(sessionId,id,LocalDateTime.now())){
                     reject(res);
                     return;
                 }

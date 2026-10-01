@@ -28,7 +28,7 @@ import static org.mockito.Mockito.verify;
 
 @DataJpaTest(properties = {"spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.show-sql=false",
         "spring.sql.init.mode=never", "spring.flyway.enabled=false", "spring.liquibase.enabled=false"})
-@Import({AuthService.class, SchoolEmailPolicy.class, TrustScoreService.class, TrustScorePolicy.class, AuthSignupTrustTest.Config.class})
+@Import({AuthService.class, LoginSessionService.class, SchoolEmailPolicy.class, TrustScoreService.class, TrustScorePolicy.class, AuthSignupTrustTest.Config.class})
 class AuthSignupTrustTest {
     @Autowired AuthService auth;
     @Autowired UserRepository users;
