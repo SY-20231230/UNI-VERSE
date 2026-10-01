@@ -1,5 +1,6 @@
 package com.universe.school.service;
 
+import com.universe.school.KnownSchools;
 import com.universe.global.exception.BusinessException;
 import com.universe.global.exception.ErrorCode;
 import com.universe.school.entity.School;

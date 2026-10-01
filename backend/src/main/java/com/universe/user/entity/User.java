@@ -1,6 +1,7 @@
 package com.universe.user.entity;
 
 import com.universe.school.entity.School;
+import com.universe.school.KnownSchools;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -101,9 +102,13 @@ public class User {
     }
 
     public String getDisplayUniversityName() {
-        return universityName == null || universityName.isBlank()
-                ? school == null ? null : school.getSchoolName()
-                : universityName;
+        if (universityName != null && !universityName.isBlank()) return universityName;
+        if (school == null) return null;
+        String schoolName = school.getSchoolName();
+        if (schoolName.equalsIgnoreCase(school.getEmailDomain())) {
+            return KnownSchools.nameOf(school.getEmailDomain()).orElse(schoolName);
+        }
+        return schoolName;
     }
 
     public void changePassword(String newPassword) {
