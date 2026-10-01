@@ -31,6 +31,9 @@ export default function Login() {
 
   function switchMode() {
     setMode(isSignup ? 'login' : 'signup');
+    // 로그인에 입력하던 값이 회원가입 칸(학교 이메일 등)으로 이어지지 않게 비운다.
+    setForm(EMPTY_FORM);
+    setShowPassword(false);
     setError('');
     setVerify(EMPTY_VERIFY);
   }

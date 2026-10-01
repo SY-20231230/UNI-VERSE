@@ -5,7 +5,7 @@ import Avatar from '../components/Avatar';
 import VerifiedChip from '../components/VerifiedChip';
 import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
-import { timeAgo, won, discountPct, formatDate } from '../lib/format';
+import { won, discountPct, formatDate, hm } from '../lib/format';
 import ReportModal from '../components/ReportModal';
 import ListingGridCard from '../components/ListingGridCard';
 import ManageSheet from '../components/ManageSheet';
@@ -280,7 +280,7 @@ export default function MarketDetail() {
               </span>
             </div>
             <div className="faint" style={{ fontSize: 12, marginTop: 10 }}>
-              <Icon name="pin" size={13} /> {listing.schoolName} · {timeAgo(listing.createdAt)}
+              {formatDate(listing.createdAt)} {hm(listing.createdAt)}
             </div>
             <div className="stat-bar">
               <span className="stat">

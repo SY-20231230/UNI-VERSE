@@ -82,6 +82,13 @@ export default function Market() {
         <Icon name="search" size={16} />
         <input placeholder="찾는 물건을 검색해보세요" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
+      <div className="safety-banner market-notice">
+        <Icon name="shield" size={16} />
+        <div>
+          <b>안전거래 안내</b>
+          선입금·계좌 공유·택배거래·외부 메신저 유도 표현이 담긴 글은 AI 검사로 등록이 제한돼요. 거래는 UNI:VERSE 채팅과 교내 직거래로 진행해주세요.
+        </div>
+      </div>
       <div className="split-layout">
         <div className="side-filter">
           <div className="side-filter-label">카테고리</div>
