@@ -68,14 +68,22 @@ python tests/smoke_test.py
 
 ## FastAPI 실행
 
+저장소 루트에서 PowerShell로 실행:
+
 ```powershell
-uvicorn serve:app --reload --host 127.0.0.1 --port 8000
+python -m uvicorn serve:app --app-dir ai-server --reload --host 127.0.0.1 --port 8000
 ```
 
 브라우저:
 
 - Swagger: `http://127.0.0.1:8000/docs`
 - Health: `http://127.0.0.1:8000/health`
+
+PowerShell에서 상태 확인:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/health
+```
 
 `POST /predict` 테스트 입력:
 

@@ -93,4 +93,20 @@ public class S3FileService implements FileService {
             }
         }
     }
+
+    @Override
+    public void saveSessionLog(String sessionId, String csvLine) {
+        String objectKey = "logs/session_" + sessionId + ".csv";
+        String content = "\uFEFF사용자 ID,이메일,닉네임,로그인 시각,마지막 API 요청 시각,종료 시각,체류시간(초),종료 사유\r\n" + csvLine + "\r\n";
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(objectKey)
+                    .contentType("text/csv")
+                    .build();
+            s3Client.putObject(putObjectRequest, RequestBody.fromString(content, java.nio.charset.StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            // Ignore
+        }
+    }
 }
