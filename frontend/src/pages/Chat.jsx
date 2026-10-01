@@ -403,8 +403,8 @@ export default function Chat() {
               <button className="iconbtn ghost chat-room-close" title="채팅 닫기" onClick={() => navigate('/chat')}>
                 <Icon name="back" size={16} /> {/* desktop close icon to back arrow so X can be delete */}
               </button>
-              <div 
-                style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: activeChat.anonymous ? 'default' : 'pointer' }}
+              <div className="chat-room-partner"
+                style={{ cursor: activeChat.anonymous ? 'default' : 'pointer' }}
                 onClick={() => { if (!activeChat.anonymous && partner2?.id) navigate(`/users/${partner2.id}`, { state: { user: partner2 } }); }}
               >
                 <Avatar user={partner2} size={40} />

@@ -15,7 +15,7 @@ img {
 }
 
 :root{
-  --bg:#FFFFFF; --surface:#FFFFFF; --surface-sunken:#F4F4F6; --surface-raised:#FFFFFF;
+  --page-max:1280px; --bg:#FFFFFF; --surface:#FFFFFF; --surface-sunken:#F4F4F6; --surface-raised:#FFFFFF;
   --card-bg:color-mix(in srgb, var(--accent) 58%, #16132A 42%);
   --ink:#151515; --ink-soft:#5B5E70; --ink-faint:#9195A6;
   --border:#DEE1EA; --border-soft:#EAECF2;
@@ -51,7 +51,7 @@ a{color:inherit; text-decoration:none;}
 
 /* ---------- nav ---------- */
 #nav{position:sticky; top:0; z-index:40; background:color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter:blur(10px); border-bottom:1px solid var(--border-soft);}
-.nav-inner{max-width:1440px; margin:0 auto; padding:0 28px; height:62px; display:flex; align-items:center; gap:8px;}
+.nav-inner{max-width:var(--page-max); margin:0 auto; padding:0 28px; height:62px; display:flex; align-items:center; gap:8px;}
 .brand{background:none; border:none; font-family:var(--font-display); font-weight:700; font-size:19px; color:var(--ink); flex:none; padding:0; margin-right:22px; display:flex; align-items:center; gap:8px;}
 .brand b{color:var(--accent); font-weight:700;}
 .nav-links{display:flex; gap:2px; flex:1; min-width:0; justify-content:center;}
@@ -97,7 +97,7 @@ a{color:inherit; text-decoration:none;}
 @media (max-width:420px){ .notif-popover{width:280px; right:-40px;} }
 
 /* ---------- layout shells ---------- */
-.container{max-width:1440px; margin:0 auto; padding:24px 28px 56px;}
+.container{max-width:var(--page-max); margin:0 auto; padding:24px 28px 56px;}
 .container.narrow{max-width:920px; padding-bottom:32px;}
 .container.mid{max-width:1160px;}
 @media (max-width:760px){ .container{padding:18px 16px 48px;} }
@@ -189,6 +189,8 @@ a{color:inherit; text-decoration:none;}
 
 /* ---------- split layout (sidebar + content) ---------- */
 .split-layout{display:grid; grid-template-columns:1fr; gap:24px; align-items:start;}
+/* 그리드 칸은 기본적으로 내용(가로 칩 줄, 채팅 상단 버튼 등)보다 좁아지지 않아 모바일에서 페이지 전체가 넓어진다. 칸이 화면 폭에 맞춰 줄어들게 한다. */
+.split-layout > *, .detail-layout > *, .home-layout > *, .admin-layout > *, .form-grid > *, .card-grid > *, .login-wrap > *, .chat-shell > *{min-width:0;}
 @media (min-width:900px){ .split-layout{grid-template-columns:220px 1fr;} }
 
 .detail-layout{display:grid; grid-template-columns:1fr; gap:24px; align-items:start;}
@@ -368,7 +370,7 @@ span.comment-more{display:inline-block; flex:none;}
 
 /* ---------- chat ---------- */
 .chat-page{display:flex; flex-direction:column;}
-.chat-shell{display:grid; grid-template-columns:1fr; max-width:1440px; margin:0 auto; width:100%; box-sizing:border-box; border-left:1px solid var(--border-soft); border-right:1px solid var(--border-soft); height:calc(100vh - 63px);}
+.chat-shell{display:grid; grid-template-columns:1fr; max-width:var(--page-max); margin:0 auto; width:100%; box-sizing:border-box; border-left:1px solid var(--border-soft); border-right:1px solid var(--border-soft); height:calc(100vh - 63px);}
 @media (min-width:760px){ .chat-shell{grid-template-columns:400px 1fr;} }
 .chat-list-pane{border-right:1px solid var(--border-soft); display:flex; flex-direction:column; min-height:0;}
 .chat-list-head{padding:22px 20px 12px; flex:none; display:flex; flex-direction:column; gap:12px;}
@@ -397,6 +399,18 @@ span.comment-more{display:inline-block; flex:none;}
 .chat-room-head{display:flex; align-items:center; gap:12px; padding:18px 20px; border-bottom:1px solid var(--border-soft); flex:none; min-height:76px; box-sizing:border-box;}
 .chat-room-head .name{font-weight:700; font-size:15px;}
 .chat-room-head-cta{flex:none; white-space:nowrap; height:30px; padding:0 11px; font-size:12.5px; border-radius:8px;}
+.chat-room-partner{display:flex; align-items:center; gap:12px; flex:1; min-width:0;}
+.chat-room-partner .name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+@media (max-width:400px){ .chat-room-partner > :first-child{display:none;} }
+@media (max-width:480px){
+  .chat-room-head{gap:8px; padding:12px 12px; min-height:64px;}
+  .chat-room-partner{gap:8px;}
+  .chat-room-head-cta{padding:0 9px; font-size:12px;}
+  .trade-card{margin:10px 12px 0;}
+  .bubble-row{padding:3px 14px;}
+  .bubble-row-inner{max-width:82%;}
+  .chatinput{padding:12px; gap:8px;}
+}
 
 .chat-empty-state{flex:1; display:flex; align-items:center; justify-content:center; color:var(--ink-faint); flex-direction:column; gap:16px; padding:40px 30px 14vh;}
 .chat-empty-icon{width:72px; height:72px; border-radius:20px; background:var(--accent-soft); color:var(--accent-soft-ink); display:flex; align-items:center; justify-content:center;}
@@ -424,7 +438,7 @@ span.comment-more{display:inline-block; flex:none;}
 .bubble-row.them .bubble{background:var(--surface-sunken); color:var(--ink); border-bottom-left-radius:4px;}
 .chatinput{display:flex; align-items:center; gap:10px; padding:16px 20px; border-top:1px solid var(--border-soft); flex:none; min-height:66px; box-sizing:border-box;}
 .chatinput-add{flex:none;}
-.chatinput input{flex:1; border:none; background:var(--surface-sunken); border-radius:10px; padding:12px 14px; font-size:13.5px; outline:none; color:var(--ink);}
+.chatinput input{flex:1; min-width:0; border:none; background:var(--surface-sunken); border-radius:10px; padding:12px 14px; font-size:13.5px; outline:none; color:var(--ink);}
 .chat-send-btn{flex:none; padding:10px 18px; border-radius:10px;}
 @media (max-width:759px){
   .chat-shell:not(.show-room) .chat-room-pane{display:none;}
@@ -523,6 +537,10 @@ span.comment-more{display:inline-block; flex:none;}
 .write-input, .write-textarea{background:color-mix(in srgb, var(--surface-sunken) 45%, white);}
 .write-input:focus, .write-textarea:focus{box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent); background:var(--surface);}
 .write-helper{font-size:12px; color:var(--ink-faint); margin-top:8px; line-height:1.5;}
+.write-notes{list-style:none; margin:8px 0 0; padding:0; display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--ink-faint); line-height:1.5;}
+.write-notes li{position:relative; padding-left:15px;}
+.write-notes li::before{content:"※"; position:absolute; left:0;}
+.market-notice{margin:-6px 0 18px;}
 .write-risk-notice{margin-top:10px; font-size:12.5px; font-weight:600; border:1px solid color-mix(in srgb, var(--warn) 30%, transparent);}
 .write-tag-input{display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-height:54px; padding:9px 12px; box-sizing:border-box; border-radius:12px; border:1.5px solid transparent; background:color-mix(in srgb, var(--surface-sunken) 45%, white); transition:border-color .12s ease, background .12s ease;}
 .write-tag-input:focus-within{border-color:var(--accent); background:var(--surface); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);}
@@ -551,7 +569,7 @@ footer{border-top:1px solid var(--border-soft); margin-top:40px; background:colo
 .info-tip-bubble{position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%); z-index:20; white-space:nowrap; padding:7px 10px; border-radius:9px; background:var(--ink); color:var(--surface); font-size:11.5px; font-weight:600; box-shadow:var(--shadow); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .12s ease;}
 .info-tip-bubble::before{content:''; position:absolute; top:-4px; left:50%; width:8px; height:8px; background:var(--ink); transform:translateX(-50%) rotate(45deg);}
 .info-tip:hover .info-tip-bubble, .info-tip-btn:focus-visible + .info-tip-bubble, .info-tip.open .info-tip-bubble{opacity:1; visibility:visible;}
-.footer-inner{max-width:1440px; margin:0 auto; padding:28px 28px 34px; display:flex; flex-wrap:wrap; gap:32px; justify-content:space-between;}
+.footer-inner{max-width:var(--page-max); margin:0 auto; padding:28px 28px 34px; display:flex; flex-wrap:wrap; gap:32px; justify-content:space-between;}
 @media (max-width:760px){ .footer-inner{padding:24px 16px 30px; gap:22px;} }
 .footer-brand{font-family:var(--font-display); font-weight:700; font-size:17px;}
 .footer-cols{display:flex; gap:52px; flex-wrap:wrap;}
