@@ -39,6 +39,7 @@ class AuthSignupTrustTest {
     @MockitoBean TokenSessionService sessions;
     @MockitoBean EmailVerificationService emailVerification;
     @MockitoBean NotificationService notifications;
+    @MockitoBean com.universe.file.service.FileService fileService;
 
     static class Config {
         @Bean PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
