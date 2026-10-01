@@ -35,8 +35,9 @@ export default function CommunityDetail() {
         const cRes = await communityApi.getComments(id);
         setComments(cRes.content || []);
         // Fetch related posts (simplification for now: just fetch top popular)
-        const relRes = await communityApi.getPosts({ sort: 'popular', size: 5 });
-        setRelated(relRes.content.filter(x => x.postId != id));
+        // 현재 글을 빼도 5개가 남도록 하나 더 받아온다.
+        const relRes = await communityApi.getPosts({ sort: 'popular', size: 6 });
+        setRelated((relRes.content || []).filter(x => x.postId != id).slice(0, 5));
       } catch (err) {
         console.error('Failed to load post', err);
       }

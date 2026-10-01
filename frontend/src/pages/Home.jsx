@@ -42,8 +42,11 @@ export default function Home() {
       if (cancelled) return;
       setServer({
         posts: posts.content || [],
-        // 거래가 끝나지 않은 상품(판매중·거래 요청중·거래중)을 보여준다.
-        listings: (items.content || []).filter((l) => !['COMPLETED', 'CANCELLED'].includes(l.tradeStatus)).slice(0, 4),
+        // 거래가 끝나지 않은 상품(판매중·거래 요청중·거래중)을 새로 올라온 순으로 보여준다.
+        listings: (items.content || [])
+          .filter((l) => !['COMPLETED', 'CANCELLED'].includes(l.tradeStatus))
+          .sort((a, b) => (new Date(b.createdAt).getTime() || 0) - (new Date(a.createdAt).getTime() || 0) || (b.id ?? 0) - (a.id ?? 0))
+          .slice(0, 4),
         counts: Object.fromEntries(counts),
       });
     });
