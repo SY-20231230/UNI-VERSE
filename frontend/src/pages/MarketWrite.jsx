@@ -185,6 +185,10 @@ export default function MarketWrite() {
       </Link>
       <h1 className="write-title">{isEdit ? '중고거래 수정' : '중고거래 글쓰기'}</h1>
       <p className="write-sub">학교 안에서 안전하게 거래할 물건을 등록해보세요.</p>
+      <div className="write-risk-notice" role="note">
+        <Icon name="alert" size={16} />
+        <span><b>등록 제한</b> 선입금·계좌 공유·택배거래·외부 메신저 유도 표현이 있으면 등록할 수 없어요.</span>
+      </div>
 
       <div className="field" style={{ marginTop: 26 }}>
         <label>사진 추가 (최대 5장)</label>
@@ -272,13 +276,6 @@ export default function MarketWrite() {
           <li>전화번호·이메일·계좌번호·외부 메신저 아이디는 적지 마세요. 연락은 UNI:VERSE 채팅으로 해주세요.</li>
           <li>거래는 교내 직거래를 기준으로 해요.</li>
         </ul>
-        <div className="safety-banner write-risk-notice">
-          <Icon name="alert" size={16} />
-          <div>
-            <b>등록 제한 안내</b>
-            선입금·계좌 공유·택배거래·외부 메신저 유도 표현이 감지되면 등록이 제한돼요.
-          </div>
-        </div>
       </div>
 
       <div className="write-bottom-bar" style={{ justifyContent: 'flex-end' }}>

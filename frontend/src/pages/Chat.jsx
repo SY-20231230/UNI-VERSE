@@ -26,6 +26,16 @@ function dateLabel(ts) {
   return formatDate(ts);
 }
 
+// 목록 시간: 오늘은 '오후 5:02', 어제는 '어제', 그 전은 '9.28'
+function chatTime(ts) {
+  const d = new Date(ts);
+  const today = new Date();
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return hm(ts);
+  if (d.toDateString() === yesterday.toDateString()) return '어제';
+  return `${d.getMonth() + 1}.${d.getDate()}`;
+}
+
 export default function Chat() {
   const { id: activeId } = useParams();
   const { state, userOf, sendChatMessage, receiveChatMessage, markChatRead, acceptChatRequest, declineChatRequest, deleteChatRoom, dismissSafety, stompConnected, publishMessage } = useApp();
@@ -46,6 +56,24 @@ export default function Chat() {
   const msgsRef = useRef(null);
   const menuRef = useRef(null);
 
+  // 서버 채팅방에는 상품 ID만 있어 목록에 상품명을 보여주려고 상품 목록을 한 번 받아 둔다.
+  // 상세 조회(getItem)는 조회수를 올리므로 목록 API를 쓴다.
+  const [itemInfo, setItemInfo] = useState({});
+  useEffect(() => {
+    if (state.authMode !== 'server') return;
+    import('../lib/marketApi').then(({ marketApi }) => marketApi.getItems({ page: 0, size: 100 }))
+      .then((res) => {
+        const map = {};
+        (res?.content || []).forEach((it) => {
+          const itemId = it.id ?? it.itemId;
+          map[itemId] = { id: itemId, title: it.title, price: it.listedPrice };
+        });
+        setItemInfo(map);
+      })
+      .catch(() => {});
+  }, [state.authMode]);
+  const listingOf = (c) => state.listings.find((x) => x.id === c.listingId) || itemInfo[c.listingId] || null;
+
   const allIds = Object.keys(state.chats).sort((a, b) => {
     const at = state.chats[a].messages[state.chats[a].messages.length - 1]?.time || 0;
     const bt = state.chats[b].messages[state.chats[b].messages.length - 1]?.time || 0;
@@ -55,7 +83,7 @@ export default function Chat() {
   const ids = q
     ? allIds.filter((cid) => {
         const c = state.chats[cid];
-        const l = state.listings.find((x) => x.id === c.listingId);
+        const l = listingOf(c);
         const partner = c.anonymous ? { name: '익명 사용자' } : userOf(c.partnerId);
         return partner.name.toLowerCase().includes(q) || (l && l.title.toLowerCase().includes(q));
       })
@@ -63,11 +91,10 @@ export default function Chat() {
   const activeChat = activeId ? state.chats[activeId] : null;
   const pendingIds = ids.filter((cid) => state.chats[cid].status === 'pending');
   const acceptedIds = ids.filter((cid) => state.chats[cid].status !== 'pending');
-  const pendingCount = pendingIds.length;
 
   function renderChatRow(cid) {
     const c = state.chats[cid];
-    const l = state.listings.find((x) => x.id === c.listingId);
+    const l = listingOf(c);
     const partner = c.anonymous ? { name: '익명 사용자', color: '#9195A6' } : userOf(c.partnerId, c.partnerName);
     const last = c.messages[c.messages.length - 1];
     
@@ -76,24 +103,20 @@ export default function Chat() {
 
     return (
       <Link key={cid} className={'chat-row' + (cid === activeId ? ' active' : '')} to={`/chat/${cid}`}>
-        <Avatar user={partner} size={44} />
-        <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }} className="stack g4">
-          <div className="row between">
-            <b style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
-              {partner.name}
-            </b>
-            <span className="faint" style={{ fontSize: 11 }}>
-              {last ? timeAgo(last.time) : ''}
-            </span>
-          </div>
-          <div className="faint" style={{ fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {l ? l.title : ''}
-          </div>
+        <Avatar user={partner} size={38} />
+        <div className="chat-row-body">
           <div className="row between g8">
-            <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--ink-soft)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {last ? last.text : '대화를 시작해보세요'}
-            </div>
-            {l && <span className="chat-row-price tnum">{won(l.price)}</span>}
+            <b className="chat-row-name">{partner.name}</b>
+            <span className="chat-row-time">{last ? chatTime(last.time) : ''}</span>
+          </div>
+          {l && (
+            <span className="chat-row-item">
+              <Icon name="shopping-bag" size={11} />
+              <span>{l.title}</span>
+            </span>
+          )}
+          <div className="row between g8">
+            <div className="chat-row-last">{last ? last.text : '대화를 시작해보세요'}</div>
             {isUnread && (
               <span className="chat-unread-badge tnum" aria-label={`안 읽은 메시지 ${c.unreadCount || 1}개`}>
                 {c.unreadCount > 99 ? '99+' : c.unreadCount || 1}
@@ -118,7 +141,7 @@ export default function Chat() {
 
   function renderRequestCard(cid) {
     const c = state.chats[cid];
-    const l = state.listings.find((x) => x.id === c.listingId);
+    const l = listingOf(c);
     const partner = c.anonymous ? { name: '익명 사용자', color: '#9195A6' } : userOf(c.partnerId, c.partnerName);
     const last = c.messages[c.messages.length - 1];
     return (
@@ -331,18 +354,10 @@ export default function Chat() {
 
   return (
     <div className="chat-page fade-enter">
+      <h1 className="h1 chat-page-title">실시간 거래 채팅</h1>
       <div className={'chat-shell' + (activeId ? ' show-room' : '')}>
         <div className="chat-list-pane">
           <div className="chat-list-head">
-            <div className="row between">
-              <div className="page-title">채팅</div>
-              {allIds.length > 0 && (
-                <span className="chat-count">
-                  전체 {allIds.length}개
-                  {pendingCount > 0 && <span className="chat-count-pending">요청 {pendingCount}</span>}
-                </span>
-              )}
-            </div>
             {allIds.length > 0 && (
               <div className="chat-search">
                 <Icon name="search" size={15} />
@@ -409,7 +424,12 @@ export default function Chat() {
               >
                 <Avatar user={partner2} size={40} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="name" style={!activeChat.anonymous ? { '&:hover': { textDecoration: 'underline' } } : undefined}>{partner2.name}</div>
+                  <div className="name">{partner2.name}</div>
+                  {listing2 && (
+                    <div className="chat-room-item">
+                      {listing2.title}
+                    </div>
+                  )}
               </div>
               </div>
               {listing2 && (
@@ -501,44 +521,17 @@ export default function Chat() {
               if (tradeStatus === 'COMPLETED') activeIdx = 3;
 
               return (
-                <div style={{ padding: '14px 20px 0' }}>
-                  <div style={{
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 12,
-                    padding: '16px 20px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 16,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div className="row g12" style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          width: 44, height: 44, borderRadius: 10, background: 'var(--accent-soft)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0
-                        }}>
-                          <Icon name="book" size={22} />
-                        </div>
-                        <div className="stack" style={{ minWidth: 0, gap: 4 }}>
-                          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)' }}>
-                            {tradeStatus === 'NOT_REQUESTED' || tradeStatus === 'CANCELLED' ? '거래를 시작해 보세요' :
-                             tradeStatus === 'REQUESTED' ? '거래 요청이 도착했어요' :
-                             tradeStatus === 'TRADING' ? '거래 중이에요' :
-                             tradeStatus === 'PROMISED' ? '약속이 확정됐어요' :
-                             '거래가 완료됐어요'}
-                          </div>
-                          <div className="row g8" style={{ minWidth: 0, alignItems: 'baseline' }}>
-                            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
-                              {listing2?.title || trade?.listingTitle || '상품 정보 없음'}
-                            </span>
-                            <span style={{ flex: 'none', fontSize: 13, fontWeight: 700, color: 'var(--ink-soft)' }}>
-                              {listing2 ? won(listing2.listedPrice !== undefined ? listing2.listedPrice : listing2.price) : '0원'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ marginLeft: 16, flexShrink: 0 }}>
+                <div className="chat-trade-wrap">
+                  <div className="chat-trade-card">
+                    <div className="chat-trade-status-row">
+                      <span className="chat-trade-status">
+                        {tradeStatus === 'NOT_REQUESTED' || tradeStatus === 'CANCELLED' ? '거래를 시작해 보세요' :
+                         tradeStatus === 'REQUESTED' ? '거래 요청이 도착했어요' :
+                         tradeStatus === 'TRADING' ? '거래 중이에요' :
+                         tradeStatus === 'PROMISED' ? '약속이 확정됐어요' :
+                         '거래가 완료됐어요'}
+                      </span>
+                      <div style={{ flexShrink: 0 }}>
                         {(tradeStatus === 'NOT_REQUESTED' || tradeStatus === 'CANCELLED') && isSeller && (
                           <div style={{ fontSize: 13, color: 'var(--ink-soft)', background: 'var(--surface-2)', padding: '6px 12px', borderRadius: 6 }}>
                             요청 대기 중
@@ -594,40 +587,23 @@ export default function Chat() {
                     </div>
 
                     {/* PROGRESS BAR */}
-                    <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', padding: '0 10px' }}>
-                      <div style={{ position: 'absolute', top: 6, left: 40, right: 40, height: 2, background: 'var(--border)', zIndex: 0 }} />
-                      <div style={{ position: 'absolute', top: 6, left: 40, width: `calc((100% - 80px) * ${activeIdx / 3})`, height: 2, background: 'var(--accent)', zIndex: 0, transition: 'width 0.3s ease' }} />
-                      
-                      {steps.map((step, idx) => {
-                        const isPast = idx < activeIdx;
-                        const isActive = idx === activeIdx;
-                        return (
-                          <div key={step} className="stack" style={{ alignItems: 'center', gap: 8, zIndex: 1, width: 60 }}>
-                            <div style={{
-                              width: 14, height: 14, borderRadius: '50%', background: 'var(--surface)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              ...(isActive || isPast ? {} : { border: '2px solid var(--border)' })
-                            }}>
-                              {isActive ? (
-                                <div style={{ width: 14, height: 14, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 0 4px var(--accent-soft)' }} />
-                              ) : isPast ? (
-                                <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--accent)' }} />
-                              ) : null}
-                            </div>
-                            <div style={{ fontSize: 12, fontWeight: isActive || isPast ? 600 : 400, color: isActive || isPast ? 'var(--accent)' : 'var(--ink-faint)', whiteSpace: 'nowrap' }}>
-                              {step}
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="trade-steps">
+                      <div className="trade-steps-labels">
+                        {steps.map((step, idx) => (
+                          <span key={step} className={idx <= activeIdx ? 'on' : ''}>{step}</span>
+                        ))}
+                      </div>
+                      <div className="trade-steps-track">
+                        <div className="trade-steps-fill" style={{ width: `${((activeIdx + 1) / steps.length) * 100}%` }} />
+                      </div>
                     </div>
                   </div>
                 </div>
               );
             })()}
             {activeChat.showSafety !== false && (
-              <div style={{ padding: '8px 20px 0' }}>
-                <SafetyBanner onClose={() => dismissSafety(activeId)} />
+              <div className="chat-safety-wrap">
+                <SafetyBanner compact onClose={() => dismissSafety(activeId)} />
               </div>
             )}
             <div className="chat-msgs" ref={msgsRef}>
@@ -643,13 +619,12 @@ export default function Chat() {
                     {showDate && <div className="chat-date-sep">{dateLabel(m.time)}</div>}
                     <div className={'bubble-row ' + m.from}>
                       <div className="bubble-row-inner">
-                        <div className="bubble">{m.text}</div>
-                        {(showTime || unreadByPartner) && (
-                          <span className="bubble-meta">
-                            {unreadByPartner && <span className="bubble-read">1</span>}
-                            {showTime && <span className="bubble-time">{hm(m.time)}</span>}
-                          </span>
-                        )}
+                        {/* 상대가 안 읽은 "1"은 말풍선 끝 바로 옆, 시간은 말풍선 아래 */}
+                        <div className="bubble-line">
+                          <div className="bubble">{m.text}</div>
+                          {unreadByPartner && <span className="bubble-read">1</span>}
+                        </div>
+                        {showTime && <span className="bubble-time">{hm(m.time)}</span>}
                       </div>
                     </div>
                   </div>
@@ -687,15 +662,15 @@ export default function Chat() {
                   <Icon name="plus" size={17} />
                 </button>
                 <input
-                  placeholder="메시지를 입력하세요"
+                  placeholder="메시지를 입력하세요..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') send();
                   }}
                 />
-                <button className="btn btn-primary chat-send-btn" onClick={send} disabled={!input.trim()}>
-                  전송
+                <button className="btn btn-primary chat-send-btn" onClick={send} disabled={!input.trim()} aria-label="전송" title="전송">
+                  <Icon name="send" size={17} />
                 </button>
               </div>
             )}
@@ -705,19 +680,21 @@ export default function Chat() {
           <div className="chat-room-pane">
             <div className="chat-empty-state">
               <div className="chat-empty-icon">
-                <Icon name="chat" size={30} />
+                <Icon name="message-circle" size={30} />
               </div>
               <div className="chat-empty-title">대화를 시작해보세요</div>
               <div className="chat-empty-sub">
-                중고거래와 캠퍼스 이야기에서
+                왼쪽에서 채팅방을 고르거나,
                 <br />
-                필요한 사람과 바로 연결할 수 있어요.
+                중고거래 글에서 판매자에게 대화를 요청해보세요.
               </div>
               <div className="chat-empty-cta">
                 <Link className="btn btn-outline" to="/market">
-                  최근 거래 보기
+                  <Icon name="shopping-bag" size={16} />
+                  중고거래 둘러보기
                 </Link>
                 <Link className="btn btn-outline" to="/community">
+                  <Icon name="message-square" size={16} />
                   커뮤니티 보기
                 </Link>
               </div>

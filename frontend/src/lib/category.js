@@ -1,5 +1,6 @@
 export const POST_CATEGORY_META = {
   '전체': { variant: 'outline', icon: 'board' },
+  '공지': { variant: 'danger', icon: 'bell' },
   '자유': { variant: 'accent', icon: 'chat' },
   '수업/학점': { variant: 'verified', icon: 'grad' },
   '학교생활': { variant: 'success', icon: 'home' },
