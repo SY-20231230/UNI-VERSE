@@ -16,31 +16,28 @@ export default function PostCard({ post, compact }) {
   const commentsCount = post.comments ? post.comments.length : (post.commentCount || 0);
 
   return (
-    <Link className="post-card" to={`/community/${id}`}>
-      <div className="row g8">
-        <span className={'chip ' + meta.variant}>
-          <Icon name={meta.icon} size={11} />
-          {category}
-        </span>
-        {post.anonymous && <span className="chip outline">익명</span>}
-      </div>
-      <div className="post-title" style={{ marginTop: 9 }}>
-        {post.title}
-      </div>
-      {!compact && <div className="post-excerpt">{body}</div>}
-      <div className="row between" style={{ marginTop: 11 }}>
-        <div className="meta-row">
-          <span>{author}</span>
-          <span className="dot"></span>
-          <span>{timeAgo(time)}</span>
+    <Link className={'post-card' + (compact ? ' compact' : '')} to={`/community/${id}`}>
+      <div className="post-card-top">
+        <div className="row g6">
+          <span className={'chip ' + meta.variant}>
+            <Icon name={meta.icon} size={11} />
+            {category}
+          </span>
+          {post.anonymous && <span className="chip outline">익명</span>}
         </div>
-        <div className="row g10">
-          <span className="stat">
-            <Icon name="heart" size={13} />
+        <span className="post-card-time">{timeAgo(time)}</span>
+      </div>
+      <div className="post-title">{post.title}</div>
+      {body && <div className="post-excerpt">{body}</div>}
+      <div className="post-card-foot">
+        <span className="post-card-author">작성자: {author}</span>
+        <div className="row g12">
+          <span className="stat like">
+            <Icon name="heart" size={14} />
             {likes}
           </span>
           <span className="stat">
-            <Icon name="chat" size={13} />
+            <Icon name="chat" size={14} />
             {commentsCount}
           </span>
         </div>

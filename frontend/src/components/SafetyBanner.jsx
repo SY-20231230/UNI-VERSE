@@ -1,6 +1,20 @@
 import Icon from '../lib/icons';
 
-export default function SafetyBanner({ onClose }) {
+export default function SafetyBanner({ onClose, compact }) {
+  // 채팅방에서는 한 줄 안내로 짧게 보여준다.
+  if (compact) {
+    return (
+      <div className="safety-banner compact">
+        <Icon name="alert" size={16} />
+        <span>카카오톡 등 외부 메신저 이동, 선입금 요구 시 사기 위험이 있어요. 교내에서 만나 직거래하세요.</span>
+        {onClose && (
+          <button className="iconbtn ghost safety-banner-close" onClick={onClose} aria-label="안내 닫기">
+            <Icon name="x" size={13} />
+          </button>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="safety-banner">
       {onClose && (

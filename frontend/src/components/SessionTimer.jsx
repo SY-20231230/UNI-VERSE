@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Icon from '../lib/icons';
 import { authApi, useApp } from '../context/AppContext';
@@ -87,11 +88,12 @@ export default function SessionTimer() {
         <span className="session-timer-time">{formatRemaining(remaining)}</span>
         <span className="session-timer-extend">연장</span>
       </button>
-      {promptOpen && <div className="modal-backdrop session-expiry-backdrop">
+      {/* 상단바의 backdrop-filter 안에서는 fixed 창이 상단바 영역에 갇히므로 body로 띄운다. */}
+      {promptOpen && createPortal(<div className="modal-backdrop session-expiry-backdrop">
         <section className="modal-card session-expiry-modal" role="dialog" aria-modal="true" aria-labelledby="session-expiry-title">
           <Icon name="clock" size={24} />
-          <h2 className="h3" id="session-expiry-title">로그인 시간이 얼마 남지 않았어요</h2>
-          <p className="muted">시간이 끝나면 자동으로 로그아웃돼요. 이용을 계속하려면 연장하거나 다시 로그인해주세요.</p>
+          <h2 className="h3" id="session-expiry-title">로그인 시간이 곧 끝나요</h2>
+          <p className="muted">연장하면 30분 더 이용할 수 있어요.</p>
           <div className="row g10 session-expiry-actions">
             <button className="btn btn-outline" type="button" onClick={signInAgain} disabled={relogging || extending}>
               {relogging ? '로그아웃 중…' : '다시 로그인'}
@@ -101,7 +103,7 @@ export default function SessionTimer() {
             </button>
           </div>
         </section>
-      </div>}
+      </div>, document.body)}
     </>
   );
 }

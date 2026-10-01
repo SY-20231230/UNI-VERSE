@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Icon from '../lib/icons';
 import Avatar from '../components/Avatar';
 import ListingGridCard from '../components/ListingGridCard';
@@ -23,6 +23,21 @@ export default function MyPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const fileRef = useRef(null);
+  // 사진이 있으면 카메라 버튼 옆에 '사진 변경 / 기본 이미지로' 작은 메뉴를 연다. 없으면 바로 사진을 고른다.
+  const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
+  const photoMenuRef = useRef(null);
+  useEffect(() => {
+    if (!photoMenuOpen) return undefined;
+    const close = (e) => { if (photoMenuRef.current && !photoMenuRef.current.contains(e.target)) setPhotoMenuOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setPhotoMenuOpen(false); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', onKey); };
+  }, [photoMenuOpen]);
+  function openPhotoMenu() {
+    if (!me.avatarUrl) fileRef.current?.click();
+    else setPhotoMenuOpen((v) => !v);
+  }
 
   const requestedTab = searchParams.get('tab');
   const tab = TABS.some((t) => t.k === requestedTab) ? requestedTab : 'posts';
@@ -38,25 +53,28 @@ export default function MyPage() {
   // 실제 로그인이면 서버 데이터, 데모 모드면 기존 목업 데이터를 보여준다.
   const server = useMyPage();
   const summary = server.summary;
-  // 1줄: 학교 · 학과 · 인증 상태 / 2줄: 학교 이메일 (서버·데모 동일한 형식)
+  // 1줄: 학교 · 학과 (인증 상태는 이름 옆 배지) / 2줄: 학교 이메일 (서버·데모 동일한 형식)
   const profileLine = server.enabled
     ? summary
-      ? [summary.schoolName || me.school || '학교 미등록', me.dept, summary.schoolVerified ? '학교 인증 완료' : '학교 인증 필요'].filter(Boolean).join(' · ')
+      ? [summary.schoolName || me.school || '학교 미등록', me.dept].filter(Boolean).join(' · ')
       : server.error || '불러오는 중…'
-    : [me.school, me.dept, '학교 인증 완료'].filter(Boolean).join(' · ');
+    : [me.school, me.dept].filter(Boolean).join(' · ');
+  // 요약을 받기 전에는 배지를 보이지 않는다.
+  const schoolVerified = server.enabled ? (summary ? !!summary.schoolVerified : null) : true;
+  const withUnit = (v, unit) => (v === '–' || v === undefined || v === null ? '–' : `${v}${unit}`);
   const profileEmail = server.enabled ? summary?.email : me.email;
   const stats = server.enabled
     ? [
         { label: '신뢰점수', value: summary ? `${summary.trustScore}점` : '–', accent: true },
-        { label: '거래완료', value: summary?.completedTradeCount ?? '–' },
-        { label: '작성한 글', value: summary?.postCount ?? '–' },
-        { label: '등록한 거래', value: summary?.marketItemCount ?? '–' },
+        { label: '거래완료', value: withUnit(summary?.completedTradeCount, '건') },
+        { label: '작성한 글', value: withUnit(summary?.postCount, '개') },
+        { label: '등록한 거래', value: withUnit(summary?.marketItemCount, '건') },
       ]
     : [
         { label: '신뢰점수', value: `${me.trustScore ?? 0}점`, accent: true },
-        { label: '거래완료', value: done },
-        { label: '진행중', value: going },
-        { label: '내 신고', value: state.reports || 0 },
+        { label: '거래완료', value: `${done}건` },
+        { label: '진행중', value: `${going}건` },
+        { label: '내 신고', value: `${state.reports || 0}건` },
       ];
   const counts = server.enabled
     ? { posts: summary?.postCount ?? 0, listings: summary?.marketItemCount ?? 0, liked: server.favorites.totalElements }
@@ -99,53 +117,58 @@ export default function MyPage() {
   }
 
   return (
-    <div className="container fade-enter">
+    <div className="container mypage-container fade-enter">
       <div className="card profile-card">
-        <div className="profile-cover">
-          <div className="hero-dots"></div>
-          <button className="profile-logout" onClick={handleLogout}>
+        <div className="profile-body">
+          <div className="profile-avatar-wrap" ref={photoMenuRef}>
+            <Avatar user={me} size={96} />
+            <button className="avatar-edit-btn" title="프로필 사진 변경" onClick={openPhotoMenu}
+              aria-haspopup={me.avatarUrl ? 'menu' : undefined} aria-expanded={me.avatarUrl ? photoMenuOpen : undefined}>
+              <Icon name="camera" size={14} />
+            </button>
+            {photoMenuOpen && (
+              <div className="avatar-menu" role="menu">
+                <button type="button" role="menuitem" onClick={() => { setPhotoMenuOpen(false); fileRef.current?.click(); }}>
+                  <Icon name="camera" size={14} />
+                  사진 변경
+                </button>
+                <button type="button" role="menuitem" onClick={() => { setPhotoMenuOpen(false); removeProfilePhoto(); }}>
+                  <Icon name="user" size={14} />
+                  기본 이미지로
+                </button>
+              </div>
+            )}
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={handlePhotoPick} />
+          </div>
+          <div className="profile-info">
+            <div className="row g8 wrap">
+              <span className="profile-name">{me.name}</span>
+              {schoolVerified !== null && (
+                <span className={'chip ' + (schoolVerified ? 'success' : 'warn')}>
+                  {schoolVerified ? '학교 인증 완료' : '학교 인증 필요'}
+                </span>
+              )}
+            </div>
+            <div className="profile-line">{profileLine}</div>
+            {profileEmail && <div className="profile-email">{profileEmail}</div>}
+          </div>
+          <button className="btn btn-outline btn-sm mypage-logout" onClick={handleLogout}>
             <Icon name="logout" size={13} />
             로그아웃
           </button>
         </div>
-        <div className="profile-body">
-          <div className="profile-avatar-wrap">
-            <Avatar user={me} size={96} />
-            <button className="avatar-edit-btn" title="프로필 사진 변경" onClick={() => fileRef.current?.click()}>
-              <Icon name="camera" size={14} />
-            </button>
-            <input ref={fileRef} type="file" accept="image/*" hidden onChange={handlePhotoPick} />
-          </div>
-          <div className="profile-info">
-            <div className="row g8">
-              <span className="h2">{me.name}</span>
-            </div>
-            <div className="faint" style={{ fontSize: 12.5, marginTop: 5 }}>
-              {profileLine}
-            </div>
-            {profileEmail && (
-              <div className="faint" style={{ fontSize: 12.5, marginTop: 3 }}>
-                {profileEmail}
-              </div>
-            )}
-            {me.avatarUrl && (
-              <button className="link" style={{ marginTop: 6, fontSize: 11.5 }} onClick={removeProfilePhoto}>
-                기본 이미지로 되돌리기
-              </button>
-            )}
-          </div>
-        </div>
         <div className="stat-row-plain">
           {stats.map((s) => (
             <div className="stat-plain" key={s.label}>
-              <b className="tnum" style={s.accent ? { color: 'var(--accent)' } : undefined}>{s.value}</b>
               <span>{s.label}</span>
+              <b className="tnum" style={s.accent ? { color: 'var(--accent)' } : undefined}>{s.value}</b>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="tab-row-plain" style={{ marginTop: 26 }}>
+      <div className="card mypage-tabs-card">
+      <div className="tab-row-plain">
         {TABS.map((t) => (
           <button key={t.k} className={tab === t.k ? 'on' : ''} onClick={() => setTab(t.k)}>
             {t.label}
@@ -159,7 +182,7 @@ export default function MyPage() {
       ) : (
       <div style={{ marginTop: 4 }}>
         {tab === 'posts' && (
-          <div style={{ maxWidth: 760 }}>
+          <div>
             {myPosts.length ? (
               myPosts.map((p) => {
                 const meta = POST_CATEGORY_META[p.category] || POST_CATEGORY_META['기타'];
@@ -233,6 +256,7 @@ export default function MyPage() {
           ))}
       </div>
       )}
+      </div>
     </div>
   );
 }
@@ -282,6 +306,9 @@ function ItemRows({ items }) {
             {won(item.listedPrice || item.price)} · {formatDate(item.createdAt)}
           </div>
         </div>
+        <Link className="mypage-row-chev" to={`/market/${id}`} aria-label="상품 보기">
+          <Icon name="chev" size={16} />
+        </Link>
       </div>
     );
   });
@@ -300,7 +327,7 @@ function ServerTabs({ tab, posts, items, favorites }) {
   }
 
   return (
-    <div style={{ maxWidth: 760, marginTop: 4, opacity: list.loading ? 0.6 : 1 }}>
+    <div style={{ marginTop: 4, opacity: list.loading ? 0.6 : 1 }}>
       {tab === 'posts'
         ? list.content.map((p) => {
             const meta = POST_CATEGORY_LABELS[p.category] || { label: p.category, variant: 'outline' };
@@ -316,6 +343,9 @@ function ServerTabs({ tab, posts, items, favorites }) {
                     {formatDate(p.createdAt)} · 조회 {p.viewCount}
                   </div>
                 </div>
+                <Link className="mypage-row-chev" to={`/community/${p.postId}`} aria-label="게시글 보기">
+                  <Icon name="chev" size={16} />
+                </Link>
               </div>
             );
           })

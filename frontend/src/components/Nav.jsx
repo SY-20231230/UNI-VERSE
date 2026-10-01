@@ -6,14 +6,14 @@ import SessionTimer from './SessionTimer';
 import { useApp } from '../context/AppContext';
 import { timeAgo, won } from '../lib/format';
 import useNotifications from '../lib/useNotifications';
-import { notificationMeta } from '../lib/notificationApi';
+import { notificationLabel, notificationMeta } from '../lib/notificationApi';
 import usePendingReportNotice from '../lib/usePendingReportNotice';
 
 const NAV_TABS = [
-  { k: 'home', icon: 'home', label: '홈', path: '/' },
-  { k: 'community', icon: 'board', label: '커뮤니티', path: '/community' },
-  { k: 'market', icon: 'tag', label: '중고거래', path: '/market' },
-  { k: 'chat', icon: 'chat', label: '채팅', path: '/chat' },
+  { k: 'home', icon: 'house', label: '홈', path: '/' },
+  { k: 'community', icon: 'message-square', label: '커뮤니티', path: '/community' },
+  { k: 'market', icon: 'shopping-bag', label: '중고거래', path: '/market' },
+  { k: 'chat', icon: 'message-circle', label: '채팅', path: '/chat' },
 ];
 
 const ADMIN_TAB = { k: 'admin', icon: 'shield', label: '관리자', path: '/admin' };
@@ -87,6 +87,7 @@ export default function Nav() {
           <span className="wordmark">
             UNI<b>:</b>VERSE
           </span>
+          <span className="brand-sub">CAMPUS PLATFORM</span>
         </Link>
         <nav className="nav-links">
           {tabs.map((t) => (
@@ -106,12 +107,15 @@ export default function Nav() {
           <div className="notif-wrap" ref={notifRef}>
             <button className="iconbtn ghost" onClick={toggleNotif} aria-label={notifCount > 0 ? `알림 ${notifCount}개` : '알림'}>
               <Icon name="bell" size={18} />
-              {notifCount > 0 && <span className="notif-dot"></span>}
+              {notifCount > 0 && <span className="notif-badge tnum">{notifCount > 99 ? '99+' : notifCount}</span>}
             </button>
             {notifOpen && (
               <div className="notif-popover">
                 <div className="notif-popover-head">
-                  <span>알림</span>
+                  <span className="row g6">
+                    알림
+                    {notifCount > 0 && <span className="notif-head-count tnum">{notifCount}</span>}
+                  </span>
                   {server.unreadCount > 0 && (
                     <button type="button" className="notif-read-all" onClick={server.markAllRead}>
                       모두 읽음
@@ -120,19 +124,24 @@ export default function Nav() {
                 </div>
                 {server.error && <div className="notif-error">{server.error}</div>}
                 {listCount === 0 ? (
-                  <div className="notif-empty">{server.loading ? '불러오는 중…' : '새 알림이 없어요'}</div>
+                  <div className="notif-empty">
+                    <span className="notif-empty-icon"><Icon name="bell" size={20} /></span>
+                    {server.loading ? '불러오는 중…' : '새 알림이 없어요'}
+                  </div>
                 ) : (
                   <div className="notif-list">
                     {pendingReportCount > 0 && (
                       <button type="button" className={'notif-item' + (reportNotice.unseen ? ' unread' : '')}
                         onClick={() => { markReportsSeen(); goTo('/admin'); }}>
-                        <div className="notif-item-icon">
+                        <div className="notif-item-icon warn">
                           <Icon name="flag" size={15} />
                         </div>
                         <div className="notif-item-text">
+                          <div className="notif-item-kind">신고 접수</div>
                           <div className="notif-item-title">새로운 신고 {pendingReportCount}건이 있어요</div>
                           <div className="notif-item-meta">관리자 페이지에서 확인하기</div>
                         </div>
+                        {reportNotice.unseen && <span className="notif-unread-dot" aria-label="안 읽음" />}
                       </button>
                     )}
                     {pendingChats.map((c) => {
@@ -143,6 +152,7 @@ export default function Nav() {
                         <button key={c.cid} type="button" className="notif-item" onClick={() => goTo(`/chat/${c.cid}`)}>
                           <Avatar user={partner} size={32} />
                           <div className="notif-item-text">
+                            <div className="notif-item-kind">채팅 요청</div>
                             <div className="notif-item-title">
                               {partner.name}님이 채팅을 요청했어요
                               {listing && <> · {won(listing.price)}</>}
@@ -154,6 +164,7 @@ export default function Nav() {
                     })}
                     {server.items.map((n) => {
                       const { icon, path } = notificationMeta(n);
+                      const { label, tone } = notificationLabel(n);
                       return (
                         <button
                           key={n.notificationId}
@@ -161,13 +172,17 @@ export default function Nav() {
                           className={'notif-item' + (n.isRead ? '' : ' unread')}
                           onClick={() => openServerNotification(n, path)}
                         >
-                          <div className="notif-item-icon">
+                          <div className={'notif-item-icon ' + tone}>
                             <Icon name={icon} size={15} />
                           </div>
                           <div className="notif-item-text">
+                            <div className="notif-item-kind">
+                              {label}
+                              {n.createdAt && <span> · {timeAgo(new Date(n.createdAt).getTime())}</span>}
+                            </div>
                             <div className="notif-item-title">{n.content}</div>
-                            <div className="notif-item-meta">{n.createdAt ? timeAgo(new Date(n.createdAt).getTime()) : ''}</div>
                           </div>
+                          {!n.isRead && <span className="notif-unread-dot" aria-label="안 읽음" />}
                         </button>
                       );
                     })}
@@ -176,9 +191,19 @@ export default function Nav() {
               </div>
             )}
           </div>
-          <Link className={'iconbtn' + (root === 'mypage' ? ' accent' : '')} to="/mypage" title="마이페이지">
-            <Icon name="user" size={18} />
-          </Link>
+          {state.user ? (
+            <Link className={'nav-profile' + (root === 'mypage' ? ' active' : '')} to="/mypage" title="마이페이지">
+              <span className="nav-profile-text">
+                <span className="nav-profile-name">{userOf('me').name}</span>
+                {userOf('me').dept && <span className="nav-profile-dept">{userOf('me').dept}</span>}
+              </span>
+              <Avatar user={userOf('me')} size={32} />
+            </Link>
+          ) : (
+            <Link className={'iconbtn' + (root === 'mypage' ? ' accent' : '')} to="/mypage" title="마이페이지">
+              <Icon name="user" size={18} />
+            </Link>
+          )}
         </div>
       </div>
     </header>
