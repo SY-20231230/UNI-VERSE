@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, useCallback } 
 import { seed } from '../lib/seed';
 import { uid } from '../lib/format';
 import { session, sessionApiOptions } from '../lib/session';
+import { idleTracker } from '../lib/sessionIdle';
 import { createAuthApi } from '../lib/authApi';
 import { createChatApi } from '../lib/chatApi';
 import { useGlobalChatSocket } from '../lib/useChatSocket';
@@ -118,6 +119,8 @@ export function AppProvider({ children }) {
     setAccessToken(current?.accessToken ?? null);
     if (!current) {
       setMe(null);
+      // 다음 로그인 때 이전 세션의 남은 시간이 이어지지 않도록 지운다.
+      idleTracker.clear();
       // 재발급 실패 등으로 세션이 끊기면 서버 로그인 사용자만 로그아웃시킨다 (데모 모드는 유지).
       setState((s) => (s.authMode === 'server' ? { ...s, user: null, isAdmin: false, authMode: null } : s));
     }
@@ -140,6 +143,8 @@ export function AppProvider({ children }) {
 
   const login = useCallback(async (credentials) => {
     session.set(await authApi.login(credentials));
+    // 로그인할 때마다 세션 시간을 처음부터(30분) 센다.
+    idleTracker.touch();
     try {
       const profile = await authApi.me();
       applyMe(profile);

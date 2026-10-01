@@ -90,9 +90,7 @@ export default function Login() {
       toast(isSignup ? `${profile.nickname}님, 가입을 환영해요` : `${profile.nickname}님, 반가워요`);
       // 관리자 계정은 관리자 페이지로, 그 외 회원은 항상 홈 화면으로 보낸다.
       const isAdmin = profile.role === 'ADMIN' || profile.role === 'SCHOOL_ADMIN';
-      const returnTo = location.state?.from;
-      const destination = isAdmin ? '/admin' : returnTo?.pathname === '/admin' ? '/' : returnTo || '/';
-      navigate(destination, { replace: true });
+      navigate(isAdmin ? '/admin' : '/', { replace: true });
     } catch (err) {
       setError(err.message || '요청을 처리하지 못했습니다. 다시 시도해주세요.');
     } finally {
