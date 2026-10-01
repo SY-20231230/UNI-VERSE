@@ -46,7 +46,8 @@ public class AuthService {
 		School school = schoolEmails.resolveSchool(email);
 		User user = User.builder().email(email).password(encoder.encode(request.getPassword()))
 				.name(request.getName().trim()).nickname(request.getNickname().trim())
-				.department(request.getDepartment().trim()).build();
+				.department(request.getDepartment().trim())
+				.universityName(request.getUniversityName().trim()).build();
 		user.verifySchool(school);
 		users.save(user);
 		SchoolVerification verification = SchoolVerification.builder()

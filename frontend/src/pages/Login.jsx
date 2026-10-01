@@ -5,7 +5,7 @@ import { useUI } from '../context/UIContext';
 import { useMouseGlow } from '../lib/useMouseGlow';
 import Icon from '../lib/icons';
 
-const EMPTY_FORM = { email: '', password: '', name: '', nickname: '', department: '' };
+const EMPTY_FORM = { email: '', password: '', name: '', nickname: '', department: '', universityName: '' };
 // 인증 단계: idle(미발송) → sent(인증번호 발송됨) → verified(인증 완료)
 const EMPTY_VERIFY = { step: 'idle', code: '', devCode: '', sending: false, confirming: false };
 
@@ -200,6 +200,10 @@ export default function Login() {
               <div className="field">
                 <input className="input" placeholder="학과 (예: 컴퓨터공학과)" maxLength={100}
                   value={form.department} onChange={update('department')} required />
+              </div>
+              <div className="field">
+                <input className="input" placeholder="대학교명 (예: 명지전문대학)" maxLength={100}
+                  value={form.universityName} onChange={update('universityName')} required />
               </div>
             </>
           )}

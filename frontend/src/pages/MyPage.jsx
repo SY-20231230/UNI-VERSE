@@ -41,7 +41,7 @@ export default function MyPage() {
   // 1줄: 학교 · 학과 · 인증 상태 / 2줄: 학교 이메일 (서버·데모 동일한 형식)
   const profileLine = server.enabled
     ? summary
-      ? [summary.schoolName || '학교 미등록', me.dept, summary.schoolVerified ? '학교 인증 완료' : '학교 인증 필요'].filter(Boolean).join(' · ')
+      ? [me.school || summary.schoolName || '학교 미등록', me.dept, summary.schoolVerified ? '학교 인증 완료' : '학교 인증 필요'].filter(Boolean).join(' · ')
       : server.error || '불러오는 중…'
     : [me.school, me.dept, '학교 인증 완료'].filter(Boolean).join(' · ');
   const profileEmail = server.enabled ? summary?.email : me.email;
