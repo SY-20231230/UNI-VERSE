@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import Icon from '../lib/icons';
 import Avatar from './Avatar';
+import SessionTimer from './SessionTimer';
 import { useApp } from '../context/AppContext';
 import { timeAgo, won } from '../lib/format';
 import useNotifications from '../lib/useNotifications';
@@ -101,6 +102,7 @@ export default function Nav() {
           ))}
         </nav>
         <div className="nav-actions">
+          <SessionTimer />
           <div className="notif-wrap" ref={notifRef}>
             <button className="iconbtn ghost" onClick={toggleNotif} aria-label={notifCount > 0 ? `알림 ${notifCount}개` : '알림'}>
               <Icon name="bell" size={18} />
