@@ -12,6 +12,7 @@ import com.universe.report.dto.response.*;
 import com.universe.report.entity.*;
 import com.universe.report.repository.*;
 import com.universe.report.service.*;
+import com.universe.file.service.FileService;
 import com.universe.trust.service.TrustScoreService;
 import com.universe.user.entity.*;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class AdminReportService {
     private final AdminSanctionService sanctions;
     private final ReportSuspensionPolicy suspensionPolicy;
     private final ApplicationEventPublisher events;
+    private final FileService fileService;
 
     public Page<AdminReportListResponse> search(Long authenticatedAdminId,
             AdminReportSearchCondition condition, Pageable pageable) {
@@ -48,9 +50,11 @@ public class AdminReportService {
                 r.getAdmin() == null ? null : r.getAdmin().getId(), r.getAdmin() == null ? null : r.getAdmin().getNickname(),
                 r.getAdminNote(), AdminUserResponse.from(r.getTargetUser()),
                 r.getTrade() == null ? null : AdminTradeSummaryResponse.from(r.getTrade()),
-                r.getItem() != null ? AdminReportedContentResponse.from(r.getItem())
+                r.getItem() != null ? AdminReportedContentResponse.from(r.getItem(), fileService)
                         : r.getPost() != null ? AdminReportedContentResponse.from(r.getPost()) : null,
-                evidences.findByReportIdOrderByIdAsc(reportId).stream().map(ReportEvidenceResponse::from).toList());
+                evidences.findByReportIdOrderByIdAsc(reportId).stream()
+                        .map(e -> ReportEvidenceResponse.from(e, fileService))
+                        .toList());
     }
 
     @Transactional
