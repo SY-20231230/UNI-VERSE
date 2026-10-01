@@ -1,4 +1,15 @@
 package com.universe.auth.dto.request;
-import jakarta.validation.constraints.*;
-import lombok.Getter; @Getter
-public class SignupRequest { @NotBlank @Email private String email; @NotBlank @Size(min=8,max=100) private String password; @NotBlank @Size(max=50) private String name; @NotBlank @Size(max=50) private String nickname; @NotBlank @Size(max=100) private String department; }
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+
+@Getter
+public class SignupRequest {
+	@NotBlank @Email private String email;
+	@NotBlank @Size(min = 8, max = 100) private String password;
+	@NotBlank @Size(max = 50) private String name;
+	@NotBlank @Size(max = 50) private String nickname;
+	@NotBlank @Size(max = 100) private String department;
+	@NotBlank @Size(max = 100) private String universityName;
+}

@@ -41,7 +41,7 @@ public class MyPageService {
                 && latest.getEndAt() != null && !latest.getEndAt().isAfter(LocalDateTime.now()) ? latest.getEndAt() : null;
         return new MyPageResponse(user.getId(), user.getEmail(), user.getName(), user.getNickname(), user.getDepartment(),
                 user.getSchool() == null ? null : user.getSchool().getId(),
-                user.getSchool() == null ? null : user.getSchool().getSchoolName(),
+                user.getDisplayUniversityName(),
                 Boolean.TRUE.equals(user.getSchoolVerified()), user.getTrustScore(),
                 posts.countByUserIdAndStatusNot(user.getId(), PostStatus.DELETED),
                 items.countBySellerId(user.getId()), trades.countCompleted(user.getId()),

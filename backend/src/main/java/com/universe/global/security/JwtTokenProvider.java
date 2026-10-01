@@ -24,11 +24,11 @@ public class JwtTokenProvider {
     private static final Duration ACCESS_TTL=Duration.ofMinutes(30);
     private static final Duration REFRESH_TTL=Duration.ofDays(14);
     @PostConstruct void init(){ key=Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)); }
-    public String createAccessToken(Long userId, String role){ return create(userId, role, "ACCESS", ACCESS_TTL); }
-    public String createRefreshToken(Long userId, String role){ return create(userId, role, "REFRESH", REFRESH_TTL); }
-    private String create(Long id,String role,String type,Duration ttl){
+    public String createAccessToken(Long userId, String role, String sessionId){ return create(userId, role, "ACCESS", sessionId, ACCESS_TTL); }
+    public String createRefreshToken(Long userId, String role, String sessionId){ return create(userId, role, "REFRESH", sessionId, REFRESH_TTL); }
+    private String create(Long id,String role,String type,String sessionId,Duration ttl){
         Instant now=Instant.now();
-        return Jwts.builder().subject(String.valueOf(id)).claim("role",role).claim("type",type)
+        return Jwts.builder().subject(String.valueOf(id)).claim("role",role).claim("type",type).claim("sid",sessionId)
                 .issuedAt(Date.from(now)).expiration(Date.from(now.plus(ttl))).signWith(key).compact();
     }
     public Claims parse(String token){
@@ -38,5 +38,6 @@ public class JwtTokenProvider {
     public Long getUserId(String token){ try{return Long.valueOf(parse(token).getSubject());}catch(NumberFormatException e){throw new BusinessException(ErrorCode.INVALID_TOKEN);} }
     public boolean isRefresh(String token){ return "REFRESH".equals(parse(token).get("type",String.class)); }
     public boolean isAccess(String token){ return "ACCESS".equals(parse(token).get("type",String.class)); }
+    public String getSessionId(String token){ return parse(token).get("sid",String.class); }
     public Instant getIssuedAt(String token){ try{return parse(token).getIssuedAt().toInstant();}catch(Exception e){throw new BusinessException(ErrorCode.INVALID_TOKEN);} }
 }

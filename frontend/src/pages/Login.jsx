@@ -5,7 +5,7 @@ import { useUI } from '../context/UIContext';
 import { useMouseGlow } from '../lib/useMouseGlow';
 import Icon from '../lib/icons';
 
-const EMPTY_FORM = { email: '', password: '', name: '', nickname: '', department: '' };
+const EMPTY_FORM = { email: '', password: '', name: '', nickname: '', department: '', universityName: '' };
 // 인증 단계: idle(미발송) → sent(인증번호 발송됨) → verified(인증 완료)
 const EMPTY_VERIFY = { step: 'idle', code: '', devCode: '', sending: false, confirming: false };
 
@@ -75,6 +75,10 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (submitting) return;
+    if (isSignup && !form.universityName.trim()) {
+      setError('대학교명을 입력해주세요.');
+      return;
+    }
     if (isSignup && !emailVerified) {
       setError('학교 이메일 인증을 먼저 완료해주세요.');
       return;
@@ -125,10 +129,23 @@ export default function Login() {
                 : '학교 계정으로 로그인하면 커뮤니티와 중고거래를 바로 이용할 수 있어요'}
             </div>
           </div>
+          {isSignup && (
+            <div className="field">
+              <input className="input" autoComplete="organization" placeholder="대학교명 (예: 명지전문대학)" maxLength={100}
+                value={form.universityName} onChange={update('universityName')} required />
+            </div>
+          )}
+          {isSignup && (
+            <div className="field">
+              <input className="input" placeholder="학과 (예: 컴퓨터공학과)" maxLength={100}
+                value={form.department} onChange={update('department')} required />
+            </div>
+          )}
           {isSignup ? (
             <div className="field">
               <div className="row g8">
-                <input className="input" type="email" autoComplete="email" placeholder="학교 이메일"
+                <input className="input" type="email" autoComplete="email"
+                  placeholder="학교 이메일"
                   style={{ flex: 1, minWidth: 0 }} value={form.email} onChange={update('email')}
                   disabled={verify.step !== 'idle'} required />
                 {verify.step === 'idle' ? (
@@ -196,10 +213,6 @@ export default function Login() {
               <div className="field">
                 <input className="input" autoComplete="nickname" placeholder="닉네임" maxLength={50}
                   value={form.nickname} onChange={update('nickname')} required />
-              </div>
-              <div className="field">
-                <input className="input" placeholder="학과 (예: 컴퓨터공학과)" maxLength={100}
-                  value={form.department} onChange={update('department')} required />
               </div>
             </>
           )}

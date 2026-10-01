@@ -27,7 +27,7 @@ public class UserProfileResponse {
             u.getNickname(),
             u.getDepartment(),
             u.getSchool() == null ? null : u.getSchool().getId(),
-            u.getSchool() == null ? null : u.getSchool().getSchoolName(),
+            u.getDisplayUniversityName(),
             Boolean.TRUE.equals(u.getSchoolVerified()),
             u.getTrustScore(),
             completedTradeCount,

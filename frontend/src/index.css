@@ -65,6 +65,16 @@ a{color:inherit; text-decoration:none;}
   .navlink .lbl{display:none;} .navlink svg{display:block;} .navlink{padding:9px;}
 }
 
+.session-timer{display:flex; align-items:center; gap:5px; height:32px; padding:0 11px; border-radius:99px; border:1px solid var(--border-soft); background:var(--surface-sunken); color:var(--ink-soft); font-size:12.5px; font-weight:700; cursor:pointer; transition:background .12s, color .12s, border-color .12s;}
+.session-timer:hover{background:var(--accent-soft); color:var(--accent-soft-ink); border-color:transparent;}
+.session-timer:disabled{opacity:.7; cursor:default;}
+.session-timer-time{font-variant-numeric:tabular-nums; min-width:34px; text-align:right;}
+.session-timer-extend{font-size:11.5px; font-weight:600; color:var(--ink-faint); padding-left:6px; border-left:1px solid var(--border);}
+.session-timer:hover .session-timer-extend{color:inherit;}
+.session-timer.warn{background:var(--warn-soft); color:var(--warn); border-color:transparent;}
+.session-timer.warn .session-timer-extend{color:var(--warn); border-left-color:currentColor;}
+@media (max-width:560px){ .session-timer-extend{display:none;} .session-timer{padding:0 9px;} }
+
 .notif-wrap{position:relative;}
 .notif-dot{position:absolute; top:6px; right:6px; width:8px; height:8px; border-radius:50%; background:var(--danger); box-shadow:0 0 0 2px var(--surface);}
 .notif-popover{position:absolute; top:calc(100% + 14px); right:0; width:320px; background:var(--surface); border:1px solid var(--border-soft); border-radius:14px; box-shadow:var(--shadow-lg); z-index:45; overflow:hidden;}
