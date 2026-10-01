@@ -198,6 +198,14 @@ Resources:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
 
+  DatabaseParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: !Sub ${ProjectName}-${Environment} MySQL parameters
+      Family: mysql8.0
+      Parameters:
+        time_zone: Asia/Seoul
+
   Database:
     Type: AWS::RDS::DBInstance
     Properties:
@@ -208,6 +216,7 @@ Resources:
       EngineVersion: '8.0'
       MasterUsername: !Ref DBUsername
       MasterUserPassword: !Ref DBPassword
+      DBParameterGroupName: !Ref DatabaseParameterGroup
       DBSubnetGroupName: !Ref DBSubnetGroup
       VPCSecurityGroups:
         - !Ref RDSSecurityGroup
