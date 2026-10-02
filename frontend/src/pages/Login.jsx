@@ -161,7 +161,7 @@ export default function Login() {
             }}
           >
             <span aria-hidden="true">●</span>
-            AWS CD 배포 확인
+            CI/CD 자동 배포 테스트
           </div>
           <h1 className="lh-title">
             우리 학교에서,
