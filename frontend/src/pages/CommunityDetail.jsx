@@ -25,6 +25,8 @@ export default function CommunityDetail() {
   const [liked, setLiked] = useState(false);
   const [likePending, setLikePending] = useState(false);
   const [related, setRelated] = useState([]);
+  const [replyTo, setReplyTo] = useState(null);
+  const [commentLikePending, setCommentLikePending] = useState(null);
 
   useEffect(() => {
     async function loadData() {
@@ -32,7 +34,7 @@ export default function CommunityDetail() {
         const pRes = await communityApi.getPost(id);
         setPost(pRes);
         setLiked(Boolean(pRes.likedByCurrentUser));
-        const cRes = await communityApi.getComments(id);
+        const cRes = await communityApi.getComments(id, { size: 100 });
         setComments(cRes.content || []);
         // Fetch related posts (simplification for now: just fetch top popular)
         // 현재 글을 빼도 5개가 남도록 하나 더 받아온다.
@@ -63,10 +65,15 @@ export default function CommunityDetail() {
       return;
     }
     try {
-      await communityApi.addComment(post.postId, { content: text, isAnonymous: commentAnonymous });
+      await communityApi.addComment(post.postId, {
+        content: text,
+        isAnonymous: commentAnonymous,
+        parentCommentId: replyTo?.commentId || null,
+      });
       setCommentText('');
       setCommentAnonymous(false);
-      const cRes = await communityApi.getComments(id);
+      setReplyTo(null);
+      const cRes = await communityApi.getComments(id, { size: 100 });
       setComments(cRes.content || []);
     } catch {
       toast('댓글 작성에 실패했습니다.');
@@ -112,7 +119,7 @@ export default function CommunityDetail() {
       setEditingCommentId(null);
       setEditText('');
       setEditAnonymous(false);
-      const cRes = await communityApi.getComments(id);
+      const cRes = await communityApi.getComments(id, { size: 100 });
       setComments(cRes.content || []);
     } catch {
       toast('댓글 수정에 실패했습니다.');
@@ -123,11 +130,97 @@ export default function CommunityDetail() {
     try {
       await communityApi.deleteComment(cid);
       toast('댓글이 삭제되었습니다');
-      const cRes = await communityApi.getComments(id);
+      const cRes = await communityApi.getComments(id, { size: 100 });
       setComments(cRes.content || []);
     } catch {
       toast('댓글 삭제에 실패했습니다.');
     }
+  }
+
+  async function toggleCommentLike(comment) {
+    if (commentLikePending === comment.commentId) return;
+    setCommentLikePending(comment.commentId);
+    try {
+      const response = comment.likedByCurrentUser
+        ? await communityApi.unlikeComment(comment.commentId)
+        : await communityApi.likeComment(comment.commentId);
+      setComments((items) => items.map((item) => item.commentId === comment.commentId
+        ? { ...item, likeCount: response.likeCount, likedByCurrentUser: response.liked }
+        : item));
+    } catch {
+      toast('댓글 좋아요 요청에 실패했습니다.');
+    } finally {
+      setCommentLikePending(null);
+    }
+  }
+
+  const commentIds = new Set(comments.map((comment) => comment.commentId));
+  const rootComments = comments.filter((comment) => !comment.parentCommentId || !commentIds.has(comment.parentCommentId));
+  const repliesByParent = comments.reduce((groups, comment) => {
+    if (!comment.parentCommentId) return groups;
+    const replies = groups.get(comment.parentCommentId) || [];
+    replies.push(comment);
+    groups.set(comment.parentCommentId, replies);
+    return groups;
+  }, new Map());
+
+  function renderComment(comment, reply = false) {
+    return (
+      <div className={'card community-comment' + (reply ? ' reply' : '')} key={comment.commentId}>
+        <div className="row between">
+          <div className="row g6">
+            {reply && <Icon name="chev" size={12} />}
+            <b style={{ fontSize: 13 }}>{comment.authorName}</b>
+            {comment.postAuthor && <span className="chip accent" style={{ fontSize: 10 }}>작성자</span>}
+          </div>
+          <div className="row g8">
+            <span className="faint" style={{ fontSize: 11 }}>{timeAgo(comment.createdAt)}</span>
+            {comment.mine && editingCommentId !== comment.commentId && (
+              <button className="iconbtn ghost comment-more" title="댓글 관리" aria-label="댓글 관리"
+                onClick={() => openSheet(
+                  <ManageSheet onClose={closeOverlay} onEdit={() => startEditComment(comment)}
+                    onDelete={() => openModal(
+                      <ConfirmModal title="댓글을 삭제할까요?" desc="삭제한 댓글은 복구할 수 없어요."
+                        onClose={closeOverlay}
+                        onConfirm={() => { closeOverlay(); deleteComment(comment.commentId); }} />
+                    )} />
+                )}>
+                <Icon name="more" size={16} />
+              </button>
+            )}
+            {!(comment.mine && editingCommentId !== comment.commentId) && <span className="comment-more" aria-hidden="true" />}
+          </div>
+        </div>
+        {editingCommentId === comment.commentId ? (
+          <div style={{ marginTop: 8 }}>
+            <textarea className="textarea" style={{ minHeight: 64, fontSize: 13.5 }} value={editText}
+              onChange={(event) => setEditText(event.target.value)} />
+            <label className="row g6" style={{ marginTop: 8, fontSize: 12 }}>
+              <input type="checkbox" checked={editAnonymous} onChange={(event) => setEditAnonymous(event.target.checked)} />
+              익명으로 표시
+            </label>
+            <div className="row g8" style={{ marginTop: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-outline btn-sm" onClick={cancelEditComment}>취소</button>
+              <button className="btn btn-primary btn-sm" onClick={saveEditComment}>저장</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: 13.5, marginTop: 5, lineHeight: 1.6 }}>{comment.content}</div>
+        )}
+        <div className="comment-actions">
+          <button type="button" className={'comment-like' + (comment.likedByCurrentUser ? ' on' : '')}
+            disabled={commentLikePending === comment.commentId} onClick={() => toggleCommentLike(comment)}
+            aria-pressed={comment.likedByCurrentUser}>
+            <Icon name={comment.likedByCurrentUser ? 'heart-fill' : 'heart'} size={12} />
+            좋아요 {comment.likeCount || 0}
+          </button>
+          <button type="button" className="comment-reply"
+            onClick={() => setReplyTo({ commentId: comment.parentCommentId || comment.commentId, authorName: comment.authorName })}>
+            답글
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -141,7 +234,10 @@ export default function CommunityDetail() {
       <div className="card post-detail-card">
         <div className="row between">
           <div className="row g8">
-            <span className="chip accent post-detail-cat">{postCategoryFromApi(post.category)}</span>
+            <span className={'chip post-detail-cat ' + (post.category === 'NOTICE' ? 'danger' : 'accent')}>
+              {post.category === 'NOTICE' && <Icon name="bell" size={11} />}
+              {postCategoryFromApi(post.category)}
+            </span>
             {post.anonymous && <span className="chip outline">익명</span>}
           </div>
           <div className="row g6">
@@ -230,100 +326,38 @@ export default function CommunityDetail() {
       </div>
 
       <div className="card comment-card">
-      <div className="h3" style={{ marginBottom: 16 }}>
-        댓글 {comments.length}개
-      </div>
-      <div className="stack g10">
-        {comments.length ? (
-          comments.map((c) => (
-            <div className="comment-item" key={c.commentId}>
-              <div className="row between">
-                <div className="row g6">
-                  <b style={{ fontSize: 13 }}>{c.authorName}</b>
-                  {c.postAuthor && <span className="chip accent" style={{ fontSize: 10 }}>작성자</span>}
-                </div>
-                <div className="row g8">
-                  <span className="faint" style={{ fontSize: 11 }}>
-                    {timeAgo(c.createdAt)}
-                  </span>
-                  {c.mine && editingCommentId !== c.commentId && (
-                    <button
-                      className="iconbtn ghost comment-more"
-                      title="댓글 관리"
-                      aria-label="댓글 관리"
-                      onClick={() =>
-                        openSheet(
-                          <ManageSheet
-                            onClose={closeOverlay}
-                            onEdit={() => startEditComment(c)}
-                            onDelete={() =>
-                              openModal(
-                                <ConfirmModal
-                                  title="댓글을 삭제할까요?"
-                                  desc="삭제한 댓글은 복구할 수 없어요."
-                                  onClose={closeOverlay}
-                                  onConfirm={() => { closeOverlay(); deleteComment(c.commentId); }}
-                                />
-                              )
-                            }
-                          />
-                        )
-                      }
-                    >
-                      <Icon name="more" size={16} />
-                    </button>
-                  )}
-                  {/* ⋯ 버튼이 없는 댓글도 같은 자리를 비워 두어 날짜 위치를 맞춘다 */}
-                  {!(c.mine && editingCommentId !== c.commentId) && <span className="comment-more" aria-hidden="true" />}
-                </div>
-              </div>
-              {editingCommentId === c.commentId ? (
-                <div style={{ marginTop: 8 }}>
-                  <textarea
-                    className="textarea"
-                    style={{ minHeight: 64, fontSize: 13.5 }}
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                  />
-                  <div className="row between g8" style={{ marginTop: 8 }}>
-                    <AnonToggle anonymous={editAnonymous} onChange={setEditAnonymous} />
-                    <div className="row g8">
-                    <button className="btn btn-outline btn-sm" onClick={cancelEditComment}>
-                      취소
-                    </button>
-                    <button className="btn btn-primary btn-sm" onClick={saveEditComment}>
-                      저장
-                    </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ fontSize: 13.5, marginTop: 5, lineHeight: 1.6 }}>{c.content}</div>
-              )}
+        <div className="h3" style={{ marginBottom: 16 }}>댓글 {comments.length}개</div>
+        <div className="stack g10">
+          {comments.length ? rootComments.map((comment) => (
+            <div className="comment-thread" key={comment.commentId}>
+              {renderComment(comment)}
+              {(repliesByParent.get(comment.commentId) || []).map((reply) => renderComment(reply, true))}
             </div>
-          ))
-        ) : (
-          <div className="comment-empty">첫 댓글을 남겨보세요</div>
-        )}
-      </div>
-      <div style={{ marginTop: 20 }}>
-        <div className="comment-input-row">
-          <AnonToggle anonymous={commentAnonymous} onChange={setCommentAnonymous} />
-          <input
-            className="input"
-            placeholder="댓글을 입력하세요..."
-            style={{ flex: 1 }}
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') submitComment();
-            }}
-          />
-          <button className="btn btn-primary comment-submit" onClick={submitComment}>
-            작성
-          </button>
+          )) : (
+            <div className="comment-empty">첫 댓글을 남겨보세요</div>
+          )}
         </div>
-      </div>
+        <div className="comment-composer">
+          {replyTo && (
+            <div className="comment-reply-target">
+              <span><b>{replyTo.authorName}</b>님에게 답글 작성 중</span>
+              <button type="button" onClick={() => setReplyTo(null)} aria-label="답글 취소"><Icon name="x" size={13} /></button>
+            </div>
+          )}
+          <div className="comment-input-row">
+            <AnonToggle anonymous={commentAnonymous} onChange={setCommentAnonymous} />
+            <input
+              className="input"
+              placeholder={replyTo ? '답글을 입력하세요...' : '댓글을 입력하세요...'}
+              value={commentText}
+              onChange={(event) => setCommentText(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter') submitComment(); }}
+            />
+            <button className="btn btn-primary comment-submit" onClick={submitComment}>
+              {replyTo ? '답글 등록' : '작성'}
+            </button>
+          </div>
+        </div>
       </div>
         </div>
 

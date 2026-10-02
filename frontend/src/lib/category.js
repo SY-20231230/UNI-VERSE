@@ -14,6 +14,7 @@ export const POST_CATEGORY_META = {
 };
 
 export const POST_CATEGORY_API_CODES = {
+  공지: 'NOTICE',
   자유: 'FREE',
   '수업/학점': 'COURSE_CREDIT',
   학교생활: 'CAMPUS_LIFE',
