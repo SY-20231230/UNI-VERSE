@@ -51,6 +51,18 @@ public class ChatService {
         if (request.getItemId() != null) {
             item = itemRepository.findById(request.getItemId())
                     .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+            
+            // 동일 상품, 동일 구매자, 동일 판매자 방이 이미 있으면 기존 방 반환 (단, 양쪽 다 채팅방에 남아있을 때만)
+            ChatRequest existingReq = chatRequestRepository.findFirstByRequesterIdAndReceiverIdAndItemIdOrderByIdDesc(requesterId, receiver.getId(), item.getId()).orElse(null);
+            if (existingReq != null) {
+                ChatRoom existingRoom = chatRoomRepository.findByRequestId(existingReq.getId()).orElse(null);
+                if (existingRoom != null) {
+                    List<ChatMember> existingMembers = chatMemberRepository.findByRoomId(existingRoom.getId());
+                    if (existingMembers.size() == 2) {
+                        return new ChatRoomDto(existingRoom, receiver.getId(), receiver.getNickname());
+                    }
+                }
+            }
         }
 
         // Direct room creation (simplifying request/accept flow for immediate chat)
@@ -109,8 +121,16 @@ public class ChatService {
                     .findFirst().orElse(null);
             User partner = partnerMember != null ? partnerMember.getUser() : null;
             
+            if (partner == null && room.getRequest() != null) {
+                User req = room.getRequest().getRequester();
+                User rec = room.getRequest().getReceiver();
+                if (req != null && rec != null) {
+                    partner = req.getId().equals(userId) ? rec : req;
+                }
+            }
+            
             Long pId = partner != null ? partner.getId() : null;
-            String pName = partner != null ? partner.getNickname() : "알 수 없음";
+            String pName = (partnerMember == null) ? "알 수 없음" : partner.getNickname();
             long unread = messageRepository.countUnread(room.getId(), userId, lastReadId(m));
             Long partnerLastRead = partnerMember != null && partnerMember.getLastReadMessage() != null
                     ? partnerMember.getLastReadMessage().getId() : null;
@@ -180,22 +200,38 @@ public class ChatService {
     public void deleteRoom(Long roomId, Long userId) {
         ChatRoom room = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        // Verify user is member of room
+        
         List<ChatMember> members = chatMemberRepository.findByRoomId(roomId);
-        boolean isMember = members.stream().anyMatch(m -> m.getUser().getId().equals(userId));
-        if (!isMember) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
+        ChatMember me = members.stream().filter(m -> m.getUser().getId().equals(userId)).findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN));
 
-        // Delete all messages
-        messageRepository.deleteByRoomId(roomId);
-        // Delete all members
-        chatMemberRepository.deleteByRoomId(roomId);
-        // Delete room
-        chatRoomRepository.delete(room);
-        // Delete chat request if exists
-        if (room.getRequest() != null) {
-            chatRequestRepository.delete(room.getRequest());
+        if (members.size() <= 1) {
+            // Delete all messages
+            messageRepository.deleteByRoomId(roomId);
+            // Delete all members
+            chatMemberRepository.deleteByRoomId(roomId);
+            // Delete room
+            chatRoomRepository.delete(room);
+            // Delete chat request if exists
+            if (room.getRequest() != null) {
+                chatRequestRepository.delete(room.getRequest());
+            }
+        } else {
+            chatMemberRepository.delete(me);
+            
+            // 상대방에게 새로고침 이벤트 전송
+            List<Long> partnerIds = members.stream()
+                    .map(m -> m.getUser().getId())
+                    .filter(id -> !id.equals(userId))
+                    .toList();
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        partnerIds.forEach(id -> messagingTemplate.convertAndSend("/sub/chat/user/" + id, "{\"type\":\"NEW_ROOM\"}"));
+                    }
+                }
+            );
         }
     }
 }

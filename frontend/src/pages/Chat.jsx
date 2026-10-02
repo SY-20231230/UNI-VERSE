@@ -349,8 +349,8 @@ export default function Chat() {
   const myPromised = isSeller ? trade?.sellerPromised : (isBuyer ? trade?.buyerPromised : false);
   const tradeStatus = trade?.status || 'NOT_REQUESTED'; // TRADING | COMPLETED | CANCELLED | NOT_REQUESTED
   const itemTradeCompleted = tradeStatus === 'COMPLETED';
-  // 상품이 거래완료면 메시지 입력 차단
-  const chatBlocked = itemTradeCompleted;
+  // 상품이 거래완료여도 계속 채팅이 가능하도록 차단 해제 (사용자 요청)
+  const chatBlocked = false;
 
   return (
     <div className="chat-page fade-enter">

@@ -760,7 +760,7 @@ span.comment-more{display:inline-block; flex:none;}
 .market-detail-info .seller-card{border:none; background:#F6F7FA; border-radius:20px; padding:18px 20px;}
 .market-detail-info .seller-card .avatar{border-radius:14px; box-shadow:0 0 0 2px rgba(83,59,210,.2);}
 .market-detail-actions{display:flex; gap:12px; padding-top:16px; border-top:1px solid var(--border-soft);}
-.market-like-btn{width:54px; height:54px; flex:none; display:flex; align-items:center; justify-content:center; border-radius:16px; border:1px solid var(--border); background:var(--surface); color:#475569; transition:color .15s ease, border-color .15s ease;}
+.market-like-btn{width:54px; height:54px; flex:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border-radius:16px; border:1px solid var(--border); background:var(--surface); color:#475569; transition:color .15s ease, border-color .15s ease;}
 .market-like-btn:hover, .market-like-btn.on{color:#F43F5E; border-color:#FECDD3;}
 .market-detail-cta{flex:1; border-radius:16px; height:54px; box-shadow:0 10px 15px -3px rgba(83,59,210,.2);}
 @media (max-width:540px){ .market-detail-card{padding:18px; gap:20px;} .market-detail-price{font-size:26px;} }

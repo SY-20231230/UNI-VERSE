@@ -37,7 +37,7 @@ export default function MarketWrite() {
   const [cat, setCat] = useState('');
   const [cond, setCond] = useState('');
   const [title, setTitle] = useState('');
-  const [price, setPrice] = useState('');
+    const [price, setPrice] = useState('');
   const [desc, setDesc] = useState('');
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -82,7 +82,6 @@ export default function MarketWrite() {
       category: marketCategoryToApi(cat),
       title: t,
       listedPrice: Number(price.replace(/\D/g, '')) || 0,
-      purchasePrice: 0, // 서버 필수값. 구매 가격 입력은 받지 않는다.
       condition: conditionToApi(cond),
       description: d, 
       images: images,
