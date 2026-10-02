@@ -8,7 +8,7 @@ import { POST_CATEGORY_META, postCategoryToApi } from '../lib/category';
 import { communityApi } from '../lib/communityApi';
 import useDebounce from '../hooks/useDebounce';
 
-const CATS = ['전체', '자유', '수업/학점', '학교생활', '시설/환경', '기숙사', '취업/진로', '기타'];
+const CATS = ['전체', '공지', '자유', '수업/학점', '학교생활', '시설/환경', '기숙사', '취업/진로', '기타'];
 const SORTS = [
   { k: 'latest', label: '최신순' },
   { k: 'popular', label: '인기순' },

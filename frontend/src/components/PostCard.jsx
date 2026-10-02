@@ -16,7 +16,8 @@ export default function PostCard({ post, compact }) {
   const commentsCount = post.comments ? post.comments.length : (post.commentCount || 0);
 
   return (
-    <Link className="post-card" to={`/community/${id}`}>
+    <Link className={'post-card' + (post.category === 'NOTICE' ? ' notice' : '')} to={`/community/${id}`}>
+      {post.category === 'NOTICE' && <div className="post-notice-label"><Icon name="bell" size={13} /> 학교 공지</div>}
       <div className="row g8">
         <span className={'chip ' + meta.variant}>
           <Icon name={meta.icon} size={11} />
