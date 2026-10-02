@@ -11,4 +11,5 @@ import java.util.List;
 public interface ChatRequestRepository extends JpaRepository<ChatRequest, Long> {
     List<ChatRequest> findByReceiverIdAndStatusOrderByCreatedAtDesc(Long receiverId, ChatRequestStatus status);
     List<ChatRequest> findByRequesterIdOrderByCreatedAtDesc(Long requesterId);
+    java.util.Optional<ChatRequest> findFirstByRequesterIdAndReceiverIdAndItemIdOrderByIdDesc(Long requesterId, Long receiverId, Long itemId);
 }

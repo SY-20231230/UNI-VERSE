@@ -350,21 +350,25 @@ export function AppProvider({ children }) {
       const roomId = response.roomId;
       const cid = String(roomId); // Use the real DB room ID
       
-      setState((s) => ({
-        ...s,
-        chats: {
-          ...s.chats,
-          [cid]: {
-            listingId: listing.id,
-            partnerId: listing.sellerId || 'unknown',
-            partnerName: response.partnerName,
-            anonymous: mode === 'anon',
-            showSafety: true,
-            status: 'accepted',
-            messages: [{ from: 'me', text: `안녕하세요! "${listing.title}" 구매하고 싶습니다.`, time: Date.now() }],
-          },
-        }
-      }));
+      setState((s) => {
+        if (s.chats[cid]) return s; // 이미 있는 방이면 덮어쓰지 않음
+
+        return {
+          ...s,
+          chats: {
+            ...s.chats,
+            [cid]: {
+              listingId: listing.id,
+              partnerId: listing.sellerId || 'unknown',
+              partnerName: response.partnerName,
+              anonymous: mode === 'anon',
+              showSafety: true,
+              status: 'accepted',
+              messages: [{ from: 'me', text: `안녕하세요! "${listing.title}" 구매하고 싶습니다.`, time: Date.now() }],
+            },
+          }
+        };
+      });
       return { cid, existing: false };
     } catch (e) {
       console.error(e);

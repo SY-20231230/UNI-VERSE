@@ -329,6 +329,7 @@ export default function MarketDetail() {
                 title={liked ? '찜 해제' : '찜하기'}
               >
                 <Icon name={liked ? 'heart-fill' : 'heart'} size={20} />
+                <span style={{ fontSize: 11, fontWeight: 500, lineHeight: 1 }}>{listing.likeCount || 0}</span>
               </button>
               {isMine ? (
                 <button className="btn btn-soft market-detail-cta" disabled>
