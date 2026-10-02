@@ -85,20 +85,22 @@ docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
 # Frontend 빌드 및 푸시
 # 주의: Frontend 빌드 시 VITE_API_BASE_URL 환경변수를 넘길 필요 없습니다. (동일 ALB 상대경로 사용)
-docker build --target production -t universe-frontend:latest ./frontend
+docker build --platform linux/amd64 --target production -t universe-frontend:latest ./frontend
 docker tag universe-frontend:latest "$ECR_REGISTRY/universe-frontend:latest"
 docker push "$ECR_REGISTRY/universe-frontend:latest"
 
 # Backend 빌드 및 푸시
-docker build -t universe-backend:latest ./backend
+docker build --platform linux/amd64 -t universe-backend:latest ./backend
 docker tag universe-backend:latest "$ECR_REGISTRY/universe-backend:latest"
 docker push "$ECR_REGISTRY/universe-backend:latest"
 
 # AI Server 빌드 및 푸시
-docker build -t universe-ai:latest ./ai-server
+docker build --platform linux/amd64 -t universe-ai:latest ./ai-server
 docker tag universe-ai:latest "$ECR_REGISTRY/universe-ai:latest"
 docker push "$ECR_REGISTRY/universe-ai:latest"
 ```
+
+> **주의 (Mac 사용자)**: ECS Fargate Task Definition이 `X86_64` 아키텍처로 고정되어 있습니다(`infra/service.yaml`에 `RuntimePlatform` 미지정 시 기본값). Apple Silicon(M1/M2/M3) 맥에서 `--platform` 없이 빌드하면 arm64 이미지가 올라가 ECS task가 `CannotPullContainerError` 또는 실행 직후 종료될 수 있습니다. 위처럼 항상 `--platform linux/amd64`를 붙이세요.
 
 ## 5. ECS 서비스(Service) 배포
 ALB, Target Groups, ECS Task Definitions, ECS Services를 배포합니다. Foundation 스택의 Output 값을 자동으로 추출해 파라미터로 넘깁니다.
@@ -133,6 +135,8 @@ aws cloudformation deploy \
   --region "$AWS_REGION"
 ```
 
+> **주의 (학교 이메일 인증 메일 발송)**: `infra/service.yaml`의 backend task에는 `MAIL_HOST`/`MAIL_USERNAME`/`MAIL_PASSWORD` 등 SMTP 값이 설정되어 있지 않습니다. 이 상태로는 이메일 인증 기능이 켜져 있어도 실제 메일이 발송되지 않습니다(`backend/src/main/resources/application.yml` 기준 빈 값 기본 처리). 메일 발송이 필요하면 2단계처럼 SSM에 `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD`를 추가로 등록하고, `service.yaml`의 `BackendTaskDefinition`에 해당 `Environment`/`Secrets` 항목을 추가해야 합니다. `[팀 확인 필요]`
+
 ## 6. 배포 완료 후 최소 확인
 
 모든 배포가 성공하면, 아래 명령들을 통해 배포 상태를 검증합니다.
@@ -160,3 +164,17 @@ aws cloudformation describe-stacks \
 
 출력된 `AlbDnsName` 주소를 브라우저에 입력하여 서비스에 접속하세요. 
 (최초 접속 시 ECS 컨테이너 기동 및 RDS 스키마 자동 생성으로 인해 1~2분 정도 지연될 수 있습니다.)
+
+## 7. 문제가 생기면 (로그 확인)
+
+task가 `RUNNING`으로 안 올라오거나 target health가 `unhealthy`면 CloudWatch 로그를 먼저 확인합니다.
+
+```bash
+aws logs tail /ecs/universe-backend --since 15m --follow --region "$AWS_REGION"
+aws logs tail /ecs/universe-ai --since 15m --follow --region "$AWS_REGION"
+aws logs tail /ecs/universe-frontend --since 15m --follow --region "$AWS_REGION"
+```
+
+- **task가 시작 직후 바로 멈춤 (`CannotPullContainerError` 등)**: 1장에서 설명한 `--platform linux/amd64` 빌드 여부를 확인하세요.
+- **backend task가 `STOPPED`되고 로그에 DB 연결 오류**: RDS 생성 완료(`CREATE_COMPLETE`) 전에 service 스택을 배포했거나, 3단계에서 넣은 `DB_PASSWORD_VALUE`가 실제 RDS 비밀번호와 다른 경우입니다.
+- **backend task가 secret 주입 단계에서 실패**: SSM `SecureString`을 기본 KMS 키(`alias/aws/ssm`)가 아닌 별도 고객관리형 키로 암호화했다면, `EcsTaskExecutionRole`에 `kms:Decrypt` 권한이 없어서 실패할 수 있습니다. `[확인 필요]` — 기본 키를 썼다면 보통 추가 권한이 필요 없습니다.
