@@ -6,7 +6,7 @@ import com.universe.auth.dto.request.SignupRequest;
 import com.universe.auth.dto.response.LoginResponse;
 import com.universe.auth.dto.response.SignupResponse;
 import com.universe.auth.dto.response.TokenResponse;
-import com.universe.auth.entity.LoginSession.EndReason;
+import com.universe.auth.service.LoginSessionService.EndReason;
 import com.universe.global.exception.BusinessException;
 import com.universe.global.exception.ErrorCode;
 import com.universe.global.security.CurrentUser;

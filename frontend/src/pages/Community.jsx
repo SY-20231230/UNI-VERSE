@@ -4,8 +4,10 @@ import Icon from '../lib/icons';
 import Pagination from '../components/Pagination';
 import { useApp } from '../context/AppContext';
 import PostCard from '../components/PostCard';
-import { POST_CATEGORY_META, postCategoryToApi } from '../lib/category';
+import NoticeCard from '../components/NoticeCard';
+import { postCategoryToApi } from '../lib/category';
 import { communityApi } from '../lib/communityApi';
+import { CAMPUS_NOTICES } from '../lib/notices';
 import useDebounce from '../hooks/useDebounce';
 
 const CATS = ['전체', '공지', '자유', '수업/학점', '학교생활', '시설/환경', '기숙사', '취업/진로', '기타'];
@@ -29,7 +31,14 @@ export default function Community() {
     setPage(0);
   }, [state.communityFilter, debouncedQ, sort]);
 
+  // 공지는 서버 카테고리가 없어 프론트 공지 목록을 그대로 보여준다.
+  const isNotice = state.communityFilter === '공지';
+  // '전체' 첫 페이지에서는 최신 공지 1개를 맨 위에 고정한다.
+  const pinnedNotice = state.communityFilter === '전체' && !debouncedQ && page === 0 ? CAMPUS_NOTICES[0] : null;
+  const notices = isNotice ? CAMPUS_NOTICES.filter((n) => !debouncedQ || (n.title + n.body).includes(debouncedQ)) : [];
+
   useEffect(() => {
+    if (isNotice) return;
     async function fetchPosts() {
       try {
         const catParam = state.communityFilter === '전체' ? undefined : postCategoryToApi(state.communityFilter);
@@ -38,7 +47,7 @@ export default function Community() {
           keyword: debouncedQ || undefined,
           sort: sort,
           page: page,
-          size: 10
+          size: 7
         });
         setList(res.content);
         setTotalElements(res.totalElements);
@@ -48,39 +57,48 @@ export default function Community() {
       }
     }
     fetchPosts();
-  }, [state.communityFilter, debouncedQ, sort, page]);
+  }, [state.communityFilter, debouncedQ, sort, page, isNotice]);
 
   return (
     <div className="container fade-enter">
       <div className="page-head">
-        <h1 className="h1">커뮤니티</h1>
-        <Link className="btn btn-primary btn-sm" to="/community/write">
+        <div>
+          <h1 className="h1">캠퍼스 커뮤니티</h1>
+          <p className="page-sub">익명과 익명이 만드는 솔직하고 유익한 학생 커뮤니티.</p>
+        </div>
+        <Link className="btn btn-primary page-head-cta" to="/community/write">
           <Icon name="plus" size={15} />
-          글쓰기
+          새 글 작성
         </Link>
       </div>
       <div className="search-bar">
         <Icon name="search" size={16} />
         <input placeholder="궁금한 이야기를 검색해보세요" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
-      <div className="split-layout">
-        <div className="side-filter">
-          <div className="side-filter-label">카테고리</div>
-          {CATS.map((c) => (
-            <button key={c} className={state.communityFilter === c ? 'on' : ''} onClick={() => setCommunityFilter(c)}>
-              <Icon name={POST_CATEGORY_META[c].icon} size={15} />
-              {c}
-            </button>
-          ))}
-        </div>
+      <div className="underline-tabs">
+        {CATS.map((c) => (
+          <button key={c} className={state.communityFilter === c ? 'on' : ''} onClick={() => setCommunityFilter(c)}>
+            {c}
+          </button>
+        ))}
+      </div>
+      <div>
         <div>
-          <div className="chiprow only-mobile" style={{ marginBottom: 6 }}>
-            {CATS.map((c) => (
-              <button key={c} className={'chip' + (state.communityFilter === c ? ' on' : '')} onClick={() => setCommunityFilter(c)}>
-                {c}
-              </button>
-            ))}
-          </div>
+          {isNotice ? (
+            notices.length ? (
+              notices.map((n) => <NoticeCard key={n.id} notice={n} />)
+            ) : (
+              <div className="empty">
+                <div className="empty-icon">
+                  <Icon name="bell" size={28} />
+                </div>
+                <div className="h2" style={{ marginTop: 10 }}>
+                  공지가 없어요
+                </div>
+              </div>
+            )
+          ) : (
+          <>
           {list.length > 0 && (
             <div className="row between" style={{ marginBottom: 12 }}>
               <span className="faint" style={{ fontSize: 12.5 }}>
@@ -97,6 +115,7 @@ export default function Community() {
           )}
           {list.length ? (
             <>
+              {pinnedNotice && <NoticeCard notice={pinnedNotice} pinned />}
               {list.map((p) => <PostCard key={p.postId} post={p} />)}
               <Pagination page={page} totalPages={totalPages} onChange={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
             </>
@@ -110,6 +129,8 @@ export default function Community() {
               </div>
               <div>{debouncedQ ? '다른 검색어로 시도해보세요' : '이 카테고리의 첫 글을 남겨보세요'}</div>
             </div>
+          )}
+          </>
           )}
         </div>
       </div>

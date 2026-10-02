@@ -37,8 +37,7 @@ export default function MarketWrite() {
   const [cat, setCat] = useState('');
   const [cond, setCond] = useState('');
   const [title, setTitle] = useState('');
-  const [price, setPrice] = useState('');
-  const [originalPrice, setOriginalPrice] = useState('');
+    const [price, setPrice] = useState('');
   const [desc, setDesc] = useState('');
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -57,7 +56,6 @@ export default function MarketWrite() {
           setCond(apiToCondition(p.condition));
           setTitle(p.title);
           setPrice(String(p.listedPrice || ''));
-          setOriginalPrice(''); // backend doesn't return purchasePrice due to security rules
           setDesc(p.description);
           setImages(p.images || []);
           setLoading(false);
@@ -84,7 +82,6 @@ export default function MarketWrite() {
       category: marketCategoryToApi(cat),
       title: t,
       listedPrice: Number(price.replace(/\D/g, '')) || 0,
-      purchasePrice: Number(originalPrice.replace(/\D/g, '')) || 0,
       condition: conditionToApi(cond),
       description: d, 
       images: images,
@@ -120,7 +117,8 @@ export default function MarketWrite() {
               <b>사유:</b> {err.message}
             </div>
             <div className="muted" style={{ fontSize: 12, marginTop: 14, lineHeight: 1.6 }}>
-              저희 서비스는 교내 직거래를 원칙으로 합니다. 해당 내용을 수정 후 다시 시도해주세요.
+              {/* 사유 문구가 이미 유형별 안내를 담고 있으므로 여기서는 다음 행동만 알려준다. */}
+              해당 표현을 수정한 뒤 다시 등록해주세요.
             </div>
             <button className="btn btn-dark btn-full" style={{ marginTop: 18 }} onClick={closeOverlay}>
               확인
@@ -186,6 +184,10 @@ export default function MarketWrite() {
       </Link>
       <h1 className="write-title">{isEdit ? '중고거래 수정' : '중고거래 글쓰기'}</h1>
       <p className="write-sub">학교 안에서 안전하게 거래할 물건을 등록해보세요.</p>
+      <div className="write-risk-notice" role="note">
+        <Icon name="alert" size={16} />
+        <span><b>등록 제한</b> 선입금·계좌 공유·택배거래·외부 메신저 유도 표현이 있으면 등록할 수 없어요.</span>
+      </div>
 
       <div className="field" style={{ marginTop: 26 }}>
         <label>사진 추가 (최대 5장)</label>
@@ -257,21 +259,7 @@ export default function MarketWrite() {
             onChange={(e) => setPrice(e.target.value)}
           />
         </div>
-        <div className="field">
-          <label htmlFor="mw-original-price">
-            실제 구매 가격 (원) <span className="faint" style={{ fontWeight: 500 }}>(선택)</span>
-          </label>
-          <input
-            id="mw-original-price"
-            className="input write-input"
-            inputMode="numeric"
-            placeholder="예: 50000"
-            value={originalPrice}
-            onChange={(e) => setOriginalPrice(e.target.value)}
-          />
-        </div>
       </div>
-      <div className="write-helper">실제 구매 가격을 입력하면 상세 페이지에 함께 표시돼요.</div>
 
       <div className="field" style={{ marginTop: 22 }}>
         <label htmlFor="mw-desc">상품 설명</label>
@@ -282,14 +270,11 @@ export default function MarketWrite() {
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
         />
-        <div className="write-helper">상태와 사용감을 정확하게 적어주세요.</div>
-        <div className="safety-banner write-risk-notice">
-          <Icon name="alert" size={16} />
-          <div>
-            <b>등록 제한 안내</b>
-            선입금·택배거래 요구 표현이 감지되면 등록이 제한돼요.
-          </div>
-        </div>
+        <ul className="write-notes">
+          <li>상품 상태와 사용감을 정확하게 적어주세요.</li>
+          <li>전화번호·이메일·계좌번호·외부 메신저 아이디는 적지 마세요. 연락은 UNI:VERSE 채팅으로 해주세요.</li>
+          <li>거래는 교내 직거래를 기준으로 해요.</li>
+        </ul>
       </div>
 
       <div className="write-bottom-bar" style={{ justifyContent: 'flex-end' }}>

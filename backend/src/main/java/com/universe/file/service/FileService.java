@@ -7,4 +7,5 @@ public interface FileService {
     String uploadFile(MultipartFile file) throws IOException;
     String getFileUrl(String storedKey);
     void deleteFile(String storedKey);
+    void saveSessionLog(String sessionId, String csvLine);
 }

@@ -159,7 +159,13 @@ export default function CommunityWrite() {
         </div>
       </div>
 
-      <div className="field" style={{ marginTop: 22 }}>
+      <div className="write-anon-inline" style={{ marginTop: 14 }} title='작성자 이름 대신 "익명 사용자"로 표시됩니다.'>
+        <button type="button" className={'toggle' + (anon ? ' on' : '')} onClick={() => setAnon((a) => !a)}
+          role="switch" aria-checked={anon} aria-label="익명으로 작성하기"></button>
+        <span>익명으로 작성하기</span>
+      </div>
+
+      <div className="field" style={{ marginTop: 14 }}>
         <label htmlFor="cw-title">제목</label>
         <input
           id="cw-title"
@@ -206,6 +212,7 @@ export default function CommunityWrite() {
         </div>
       </div>
 
+<<<<<<< HEAD
       <div className="write-bottom-bar">
         {cat === '공지' ? (
           <div className="write-notice-hint"><Icon name="bell" size={15} /> 공지는 학교 관리자 이름으로 게시됩니다.</div>
@@ -215,6 +222,9 @@ export default function CommunityWrite() {
             <span>익명으로 작성하기</span>
           </div>
         )}
+=======
+      <div className="write-bottom-bar" style={{ justifyContent: 'flex-end' }}>
+>>>>>>> origin/develop
         <div className="row g8">
           <button className="btn btn-outline write-cancel" onClick={() => navigate(backTo)}>
             취소

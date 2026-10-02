@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
-import { useMouseGlow } from '../lib/useMouseGlow';
 import Icon from '../lib/icons';
 
 const EMPTY_FORM = { email: '', password: '', name: '', nickname: '', department: '', universityName: '' };
@@ -14,7 +13,6 @@ export default function Login() {
   const { toast } = useUI();
   const navigate = useNavigate();
   const location = useLocation();
-  const heroRef = useMouseGlow();
 
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState(EMPTY_FORM);
@@ -22,6 +20,8 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
   const [verify, setVerify] = useState(EMPTY_VERIFY);
   const [showPassword, setShowPassword] = useState(false);
+  // 회원가입은 1단계(학교 인증) → 2단계(계정 정보)로 나눠 한 화면이 길어지지 않게 한다.
+  const [signupStep, setSignupStep] = useState(1);
   const isSignup = mode === 'signup';
   const emailVerified = verify.step === 'verified';
 
@@ -31,8 +31,12 @@ export default function Login() {
 
   function switchMode() {
     setMode(isSignup ? 'login' : 'signup');
+    // 로그인에 입력하던 값이 회원가입 칸(학교 이메일 등)으로 이어지지 않게 비운다.
+    setForm(EMPTY_FORM);
+    setShowPassword(false);
     setError('');
     setVerify(EMPTY_VERIFY);
+    setSignupStep(1);
   }
 
   function resetEmail() {
@@ -72,9 +76,30 @@ export default function Login() {
     navigate(location.state?.from?.pathname || '/', { replace: true });
   }
 
+  function goNextStep() {
+    if (!form.universityName.trim()) {
+      setError('대학교명을 입력해주세요.');
+      return;
+    }
+    if (!form.department.trim()) {
+      setError('학과를 입력해주세요.');
+      return;
+    }
+    if (!emailVerified) {
+      setError('학교 이메일 인증을 먼저 완료해주세요.');
+      return;
+    }
+    setError('');
+    setSignupStep(2);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (submitting) return;
+    if (isSignup && signupStep === 1) {
+      goNextStep();
+      return;
+    }
     if (isSignup && !form.universityName.trim()) {
       setError('대학교명을 입력해주세요.');
       return;
@@ -89,7 +114,8 @@ export default function Login() {
       const profile = isSignup ? await signup(form) : await login(form);
       toast(isSignup ? `${profile.nickname}님, 가입을 환영해요` : `${profile.nickname}님, 반가워요`);
       // 관리자 계정은 관리자 페이지로, 그 외 회원은 항상 홈 화면으로 보낸다.
-      navigate(profile.role === 'ADMIN' || profile.role === 'SCHOOL_ADMIN' ? '/admin' : '/', { replace: true });
+      const isAdmin = profile.role === 'ADMIN' || profile.role === 'SCHOOL_ADMIN';
+      navigate(isAdmin ? '/admin' : '/', { replace: true });
     } catch (err) {
       setError(err.message || '요청을 처리하지 못했습니다. 다시 시도해주세요.');
     } finally {
@@ -107,42 +133,58 @@ export default function Login() {
 
   return (
     <div className="login-wrap fade-enter">
-      <div className="login-hero" ref={heroRef}>
+      <div className="login-hero">
+        {/* 배경색 덩어리들이 아주 천천히 움직인다 */}
+        <span className="lh-blob b1" aria-hidden="true" />
+        <span className="lh-blob b2" aria-hidden="true" />
+        <span className="lh-blob b3" aria-hidden="true" />
+        <span className="lh-blob b4" aria-hidden="true" />
+        <span className="lh-blob b5" aria-hidden="true" />
         <div className="lh-inner">
-          <div className="h1" style={{ color: '#fff', fontSize: 36, marginTop: 16 }}>
-            UNI:VERSE
-          </div>
-          <div style={{ fontSize: 14.5, opacity: 0.86, marginTop: 12, lineHeight: 1.7, maxWidth: 360 }}>
-            우리 학교에서, 더 가벼운 소통 더 안전한 거래
+          <div className="lh-brand">UNI:VERSE</div>
+          <div className="lh-brand-sub">CAMPUS PLATFORM</div>
+          <h1 className="lh-title">
+            우리 학교에서,
             <br />
-            같은 학교, 더 안전하게. 익명은 그대로, 거래는 신뢰있게.
-          </div>
+            <span className="lh-em">더 가벼운 소통</span> <span className="lh-em">더 안전한 거래</span>
+          </h1>
+          <p className="lh-sub">같은 학교, 더 안전하게. 익명은 그대로, 거래는 신뢰있게.</p>
         </div>
       </div>
       <div className="login-formside">
-        <form className="login-form-inner stack g20" onSubmit={handleSubmit} noValidate>
-          <div>
-            <div className="h2">{isSignup ? '회원가입' : '로그인'}</div>
-            <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+        <form className="login-form-inner login-card stack g16" onSubmit={handleSubmit} noValidate>
+          <div className="login-card-head">
+            <div className="login-card-title">{isSignup ? '회원가입' : '로그인'}</div>
+            <div className="muted" style={{ fontSize: 13, marginTop: 6, lineHeight: 1.6 }}>
               {isSignup
-                ? '학교 이메일(예: 학번@mjc.ac.kr)로 인증해야 가입할 수 있어요'
-                : '학교 계정으로 로그인하면 커뮤니티와 중고거래를 바로 이용할 수 있어요'}
+                ? '학교 이메일로 인증해야 가입할 수 있어요'
+                : '학교 계정으로 커뮤니티와 중고거래를 이용해보세요'}
             </div>
           </div>
           {isSignup && (
-            <div className="field">
-              <input className="input" autoComplete="organization" placeholder="대학교명 (예: 명지전문대학)" maxLength={100}
-                value={form.universityName} onChange={update('universityName')} required />
+            <div className="signup-steps" aria-label={`회원가입 ${signupStep}/2단계`}>
+              <span className={signupStep === 1 ? 'on' : 'done'}><b>1</b>학교 인증</span>
+              <span className="signup-steps-line" />
+              <span className={signupStep === 2 ? 'on' : ''}><b>2</b>계정 정보</span>
             </div>
           )}
-          {isSignup && (
-            <div className="field">
-              <input className="input" placeholder="학과 (예: 컴퓨터공학과)" maxLength={100}
-                value={form.department} onChange={update('department')} required />
+          {isSignup && signupStep === 1 && (
+            <div className="form-grid two signup-row">
+              <div className="field">
+                <label className="login-label">대학교</label>
+                <input className="input" autoComplete="organization" placeholder="대학교명" maxLength={100}
+                  value={form.universityName} onChange={update('universityName')} required />
+              </div>
+              <div className="field">
+                <label className="login-label">학과</label>
+                <input className="input" placeholder="학과" maxLength={100}
+                  value={form.department} onChange={update('department')} required />
+              </div>
             </div>
           )}
-          {isSignup ? (
+          {isSignup ? signupStep === 1 && (
             <div className="field">
+              <label className="login-label">학교 이메일</label>
               <div className="row g8">
                 <input className="input" type="email" autoComplete="email"
                   placeholder="학교 이메일"
@@ -161,17 +203,18 @@ export default function Login() {
                 )}
               </div>
               {verify.step === 'idle' && (
-                <div className="faint" style={{ fontSize: 12 }}>네이버·다음·구글 등 일반 메일은 사용할 수 없어요 (학교에서 발급한 메일만 가능)</div>
+                <div className="faint" style={{ fontSize: 12 }}>학교에서 발급한 메일만 사용할 수 있어요</div>
               )}
               {emailVerified && <span className="chip verified" style={{ alignSelf: 'flex-start' }}>✓ 학교 이메일 인증 완료</span>}
             </div>
           ) : (
             <div className="field">
-              <input className="input" type="email" autoComplete="email" placeholder="이메일"
+              <label className="login-label">이메일</label>
+              <input className="input" type="email" autoComplete="email" placeholder="학교 이메일"
                 value={form.email} onChange={update('email')} required />
             </div>
           )}
-          {isSignup && verify.step === 'sent' && (
+          {isSignup && signupStep === 1 && verify.step === 'sent' && (
             <div className="field">
               <div className="row g8">
                 <input className="input" inputMode="numeric" autoComplete="one-time-code" placeholder="인증번호 6자리"
@@ -194,7 +237,8 @@ export default function Login() {
               )}
             </div>
           )}
-          <div className="field">
+          {(!isSignup || signupStep === 2) && <div className="field">
+            <label className="login-label">비밀번호</label>
             <div className="pw-field">
               <input className="input" type={showPassword ? 'text' : 'password'} autoComplete={isSignup ? 'new-password' : 'current-password'}
                 placeholder={isSignup ? '비밀번호 (8자 이상)' : '비밀번호'} value={form.password} onChange={update('password')} required />
@@ -203,23 +247,39 @@ export default function Login() {
                 <Icon name={showPassword ? 'eyeOff' : 'eye'} size={18} />
               </button>
             </div>
-          </div>
-          {isSignup && (
-            <>
+          </div>}
+          {isSignup && signupStep === 2 && (
+            <div className="form-grid two signup-row">
               <div className="field">
+                <label className="login-label">이름</label>
                 <input className="input" autoComplete="name" placeholder="이름" maxLength={50}
                   value={form.name} onChange={update('name')} required />
               </div>
               <div className="field">
+                <label className="login-label">닉네임</label>
                 <input className="input" autoComplete="nickname" placeholder="닉네임" maxLength={50}
                   value={form.nickname} onChange={update('nickname')} required />
               </div>
-            </>
+            </div>
           )}
           {error && <div className="login-error" role="alert">{error}</div>}
-          <button type="submit" className="btn btn-primary btn-full" disabled={submitting || (isSignup && !emailVerified)}>
-            {submitting ? '처리 중…' : isSignup ? '가입하기' : '로그인'}
-          </button>
+          {isSignup && signupStep === 1 ? (
+            <button type="submit" className="btn btn-primary btn-full" disabled={!emailVerified}>
+              다음
+            </button>
+          ) : (
+            <div className="row g8">
+              {isSignup && (
+                <button type="button" className="btn btn-outline" style={{ flex: 'none' }}
+                  onClick={() => { setError(''); setSignupStep(1); }} disabled={submitting}>
+                  이전
+                </button>
+              )}
+              <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={submitting || (isSignup && !emailVerified)}>
+                {submitting ? '처리 중…' : isSignup ? '가입하기' : '로그인'}
+              </button>
+            </div>
+          )}
           <button type="button" className="btn btn-outline btn-full" onClick={switchMode} disabled={submitting}>
             {isSignup ? '이미 계정이 있어요' : '이메일로 회원가입'}
           </button>

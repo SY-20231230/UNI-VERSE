@@ -116,20 +116,30 @@ export default function AdminPage() {
   async function downloadSessionActivity() {
     setDownloadingActivity(true);
     try {
-      const exportEndpoint = `${API_BASE_URL}/admin/session-activities/export`;
-      const fetchFile = (token) => fetch(exportEndpoint, { headers: { Authorization: `Bearer ${token}` } });
+      const exportEndpoint = `${API_BASE_URL.replace(/\/$/, '')}/admin/session-activities/export`;
+      const fetchFile = (token) => fetch(exportEndpoint, {
+        headers: { Accept: 'text/csv', Authorization: `Bearer ${token}` },
+      });
       let response = await fetchFile(session.getAccessToken());
       if (response.status === 401) {
         const renewedToken = await session.refreshAccessToken();
         if (renewedToken) response = await fetchFile(renewedToken);
       }
-      if (!response.ok) throw new Error('활동 기록 파일을 내려받지 못했습니다.');
-      const downloadUrl = URL.createObjectURL(await response.blob());
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(errorBody?.error?.message || errorBody?.message
+          || `활동 기록 파일을 내려받지 못했습니다. (HTTP ${response.status})`);
+      }
+      const blob = await response.blob();
+      if (blob.size === 0) throw new Error('활동 기록 파일이 비어 있습니다.');
+      const downloadUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = 'session-activity.csv';
+      document.body.appendChild(link);
       link.click();
-      URL.revokeObjectURL(downloadUrl);
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
     } catch (error) {
       toast(error.message || '활동 기록 파일을 내려받지 못했습니다.');
     } finally {

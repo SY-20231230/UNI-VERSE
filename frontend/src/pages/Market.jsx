@@ -51,7 +51,7 @@ export default function Market() {
           sort: sortParam,
           status: statusParam,
           page: page,
-          size: 20
+          size: 16
         });
         
         if (page === 0) {
@@ -72,8 +72,11 @@ export default function Market() {
   return (
     <div className="container fade-enter">
       <div className="page-head">
-        <h1 className="h1">중고거래</h1>
-        <Link className="btn btn-primary btn-sm" to="/market/write">
+        <div>
+          <h1 className="h1">캠퍼스 중고거래</h1>
+          <p className="page-sub">우리 학교 학우들과 안전하고 빠르게 직거래하세요.</p>
+        </div>
+        <Link className="btn btn-primary page-head-cta" to="/market/write">
           <Icon name="plus" size={15} />
           등록하기
         </Link>
@@ -81,6 +84,10 @@ export default function Market() {
       <div className="search-bar">
         <Icon name="search" size={16} />
         <input placeholder="찾는 물건을 검색해보세요" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      <div className="market-notice">
+        <Icon name="shield" size={16} />
+        <span><b>안전거래</b> 거래는 UNI:VERSE 채팅과 교내 직거래로 진행해주세요.</span>
       </div>
       <div className="split-layout">
         <div className="side-filter">
