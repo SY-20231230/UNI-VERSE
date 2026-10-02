@@ -19,7 +19,6 @@ public class MarketItemUpdateRequest {
     @NotNull
     private ItemCondition condition;
     
-    @NotNull
     private Long purchasePrice;
     
     @NotNull

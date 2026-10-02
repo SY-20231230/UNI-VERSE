@@ -125,7 +125,7 @@ public class MarketItemService {
                 .description(request.getDescription())
                 .category(request.getCategory())
                 .itemCondition(request.getCondition())
-                .purchasePrice(request.getPurchasePrice())
+                .purchasePrice(request.getPurchasePrice() != null ? request.getPurchasePrice() : 0L)
                 .listedPrice(request.getListedPrice())
                 .build();
                 
@@ -172,7 +172,7 @@ public class MarketItemService {
             request.getCategory(),
             request.getCondition(),
             request.getListedPrice(),
-            request.getPurchasePrice()
+            request.getPurchasePrice() != null ? request.getPurchasePrice() : 0L
         );
         
         item.updateAiStatus(com.universe.ai.entity.AiAnalysisResult.SAFE);
