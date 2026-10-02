@@ -234,14 +234,10 @@ export default function CommunityDetail() {
       <div className="card post-detail-card">
         <div className="row between">
           <div className="row g8">
-<<<<<<< HEAD
-            <span className={'chip ' + (post.category === 'NOTICE' ? 'danger' : 'accent')}>
+            <span className={'chip post-detail-cat ' + (post.category === 'NOTICE' ? 'danger' : 'accent')}>
               {post.category === 'NOTICE' && <Icon name="bell" size={11} />}
               {postCategoryFromApi(post.category)}
             </span>
-=======
-            <span className="chip accent post-detail-cat">{postCategoryFromApi(post.category)}</span>
->>>>>>> origin/develop
             {post.anonymous && <span className="chip outline">익명</span>}
           </div>
           <div className="row g6">
@@ -329,137 +325,41 @@ export default function CommunityDetail() {
         </div>
       </div>
 
-<<<<<<< HEAD
-      <div className="h3" style={{ margin: '26px 0 14px' }}>댓글 {comments.length}</div>
-      <div className="stack g10">
-        {comments.length ? rootComments.map((comment) => (
-          <div className="comment-thread" key={comment.commentId}>
-            {renderComment(comment)}
-            {(repliesByParent.get(comment.commentId) || []).map((reply) => renderComment(reply, true))}
-          </div>
-        )) : (
-          <div className="empty" style={{ padding: 30 }}>첫 댓글을 남겨보세요</div>
-        )}
-      </div>
-      <div className="comment-composer">
-        {replyTo && (
-          <div className="comment-reply-target">
-            <span><b>{replyTo.authorName}</b>님에게 답글 작성 중</span>
-            <button type="button" onClick={() => setReplyTo(null)} aria-label="답글 취소"><Icon name="x" size={13} /></button>
-          </div>
-        )}
-        <label className="row g6" style={{ marginBottom: 8, fontSize: 12 }}>
-          <input type="checkbox" checked={commentAnonymous} onChange={(event) => setCommentAnonymous(event.target.checked)} />
-          {commentAnonymous ? '익명으로 작성' : '닉네임으로 작성'}
-        </label>
-        <div className="row g8">
-          <input className="input" placeholder={replyTo ? '답글을 입력하세요...' : '댓글을 입력하세요...'}
-            style={{ flex: 1 }} value={commentText} onChange={(event) => setCommentText(event.target.value)}
-            onKeyDown={(event) => { if (event.key === 'Enter') submitComment(); }} />
-          <button className="iconbtn accent" onClick={submitComment} aria-label={replyTo ? '답글 등록' : '댓글 등록'}>
-            <Icon name="send" size={16} />
-=======
       <div className="card comment-card">
-      <div className="h3" style={{ marginBottom: 16 }}>
-        댓글 {comments.length}개
-      </div>
-      <div className="stack g10">
-        {comments.length ? (
-          comments.map((c) => (
-            <div className="comment-item" key={c.commentId}>
-              <div className="row between">
-                <div className="row g6">
-                  <b style={{ fontSize: 13 }}>{c.authorName}</b>
-                  {c.postAuthor && <span className="chip accent" style={{ fontSize: 10 }}>작성자</span>}
-                </div>
-                <div className="row g8">
-                  <span className="faint" style={{ fontSize: 11 }}>
-                    {timeAgo(c.createdAt)}
-                  </span>
-                  {c.mine && editingCommentId !== c.commentId && (
-                    <button
-                      className="iconbtn ghost comment-more"
-                      title="댓글 관리"
-                      aria-label="댓글 관리"
-                      onClick={() =>
-                        openSheet(
-                          <ManageSheet
-                            onClose={closeOverlay}
-                            onEdit={() => startEditComment(c)}
-                            onDelete={() =>
-                              openModal(
-                                <ConfirmModal
-                                  title="댓글을 삭제할까요?"
-                                  desc="삭제한 댓글은 복구할 수 없어요."
-                                  onClose={closeOverlay}
-                                  onConfirm={() => { closeOverlay(); deleteComment(c.commentId); }}
-                                />
-                              )
-                            }
-                          />
-                        )
-                      }
-                    >
-                      <Icon name="more" size={16} />
-                    </button>
-                  )}
-                  {/* ⋯ 버튼이 없는 댓글도 같은 자리를 비워 두어 날짜 위치를 맞춘다 */}
-                  {!(c.mine && editingCommentId !== c.commentId) && <span className="comment-more" aria-hidden="true" />}
-                </div>
-              </div>
-              {editingCommentId === c.commentId ? (
-                <div style={{ marginTop: 8 }}>
-                  <textarea
-                    className="textarea"
-                    style={{ minHeight: 64, fontSize: 13.5 }}
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                  />
-                  <div className="row between g8" style={{ marginTop: 8 }}>
-                    <AnonToggle anonymous={editAnonymous} onChange={setEditAnonymous} />
-                    <div className="row g8">
-                    <button className="btn btn-outline btn-sm" onClick={cancelEditComment}>
-                      취소
-                    </button>
-                    <button className="btn btn-primary btn-sm" onClick={saveEditComment}>
-                      저장
-                    </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ fontSize: 13.5, marginTop: 5, lineHeight: 1.6 }}>{c.content}</div>
-              )}
+        <div className="h3" style={{ marginBottom: 16 }}>댓글 {comments.length}개</div>
+        <div className="stack g10">
+          {comments.length ? rootComments.map((comment) => (
+            <div className="comment-thread" key={comment.commentId}>
+              {renderComment(comment)}
+              {(repliesByParent.get(comment.commentId) || []).map((reply) => renderComment(reply, true))}
             </div>
-          ))
-        ) : (
-          <div className="comment-empty">첫 댓글을 남겨보세요</div>
-        )}
-      </div>
-      <div style={{ marginTop: 20 }}>
-        <div className="comment-input-row">
-          <AnonToggle anonymous={commentAnonymous} onChange={setCommentAnonymous} />
-          <input
-            className="input"
-            placeholder="댓글을 입력하세요..."
-            style={{ flex: 1 }}
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') submitComment();
-            }}
-          />
-          <button className="btn btn-primary comment-submit" onClick={submitComment}>
-            작성
->>>>>>> origin/develop
-          </button>
+          )) : (
+            <div className="comment-empty">첫 댓글을 남겨보세요</div>
+          )}
+        </div>
+        <div className="comment-composer">
+          {replyTo && (
+            <div className="comment-reply-target">
+              <span><b>{replyTo.authorName}</b>님에게 답글 작성 중</span>
+              <button type="button" onClick={() => setReplyTo(null)} aria-label="답글 취소"><Icon name="x" size={13} /></button>
+            </div>
+          )}
+          <div className="comment-input-row">
+            <AnonToggle anonymous={commentAnonymous} onChange={setCommentAnonymous} />
+            <input
+              className="input"
+              placeholder={replyTo ? '답글을 입력하세요...' : '댓글을 입력하세요...'}
+              value={commentText}
+              onChange={(event) => setCommentText(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter') submitComment(); }}
+            />
+            <button className="btn btn-primary comment-submit" onClick={submitComment}>
+              {replyTo ? '답글 등록' : '작성'}
+            </button>
+          </div>
         </div>
       </div>
-      </div>
-<<<<<<< HEAD
-=======
         </div>
->>>>>>> origin/develop
 
         <aside className="community-side">
           <div className="community-side-popular">
