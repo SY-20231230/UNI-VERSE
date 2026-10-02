@@ -6,7 +6,8 @@ import { POST_CATEGORY_META, postCategoryToApi } from '../lib/category';
 import { communityApi } from '../lib/communityApi';
 import { useApp } from '../context/AppContext';
 
-const CATS = ['자유', '수업/학점', '학교생활', '시설/환경', '기숙사', '취업/진로', '기타'];
+const STANDARD_CATS = ['자유', '수업/학점', '학교생활', '시설/환경', '기숙사', '취업/진로', '기타'];
+const ALL_CATS = ['공지', ...STANDARD_CATS];
 const MAX_TAGS = 5;
 
 export default function CommunityWrite() {
@@ -15,6 +16,8 @@ export default function CommunityWrite() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = !!id;
+  const canWriteNotice = state.me?.role === 'SCHOOL_ADMIN';
+  const categories = canWriteNotice ? ALL_CATS : STANDARD_CATS;
 
   const [loading, setLoading] = useState(isEdit);
   const [existing, setExisting] = useState(null);
@@ -34,7 +37,7 @@ export default function CommunityWrite() {
           const p = res;
           setExisting(p);
           // Find original category string
-          const origCat = CATS.find(c => postCategoryToApi(c) === p.category) || p.category;
+          const origCat = ALL_CATS.find(c => postCategoryToApi(c) === p.category) || p.category;
           setCat(origCat);
           setTitle(p.title);
           setBody(p.content);
@@ -95,7 +98,7 @@ export default function CommunityWrite() {
       category: postCategoryToApi(cat),
       title: t,
       content: b,
-      isAnonymous: anon,
+      isAnonymous: cat === '공지' ? false : anon,
       hashtags: tags
     };
 
@@ -144,10 +147,10 @@ export default function CommunityWrite() {
       <div className="field" style={{ marginTop: 26 }}>
         <label>카테고리</label>
         <div className="row g8 wrap">
-          {CATS.map((c) => {
+          {categories.map((c) => {
             const meta = POST_CATEGORY_META[c];
             return (
-              <button key={c} className={'write-cat-chip' + (cat === c ? ' on' : '')} onClick={() => setCat(c)}>
+              <button key={c} className={'write-cat-chip' + (cat === c ? ' on' : '')} onClick={() => { setCat(c); if (c === '공지') setAnon(false); }}>
                 <Icon name={meta.icon} size={12} />
                 {c}
               </button>
@@ -156,7 +159,17 @@ export default function CommunityWrite() {
         </div>
       </div>
 
-      <div className="field" style={{ marginTop: 22 }}>
+      {cat === '공지' ? (
+        <div className="write-notice-hint" style={{ marginTop: 14 }}><Icon name="bell" size={15} /> 공지는 학교 관리자 이름으로 게시됩니다.</div>
+      ) : (
+        <div className="write-anon-inline" style={{ marginTop: 14 }} title='작성자 이름 대신 "익명 사용자"로 표시됩니다.'>
+          <button type="button" className={'toggle' + (anon ? ' on' : '')} onClick={() => setAnon((a) => !a)}
+            role="switch" aria-checked={anon} aria-label="익명으로 작성하기"></button>
+          <span>익명으로 작성하기</span>
+        </div>
+      )}
+
+      <div className="field" style={{ marginTop: 14 }}>
         <label htmlFor="cw-title">제목</label>
         <input
           id="cw-title"
@@ -203,11 +216,7 @@ export default function CommunityWrite() {
         </div>
       </div>
 
-      <div className="write-bottom-bar">
-        <div className="write-anon-inline" title='작성자 이름 대신 "익명 사용자"로 표시됩니다.'>
-          <button className={'toggle' + (anon ? ' on' : '')} onClick={() => setAnon((a) => !a)}></button>
-          <span>익명으로 작성하기</span>
-        </div>
+      <div className="write-bottom-bar" style={{ justifyContent: 'flex-end' }}>
         <div className="row g8">
           <button className="btn btn-outline write-cancel" onClick={() => navigate(backTo)}>
             취소

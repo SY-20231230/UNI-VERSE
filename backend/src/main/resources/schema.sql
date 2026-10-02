@@ -107,7 +107,20 @@ CREATE TABLE comments (
         ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 6. post_likes
+-- 6. comment_likes
+CREATE TABLE comment_likes (
+    comment_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (comment_id, user_id),
+    KEY idx_comment_likes_user_id (user_id),
+    CONSTRAINT fk_comment_likes_comment FOREIGN KEY (comment_id) REFERENCES comments(comment_id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_comment_likes_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 7. post_likes
 CREATE TABLE post_likes (
     post_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
@@ -120,7 +133,7 @@ CREATE TABLE post_likes (
         ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 7. hashtags
+-- 8. hashtags
 CREATE TABLE hashtags (
     hashtag_id BIGINT NOT NULL AUTO_INCREMENT,
     name VARCHAR(50) NOT NULL,
@@ -129,7 +142,7 @@ CREATE TABLE hashtags (
     UNIQUE KEY uk_hashtags_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 8. post_hashtags
+-- 9. post_hashtags
 CREATE TABLE post_hashtags (
     post_id BIGINT NOT NULL,
     hashtag_id BIGINT NOT NULL,
@@ -141,7 +154,7 @@ CREATE TABLE post_hashtags (
         ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 9. market_items
+-- 10. market_items
 CREATE TABLE market_items (
     item_id BIGINT NOT NULL AUTO_INCREMENT,
     seller_id BIGINT NOT NULL,
@@ -167,7 +180,7 @@ CREATE TABLE market_items (
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 10. market_item_images
+-- 11. market_item_images
 CREATE TABLE market_item_images (
     image_id BIGINT NOT NULL AUTO_INCREMENT,
     item_id BIGINT NOT NULL,
@@ -180,7 +193,7 @@ CREATE TABLE market_item_images (
         ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 11. market_item_favorites
+-- 12. market_item_favorites
 CREATE TABLE market_item_favorites (
     item_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
@@ -193,7 +206,7 @@ CREATE TABLE market_item_favorites (
         ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 12. ai_risk_analyses
+-- 13. ai_risk_analyses
 CREATE TABLE ai_risk_analyses (
     analysis_id BIGINT NOT NULL AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
@@ -214,7 +227,7 @@ CREATE TABLE ai_risk_analyses (
         ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 13. chat_requests
+-- 14. chat_requests
 CREATE TABLE chat_requests (
     request_id BIGINT NOT NULL AUTO_INCREMENT,
     requester_id BIGINT NOT NULL,
@@ -240,7 +253,7 @@ CREATE TABLE chat_requests (
         ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 14. chat_rooms
+-- 15. chat_rooms
 CREATE TABLE chat_rooms (
     room_id BIGINT NOT NULL AUTO_INCREMENT,
     request_id BIGINT NOT NULL,
@@ -258,7 +271,7 @@ CREATE TABLE chat_rooms (
         ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 15. chat_members
+-- 16. chat_members
 CREATE TABLE chat_members (
     room_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
@@ -272,7 +285,7 @@ CREATE TABLE chat_members (
         ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 16. messages
+-- 17. messages
 CREATE TABLE messages (
     message_id BIGINT NOT NULL AUTO_INCREMENT,
     room_id BIGINT NOT NULL,
@@ -297,7 +310,7 @@ ALTER TABLE chat_members
     ON UPDATE CASCADE
     ON DELETE SET NULL;
 
--- 17. trades
+-- 18. trades
 CREATE TABLE trades (
     trade_id BIGINT NOT NULL AUTO_INCREMENT,
     item_id BIGINT NOT NULL,
@@ -327,7 +340,7 @@ CREATE TABLE trades (
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 18. reports
+-- 19. reports
 CREATE TABLE reports (
     report_id BIGINT NOT NULL AUTO_INCREMENT,
     reporter_id BIGINT NOT NULL,
@@ -364,7 +377,7 @@ CREATE TABLE reports (
         ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 19. report_evidences
+-- 20. report_evidences
 CREATE TABLE report_evidences (
     evidence_id BIGINT NOT NULL AUTO_INCREMENT,
     report_id BIGINT NOT NULL,
@@ -376,7 +389,7 @@ CREATE TABLE report_evidences (
         ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 20. trust_histories
+-- 21. trust_histories
 CREATE TABLE trust_histories (
     trust_history_id BIGINT NOT NULL AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
@@ -399,7 +412,7 @@ CREATE TABLE trust_histories (
         ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 21. user_sanctions
+-- 22. user_sanctions
 CREATE TABLE user_sanctions (
     sanction_id BIGINT NOT NULL AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
@@ -423,7 +436,7 @@ CREATE TABLE user_sanctions (
         ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 22. notifications
+-- 23. notifications
 CREATE TABLE notifications (
     notification_id BIGINT NOT NULL AUTO_INCREMENT,
     receiver_id BIGINT NOT NULL,

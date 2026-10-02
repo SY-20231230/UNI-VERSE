@@ -8,6 +8,7 @@ import com.universe.community.dto.response.CommunityPostResponse;
 import com.universe.community.entity.CommunityPost;
 import com.universe.community.entity.Hashtag;
 import com.universe.community.entity.PostHashtag;
+import com.universe.community.entity.PostCategory;
 import com.universe.community.entity.PostStatus;
 import com.universe.community.repository.CommentRepository;
 import com.universe.community.repository.CommunityPostRepository;
@@ -21,6 +22,7 @@ import com.universe.global.exception.ErrorCode;
 import com.universe.global.security.CurrentUser;
 import com.universe.school.repository.SchoolRepository;
 import com.universe.user.entity.User;
+import com.universe.user.entity.UserRole;
 import com.universe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -73,13 +75,15 @@ public class CommunityPostService {
         if (user.getSchool() == null || !Boolean.TRUE.equals(user.getSchoolVerified())) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
+        boolean notice = request.getCategory() == PostCategory.NOTICE;
+        requireNoticeWriter(user, notice);
         CommunityPost post = posts.save(CommunityPost.builder()
                 .user(user)
                 .school(user.getSchool())
                 .category(request.getCategory())
                 .title(request.getTitle())
                 .content(request.getContent())
-                .isAnonymous(request.getIsAnonymous())
+                .isAnonymous(notice ? false : request.getIsAnonymous())
                 .build());
         saveHashtags(post, request.getHashtags());
         return toResponse(post);
@@ -99,12 +103,15 @@ public class CommunityPostService {
     @Transactional
     public CommunityPostResponse update(Long id, PostUpdateRequest request) {
         CommunityPost post = ownedPost(id);
+        User user = post.getUser();
+        boolean notice = request.getCategory() == PostCategory.NOTICE;
+        requireNoticeWriter(user, notice || post.getCategory() == PostCategory.NOTICE);
         post.updateContent(
                 request.getTitle(),
                 request.getContent(),
                 request.getCategory(),
-                request.getIsAnonymous());
-        boolean anonymous = Boolean.TRUE.equals(request.getIsAnonymous());
+                notice ? false : request.getIsAnonymous());
+        boolean anonymous = Boolean.TRUE.equals(post.getIsAnonymous());
         comments.findByPostIdAndUserIdAndStatus(post.getId(), post.getUser().getId(), PostStatus.ACTIVE)
                 .forEach(comment -> comment.changeAnonymity(anonymous));
         postHashtags.deleteByPostId(post.getId());
@@ -115,6 +122,12 @@ public class CommunityPostService {
     @Transactional
     public void delete(Long id) {
         ownedPost(id).deletePost();
+    }
+
+    private void requireNoticeWriter(User user, boolean notice) {
+        if (notice && user.getRole() != UserRole.SCHOOL_ADMIN) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
     }
 
     private Map<Long, Long> findCommentCounts(List<CommunityPost> pagePosts) {

@@ -61,6 +61,21 @@ public class MarketItemService {
         return counted[0];
     }
     private final ApplicationEventPublisher eventPublisher;
+    
+    private String extractKey(String url) {
+        if (url == null) return null;
+        if (url.startsWith("http")) {
+            try {
+                java.net.URL parsed = new java.net.URL(url);
+                String path = parsed.getPath();
+                if (path.startsWith("/")) path = path.substring(1);
+                return path;
+            } catch (Exception e) {
+                return url;
+            }
+        }
+        return url;
+    }
 
     public Page<MarketItemListResponse> searchItems(Long schoolId, String category, String keyword, String sort, String status, Pageable pageable) {
         return itemRepository.searchItems(schoolId, category, keyword, sort, status, pageable)
@@ -110,7 +125,7 @@ public class MarketItemService {
                 .description(request.getDescription())
                 .category(request.getCategory())
                 .itemCondition(request.getCondition())
-                .purchasePrice(request.getPurchasePrice())
+                .purchasePrice(request.getPurchasePrice() != null ? request.getPurchasePrice() : 0L)
                 .listedPrice(request.getListedPrice())
                 .build();
                 
@@ -122,9 +137,10 @@ public class MarketItemService {
         if (request.getImages() != null && !request.getImages().isEmpty()) {
             int order = 0;
             for (String url : request.getImages()) {
+                String keyToSave = extractKey(url);
                 imageRepository.save(MarketItemImage.builder()
                         .item(savedItem)
-                        .imageUrl(url)
+                        .imageUrl(keyToSave)
                         .imageOrder(order++)
                         .build());
             }
@@ -156,7 +172,7 @@ public class MarketItemService {
             request.getCategory(),
             request.getCondition(),
             request.getListedPrice(),
-            request.getPurchasePrice()
+            request.getPurchasePrice() != null ? request.getPurchasePrice() : 0L
         );
         
         item.updateAiStatus(com.universe.ai.entity.AiAnalysisResult.SAFE);
@@ -173,9 +189,10 @@ public class MarketItemService {
         if (request.getImages() != null && !request.getImages().isEmpty()) {
             int order = 0;
             for (String url : request.getImages()) {
+                String keyToSave = extractKey(url);
                 imageRepository.save(MarketItemImage.builder()
                         .item(item)
-                        .imageUrl(url)
+                        .imageUrl(keyToSave)
                         .imageOrder(order++)
                         .build());
             }

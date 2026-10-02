@@ -2,7 +2,6 @@ import { useParams, Navigate, Link, useSearchParams, useLocation } from 'react-r
 import { useState, useEffect } from 'react';
 import Icon from '../lib/icons';
 import Avatar from '../components/Avatar';
-import VerifiedChip from '../components/VerifiedChip';
 import { useApp, authApi } from '../context/AppContext';
 
 export default function UserProfile() {
@@ -54,27 +53,32 @@ export default function UserProfile() {
   const suspended = user.suspendedPermanently || (user.suspendedUntil && user.suspendedUntil > Date.now());
   const fromAdmin = searchParams.get('from') === 'admin';
   const backTo = fromAdmin ? '/admin' : '/market';
-  const backLabel = fromAdmin ? '관리자' : '중고거래';
+  const backLabel = fromAdmin ? '관리자 페이지로 돌아가기' : '중고거래 목록으로 돌아가기';
+  const stats = [
+    { label: '신뢰점수', value: `${user.trustScore ?? 0}점`, accent: true },
+    { label: '거래완료', value: `${doneCount}건` },
+    { label: '거래 횟수', value: `${user.trades ?? 0}건` },
+    { label: '신고 횟수', value: `${reportCount}건` },
+  ];
 
   return (
-    <div className="container mid fade-enter">
+    <div className="container mypage-container fade-enter">
       <Link className="backlink" to={backTo}>
-        <Icon name="back" size={13} />
+        <Icon name="back" size={15} />
         {backLabel}
       </Link>
 
       <div className="card profile-card">
-        <div className="profile-cover">
-          <div className="hero-dots"></div>
-        </div>
         <div className="profile-body">
           <div className="profile-avatar-wrap">
             <Avatar user={user} size={96} />
           </div>
           <div className="profile-info">
-            <div className="row g8">
-              <span className="h2">{user.name}</span>
-              {user.verified && <VerifiedChip level={user.verified} score={user.trustScore} />}
+            <div className="row g8 wrap">
+              <span className="profile-name">{user.name}</span>
+              <span className={'chip ' + (user.verified ? 'success' : 'warn')}>
+                {user.verified ? '학교 인증 완료' : '학교 인증 필요'}
+              </span>
               {suspended && (
                 <span className={'chip ' + (user.suspendedPermanently ? 'danger' : 'warn')}>
                   {user.suspendedPermanently ? '영구정지' : '정지중'}
@@ -82,29 +86,17 @@ export default function UserProfile() {
               )}
             </div>
             {(user.dept || user.school) && (
-              <div className="faint" style={{ fontSize: 12.5, marginTop: 5 }}>
-                {[user.school || '학교 미등록', user.dept, user.verified ? '학교 인증 완료' : '학교 인증 필요'].filter(Boolean).join(' · ')}
-              </div>
+              <div className="profile-line">{[user.school || '학교 미등록', user.dept].filter(Boolean).join(' · ')}</div>
             )}
           </div>
         </div>
         <div className="stat-row-plain">
-          <div className="stat-plain">
-            <b className="tnum" style={{ color: 'var(--accent)' }}>{user.trustScore ?? 0}점</b>
-            <span>신뢰점수</span>
-          </div>
-          <div className="stat-plain">
-            <b className="tnum">{doneCount}</b>
-            <span>거래완료</span>
-          </div>
-          <div className="stat-plain">
-            <b className="tnum">{user.trades ?? 0}</b>
-            <span>거래 횟수</span>
-          </div>
-          <div className="stat-plain">
-            <b className="tnum">{reportCount}</b>
-            <span>신고 횟수</span>
-          </div>
+          {stats.map((s) => (
+            <div className="stat-plain" key={s.label}>
+              <span>{s.label}</span>
+              <b className="tnum" style={s.accent ? { color: 'var(--accent)' } : undefined}>{s.value}</b>
+            </div>
+          ))}
         </div>
       </div>
     </div>

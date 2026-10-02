@@ -1,10 +1,10 @@
-package com.universe.school.service;
+package com.universe.school;
 
 import java.util.Map;
 import java.util.Optional;
 
-/** 학교 이메일 대표 도메인 → 학교 이름. 목록에 없는 학교는 도메인이 이름으로 등록된다. */
-final class KnownSchools {
+/** Maps university email root domains to display names. */
+public final class KnownSchools {
 
     private static final Map<String, String> NAMES = Map.ofEntries(
             // 전문대학
@@ -14,6 +14,7 @@ final class KnownSchools {
             // 서울
             Map.entry("snu.ac.kr", "서울대학교"),
             Map.entry("yonsei.ac.kr", "연세대학교"),
+            Map.entry("multiverse.ac.kr", "연세 대학교"),
             Map.entry("korea.ac.kr", "고려대학교"),
             Map.entry("sogang.ac.kr", "서강대학교"),
             Map.entry("hanyang.ac.kr", "한양대학교"),
@@ -55,7 +56,7 @@ final class KnownSchools {
 
     private KnownSchools() {}
 
-    static Optional<String> nameOf(String domain) {
+    public static Optional<String> nameOf(String domain) {
         return Optional.ofNullable(NAMES.get(domain));
     }
 }

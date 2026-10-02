@@ -8,7 +8,7 @@ const INITIAL = { status: 'PENDING', reportType: '', targetUserId: '', from: '',
 const date = (value) => value ? value.replace('T', ' ').slice(0, 19) : '—';
 const statusClass = (status) => status === 'PENDING' ? 'warn' : status === 'PROCESSED' ? 'success' : 'outline';
 
-const CONTENT_STATUS = { SELLING: '판매중', REQUESTED: '거래 요청됨', TRADING: '예약중', COMPLETED: '거래완료', CANCELLED: '거래취소', ACTIVE: '게시중', DELETED: '삭제됨', BLOCKED: '차단됨' };
+const CONTENT_STATUS = { SELLING: '판매중', REQUESTED: '거래 요청됨', TRADING: '거래중', COMPLETED: '거래완료', CANCELLED: '거래취소', ACTIVE: '게시중', DELETED: '삭제됨', BLOCKED: '차단됨' };
 const ACCOUNT_STATUS = { ACTIVE: '정상', SUSPENDED: '일시정지', BANNED: '영구정지', DELETED: '탈퇴' };
 const SUSPENSION_PRESETS = [1, 3, 7, 14, 30];
 const untilLabel = (days) => { const d = new Date(Date.now() + days * 86400000); return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`; };
@@ -186,26 +186,61 @@ function AdminReportDetail({ id, api, revision, onBusy, onProcessed, onRefresh, 
     } finally { submitting.current = false; setBusy(false); onBusy(false); }
   }
 
+  const initial = (name) => (name || '?').slice(0, 1);
   return <section className="admin-report-detail" aria-label={`신고 ${id} 상세`}>
-    <div className="row between g8"><h3 className="h3" ref={heading} tabIndex={-1}>신고 상세</h3>
-      <button className="btn btn-outline btn-sm" type="button" onClick={onClose} disabled={busy}>닫기</button></div>
-    {loading && <p role="status">상세 정보를 불러오는 중…</p>}
+    <div className="rpt-head">
+      <div>
+        <h3 className="rpt-head-title" ref={heading} tabIndex={-1}>
+          {detail ? (REPORT_TYPES[detail.report.reportType] || detail.report.reportType) : '신고 상세'}
+        </h3>
+        {detail && <span className={'chip ' + statusClass(detail.report.status)}>{REPORT_STATUS[detail.report.status] || detail.report.status}</span>}
+      </div>
+      <button className="iconbtn rpt-close" type="button" onClick={onClose} disabled={busy} aria-label="닫기">×</button>
+    </div>
+    {loading && <p role="status" className="muted">상세 정보를 불러오는 중…</p>}
     {error && <div role="alert"><p>{error}</p><button className="btn btn-outline btn-sm" type="button" onClick={() => setRefresh((value) => value + 1)}>상세 다시 불러오기</button></div>}
     {actionError && <p role="alert">{actionError}</p>}
-    {completed && <p role="status">처리가 완료되었습니다.</p>}
+    {completed && <p role="status" className="rpt-done">처리가 완료되었습니다.</p>}
     {detail && <>
-      <dl className="admin-report-facts">
-        <dt>상태</dt><dd>{REPORT_STATUS[detail.report.status] || detail.report.status}</dd>
-        <dt>유형</dt><dd>{REPORT_TYPES[detail.report.reportType] || detail.report.reportType}</dd>
-        <dt>신고자</dt><dd>{detail.reporterNickname || '알 수 없음'}<span className="admin-rpt-id">{detail.reporterEmail || '—'}</span></dd>
-        <dt>대상 회원</dt><dd>{detail.targetUser.nickname}<span className="admin-rpt-id">{detail.targetUser.email || '—'}</span></dd>
-        <dt>신뢰점수</dt><dd>{detail.targetUser.trustScore}점</dd>
-        <dt>계정 상태</dt><dd>{ACCOUNT_STATUS[detail.targetUser.accountStatus] || detail.targetUser.accountStatus}</dd>
-        <dt>접수 시각</dt><dd>{date(detail.report.createdAt)}</dd>
-        <dt>처리 시각</dt><dd>{date(detail.report.processedAt)}</dd>
-        {!detail.content && !detail.trade && <><dt>관련 항목</dt><dd>없음</dd></>}
+      <div className="rpt-parties">
+        <PersonCard userId={detail.reporterId}>
+          <span className="rpt-person-label">신고자</span>
+          <div className="rpt-person-main">
+            <span className="rpt-avatar">{initial(detail.reporterNickname)}</span>
+            <div className="rpt-person-text">
+              <strong>{detail.reporterNickname || '알 수 없음'}</strong>
+              <span className="admin-rpt-id">{detail.reporterEmail || '—'}</span>
+            </div>
+          </div>
+        </PersonCard>
+        <span className="rpt-arrow" aria-hidden="true">→</span>
+        <PersonCard userId={detail.targetUser.userId}>
+          <span className="rpt-person-label">대상 회원</span>
+          <div className="rpt-person-main">
+            <span className="rpt-avatar">{initial(detail.targetUser.nickname)}</span>
+            <div className="rpt-person-text">
+              <strong>{detail.targetUser.nickname}</strong>
+              <span className="admin-rpt-id">{detail.targetUser.email || '—'}</span>
+            </div>
+          </div>
+          {detail.targetUser.accountStatus !== 'ACTIVE' && (
+            <div className="rpt-person-tags">
+              <span className="chip danger">{ACCOUNT_STATUS[detail.targetUser.accountStatus] || detail.targetUser.accountStatus}</span>
+            </div>
+          )}
+        </PersonCard>
+      </div>
+      <dl className="rpt-times">
+        <div><dt>접수 시각</dt><dd>{date(detail.report.createdAt)}</dd></div>
+        <div><dt>처리 시각</dt><dd>{date(detail.report.processedAt)}</dd></div>
+        <div><dt>유형</dt><dd>{REPORT_TYPES[detail.report.reportType] || detail.report.reportType}</dd></div>
+        {!detail.content && !detail.trade && <div><dt>관련 항목</dt><dd>없음</dd></div>}
       </dl>
-      {detail.content && <>
+      <div className="rpt-section">
+        <h4>신고 내용</h4>
+        <p className="admin-report-text rpt-quote">{detail.description}</p>
+      </div>
+      {detail.content && <div className="rpt-section">
         <h4>신고된 {detail.content.kind === 'ITEM' ? '상품' : '게시글'}</h4>
         <div className="admin-rpt-content">
           {detail.content.imageUrls?.length > 0 && <div className="admin-rpt-content-images">
@@ -218,14 +253,24 @@ function AdminReportDetail({ id, api, revision, onBusy, onProcessed, onRefresh, 
           </div>
           {detail.content.kind === 'ITEM' && <Link className="link admin-rpt-content-link" to={`/market/${detail.content.id}?from=admin`}>상품 페이지로 이동 →</Link>}
         </div>
-      </>}
-      <h4>신고 내용</h4><p className="admin-report-text">{detail.description}</p>
-      {detail.trade && <><h4>관련 거래</h4><p>거래 #{detail.trade.tradeId} · 판매자 #{detail.trade.sellerId} · 구매자 #{detail.trade.buyerId}</p>
-        <p>상태 {detail.trade.status} · 거래 금액 {detail.trade.finalPrice ?? detail.trade.listedPrice}원</p></>}
-      {detail.evidences.length > 0 && <><h4>증빙자료</h4><ul>{detail.evidences.map((evidence, index) => <li key={evidence.evidenceId}>
-        {evidenceLink(evidence.fileUrl) ? <a href={evidenceLink(evidence.fileUrl)} target="_blank" rel="noopener noreferrer">증빙자료 {index + 1} 열기</a> : <span>열 수 없는 증빙 주소입니다.</span>}
-      </li>)}</ul> </>}
-      {detail.report.status !== 'PENDING' && <><h4>관리자 처리 사유</h4><p className="admin-report-text">{detail.adminNote || '—'}</p><p className="faint">처리한 관리자: {detail.adminNickname || '—'}</p></>}
+      </div>}
+      {detail.trade && <div className="rpt-section">
+        <h4>관련 거래</h4>
+        <div className="rpt-box">
+          <p>거래 #{detail.trade.tradeId} · 판매자 #{detail.trade.sellerId} · 구매자 #{detail.trade.buyerId}</p>
+          <p className="faint">상태 {detail.trade.status} · 거래 금액 {detail.trade.finalPrice ?? detail.trade.listedPrice}원</p>
+        </div>
+      </div>}
+      {detail.evidences.length > 0 && <div className="rpt-section">
+        <h4>증빙자료</h4>
+        <ul className="rpt-evidences">{detail.evidences.map((evidence, index) => <li key={evidence.evidenceId}>
+          {evidenceLink(evidence.fileUrl) ? <a className="rpt-evidence" href={evidenceLink(evidence.fileUrl)} target="_blank" rel="noopener noreferrer">증빙자료 {index + 1} 열기 ↗</a> : <span className="rpt-evidence disabled">열 수 없는 증빙 주소입니다.</span>}
+        </li>)}</ul>
+      </div>}
+      {detail.report.status !== 'PENDING' && <div className="rpt-section">
+        <h4>관리자 처리 사유</h4>
+        <div className="rpt-box"><p className="admin-report-text">{detail.adminNote || '—'}</p><p className="faint">처리한 관리자: {detail.adminNickname || '—'}</p></div>
+      </div>}
       {detail.report.status === 'PENDING' && !completed && <form onSubmit={(event) => event.preventDefault()} className="admin-report-decision">
         <label className="field">관리자 처리 사유<textarea className="input" rows={4} required maxLength={10000} value={note} disabled={busy} onChange={(event) => { setNote(event.target.value); }} placeholder="확정 또는 기각하는 근거를 남겨주세요." /></label>
         <div className="field">
@@ -264,4 +309,15 @@ function AdminReportDetail({ id, api, revision, onBusy, onProcessed, onRefresh, 
       </form>}
     </>}
   </section>;
+}
+
+// 신고자·대상 회원 카드. 회원 ID가 있으면 눌러서 프로필로 간다 (돌아오면 관리자 화면 상태가 복원된다).
+function PersonCard({ userId, children }) {
+  if (!userId) return <div className="rpt-person">{children}</div>;
+  return (
+    <Link className="rpt-person clickable" to={`/users/${userId}?from=admin`} title="프로필 보기">
+      {children}
+      <span className="rpt-person-go" aria-hidden="true">›</span>
+    </Link>
+  );
 }

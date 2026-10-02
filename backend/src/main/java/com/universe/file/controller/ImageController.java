@@ -20,7 +20,8 @@ public class ImageController {
         if (contentType == null || !contentType.startsWith("image/")) {
             throw new IllegalArgumentException("Only image files are allowed");
         }
-        String url = fileService.uploadFile(file);
+        String key = fileService.uploadFile(file);
+        String url = fileService.getFileUrl(key);
         return ApiResponse.success(url);
     }
 }

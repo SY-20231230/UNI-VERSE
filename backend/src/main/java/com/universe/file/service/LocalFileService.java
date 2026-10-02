@@ -55,4 +55,17 @@ public class LocalFileService implements FileService {
             }
         }
     }
+
+    @Override
+    public void saveSessionLog(String sessionId, String csvLine) {
+        try {
+            Path logPath = Paths.get(uploadDir, "session_logs.csv");
+            if (!Files.exists(logPath)) {
+                Files.writeString(logPath, "\uFEFF사용자 ID,이메일,닉네임,로그인 시각,마지막 API 요청 시각,종료 시각,체류시간(초),종료 사유\r\n");
+            }
+            Files.writeString(logPath, csvLine + "\r\n", java.nio.file.StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            // Ignore
+        }
+    }
 }
