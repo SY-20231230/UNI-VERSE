@@ -178,3 +178,105 @@ aws logs tail /ecs/universe-frontend --since 15m --follow --region "$AWS_REGION"
 - **task가 시작 직후 바로 멈춤 (`CannotPullContainerError` 등)**: 1장에서 설명한 `--platform linux/amd64` 빌드 여부를 확인하세요.
 - **backend task가 `STOPPED`되고 로그에 DB 연결 오류**: RDS 생성 완료(`CREATE_COMPLETE`) 전에 service 스택을 배포했거나, 3단계에서 넣은 `DB_PASSWORD_VALUE`가 실제 RDS 비밀번호와 다른 경우입니다.
 - **backend task가 secret 주입 단계에서 실패**: SSM `SecureString`을 기본 KMS 키(`alias/aws/ssm`)가 아닌 별도 고객관리형 키로 암호화했다면, `EcsTaskExecutionRole`에 `kms:Decrypt` 권한이 없어서 실패할 수 있습니다. `[확인 필요]` — 기본 키를 썼다면 보통 추가 권한이 필요 없습니다.
+
+## 8. GitHub Actions 자동 배포(CD) 설정 — 최초 1회
+
+`main` 브랜치에 push되면 `.github/workflows/cd-deploy.yml`이 3개 이미지를 빌드·push하고 ECS 서비스를 강제로 새로 배포합니다. 이 워크플로우가 AWS에 접근하려면, **장기 Access Key 대신 OIDC로 AWS IAM Role을 임시로 assume**하는 방식을 씁니다. 아래 설정은 AWS 계정당 한 번만 하면 됩니다.
+
+### 8-1. GitHub OIDC Provider 등록 (계정에 아직 없다면)
+
+```bash
+aws iam create-open-id-connect-provider \
+  --url https://token.actions.githubusercontent.com \
+  --client-id-list sts.amazonaws.com \
+  --region "$AWS_REGION"
+```
+
+이미 등록되어 있으면 `EntityAlreadyExists` 오류가 나는데, 정상입니다(무시하고 다음 단계로).
+
+### 8-2. GitHub Actions가 assume할 IAM Role 생성
+
+리포지토리 이름과 브랜치를 신뢰 정책에 정확히 넣어야 다른 저장소가 이 Role을 가져다 쓸 수 없습니다. `<AWS_ACCOUNT_ID>`를 실제 계정 ID로 바꾸세요.
+
+```bash
+cat > /tmp/trust-policy.json <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::<AWS_ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:SY-20231230/UNI-VERSE:ref:refs/heads/main"
+        }
+      }
+    }
+  ]
+}
+EOF
+
+aws iam create-role \
+  --role-name universe-github-actions-deploy \
+  --assume-role-policy-document file:///tmp/trust-policy.json
+```
+
+### 8-3. 배포에 필요한 권한만 Role에 부여
+
+ECR push와 ECS 서비스 업데이트에 필요한 권한만 최소로 부여합니다.
+
+```bash
+cat > /tmp/deploy-policy.json <<'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:PutImage",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:GetDownloadUrlForLayer"
+      ],
+      "Resource": "arn:aws:ecr:*:*:repository/universe-*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecs:UpdateService",
+        "ecs:DescribeServices"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+
+aws iam put-role-policy \
+  --role-name universe-github-actions-deploy \
+  --policy-name universe-deploy-policy \
+  --policy-document file:///tmp/deploy-policy.json
+```
+
+### 8-4. Role ARN을 GitHub Secret으로 등록
+
+```bash
+aws iam get-role --role-name universe-github-actions-deploy --query 'Role.Arn' --output text
+```
+
+출력된 ARN을 GitHub 저장소 → **Settings → Secrets and variables → Actions → New repository secret**에 이름 `AWS_DEPLOY_ROLE_ARN`으로 등록하세요. 이 설정이 끝나면 `main`에 push될 때마다 자동으로 빌드·배포됩니다. 수동으로 바로 돌려보고 싶으면 GitHub Actions 탭 → `CD Deploy` 워크플로우 → **Run workflow**로도 실행할 수 있습니다(`workflow_dispatch`).
+
+> 처음 배포(1~6장)는 CloudFormation으로 수동 진행한 뒤, 이후 코드 변경 배포부터는 이 CD 파이프라인을 쓰는 흐름입니다. `infra/service.yaml` 자체(ALB 규칙, task 크기 등)를 바꿀 때는 여전히 5장의 `aws cloudformation deploy` 명령을 수동으로 다시 실행해야 합니다 — CD 파이프라인은 이미지 교체만 담당합니다.

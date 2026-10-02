@@ -1,0 +1,217 @@
+name: Deploy to AWS ECS
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Optional image tag. Leave empty to use the commit SHA.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production-ecs-deploy
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-2' }}
+  PROJECT_NAME: universe
+  ENVIRONMENT: prod
+  FOUNDATION_STACK: universe-prod-foundation
+  SERVICE_STACK: universe-prod-service
+
+jobs:
+  deploy:
+    name: Build, push, and deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate deployment configuration
+        env:
+          AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          if [ -z "$AWS_DEPLOY_ROLE_ARN" ]; then
+            echo "Repository variable AWS_DEPLOY_ROLE_ARN is required."
+            exit 1
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify foundation stack
+        run: |
+          status=$(aws cloudformation describe-stacks \
+            --stack-name "$FOUNDATION_STACK" \
+            --query 'Stacks[0].StackStatus' \
+            --output text)
+
+          case "$status" in
+            CREATE_COMPLETE|UPDATE_COMPLETE|UPDATE_ROLLBACK_COMPLETE)
+              echo "Foundation stack is ready: $status"
+              ;;
+            *)
+              echo "Foundation stack is not deployable: $status"
+              echo "Restore the foundation stack manually before running CD."
+              exit 1
+              ;;
+          esac
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Read foundation outputs
+        id: foundation
+        shell: bash
+        env:
+          REQUESTED_IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          output() {
+            aws cloudformation describe-stacks \
+              --stack-name "$FOUNDATION_STACK" \
+              --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue | [0]" \
+              --output text
+          }
+
+          image_tag="${REQUESTED_IMAGE_TAG:-${GITHUB_SHA::7}}"
+          if [[ ! "$image_tag" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "Invalid Docker image tag: $image_tag"
+            exit 1
+          fi
+
+          {
+            echo "image_tag=$image_tag"
+            echo "frontend_uri=$(output FrontendEcrRepositoryUri)"
+            echo "backend_uri=$(output BackendEcrRepositoryUri)"
+            echo "ai_uri=$(output AiEcrRepositoryUri)"
+            echo "vpc_id=$(output VpcId)"
+            echo "public_subnet_1=$(output PublicSubnet1)"
+            echo "public_subnet_2=$(output PublicSubnet2)"
+            echo "private_subnet_1=$(output PrivateSubnet1)"
+            echo "private_subnet_2=$(output PrivateSubnet2)"
+            echo "alb_security_group_id=$(output ALBSecurityGroupId)"
+            echo "ecs_security_group_id=$(output EcsSecurityGroupId)"
+            echo "ecs_cluster_name=$(output ECSClusterName)"
+            echo "cloudmap_namespace_id=$(output CloudMapNamespaceId)"
+            echo "ecs_execution_role_arn=$(output EcsTaskExecutionRoleArn)"
+            echo "rds_endpoint=$(output RdsEndpoint)"
+            echo "s3_bucket_name=$(output S3BucketName)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push frontend image
+        env:
+          REPOSITORY_URI: ${{ steps.foundation.outputs.frontend_uri }}
+          IMAGE_TAG: ${{ steps.foundation.outputs.image_tag }}
+        run: |
+          docker build --target production \
+            --tag "$REPOSITORY_URI:$IMAGE_TAG" \
+            --tag "$REPOSITORY_URI:latest" \
+            ./frontend
+          docker push "$REPOSITORY_URI:$IMAGE_TAG"
+          docker push "$REPOSITORY_URI:latest"
+
+      - name: Build and push backend image
+        env:
+          REPOSITORY_URI: ${{ steps.foundation.outputs.backend_uri }}
+          IMAGE_TAG: ${{ steps.foundation.outputs.image_tag }}
+        run: |
+          docker build \
+            --tag "$REPOSITORY_URI:$IMAGE_TAG" \
+            --tag "$REPOSITORY_URI:latest" \
+            ./backend
+          docker push "$REPOSITORY_URI:$IMAGE_TAG"
+          docker push "$REPOSITORY_URI:latest"
+
+      - name: Build and push AI image
+        env:
+          REPOSITORY_URI: ${{ steps.foundation.outputs.ai_uri }}
+          IMAGE_TAG: ${{ steps.foundation.outputs.image_tag }}
+        run: |
+          docker build \
+            --tag "$REPOSITORY_URI:$IMAGE_TAG" \
+            --tag "$REPOSITORY_URI:latest" \
+            ./ai-server
+          docker push "$REPOSITORY_URI:$IMAGE_TAG"
+          docker push "$REPOSITORY_URI:latest"
+
+      - name: Create or update ECS service stack
+        env:
+          IMAGE_TAG: ${{ steps.foundation.outputs.image_tag }}
+          FRONTEND_URI: ${{ steps.foundation.outputs.frontend_uri }}
+          BACKEND_URI: ${{ steps.foundation.outputs.backend_uri }}
+          AI_URI: ${{ steps.foundation.outputs.ai_uri }}
+          VPC_ID: ${{ steps.foundation.outputs.vpc_id }}
+          PUBLIC_SUBNET_1: ${{ steps.foundation.outputs.public_subnet_1 }}
+          PUBLIC_SUBNET_2: ${{ steps.foundation.outputs.public_subnet_2 }}
+          PRIVATE_SUBNET_1: ${{ steps.foundation.outputs.private_subnet_1 }}
+          PRIVATE_SUBNET_2: ${{ steps.foundation.outputs.private_subnet_2 }}
+          ALB_SECURITY_GROUP_ID: ${{ steps.foundation.outputs.alb_security_group_id }}
+          ECS_SECURITY_GROUP_ID: ${{ steps.foundation.outputs.ecs_security_group_id }}
+          ECS_CLUSTER_NAME: ${{ steps.foundation.outputs.ecs_cluster_name }}
+          CLOUDMAP_NAMESPACE_ID: ${{ steps.foundation.outputs.cloudmap_namespace_id }}
+          ECS_EXECUTION_ROLE_ARN: ${{ steps.foundation.outputs.ecs_execution_role_arn }}
+          RDS_ENDPOINT: ${{ steps.foundation.outputs.rds_endpoint }}
+          S3_BUCKET_NAME: ${{ steps.foundation.outputs.s3_bucket_name }}
+        run: |
+          aws cloudformation deploy \
+            --template-file infra/service.yaml \
+            --stack-name "$SERVICE_STACK" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              ProjectName="$PROJECT_NAME" \
+              Environment="$ENVIRONMENT" \
+              FrontendImageUri="$FRONTEND_URI:$IMAGE_TAG" \
+              BackendImageUri="$BACKEND_URI:$IMAGE_TAG" \
+              AiImageUri="$AI_URI:$IMAGE_TAG" \
+              VpcId="$VPC_ID" \
+              PublicSubnet1="$PUBLIC_SUBNET_1" \
+              PublicSubnet2="$PUBLIC_SUBNET_2" \
+              PrivateSubnet1="$PRIVATE_SUBNET_1" \
+              PrivateSubnet2="$PRIVATE_SUBNET_2" \
+              ALBSecurityGroupId="$ALB_SECURITY_GROUP_ID" \
+              EcsSecurityGroupId="$ECS_SECURITY_GROUP_ID" \
+              ECSClusterName="$ECS_CLUSTER_NAME" \
+              CloudMapNamespaceId="$CLOUDMAP_NAMESPACE_ID" \
+              EcsTaskExecutionRoleArn="$ECS_EXECUTION_ROLE_ARN" \
+              RdsEndpoint="$RDS_ENDPOINT" \
+              S3BucketName="$S3_BUCKET_NAME"
+
+      - name: Verify ECS services
+        env:
+          ECS_CLUSTER_NAME: ${{ steps.foundation.outputs.ecs_cluster_name }}
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER_NAME" \
+            --services frontend-service backend-service ai-service
+
+          aws ecs describe-services \
+            --cluster "$ECS_CLUSTER_NAME" \
+            --services frontend-service backend-service ai-service \
+            --query 'services[].{Name:serviceName,Running:runningCount,Desired:desiredCount,Status:status}' \
+            --output table
+
+      - name: Smoke test
+        run: |
+          alb_dns=$(aws cloudformation describe-stacks \
+            --stack-name "$SERVICE_STACK" \
+            --query "Stacks[0].Outputs[?OutputKey=='AlbDnsName'].OutputValue | [0]" \
+            --output text)
+
+          curl --fail --show-error \
+            --retry 30 --retry-delay 10 --retry-all-errors \
+            "http://$alb_dns/health"
+          curl --fail --show-error \
+            --retry 12 --retry-delay 10 --retry-all-errors \
+            "http://$alb_dns/api/v1/schools"
+
+          echo "Deployment URL: http://$alb_dns" >> "$GITHUB_STEP_SUMMARY"
+          echo "Image tag: ${{ steps.foundation.outputs.image_tag }}" >> "$GITHUB_STEP_SUMMARY"
