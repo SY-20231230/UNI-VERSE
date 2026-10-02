@@ -280,6 +280,7 @@ Resources:
       ServiceName: backend-service
       TaskDefinition: !Ref BackendTaskDefinition
       DesiredCount: 1
+      HealthCheckGracePeriodSeconds: 300
       LaunchType: FARGATE
       NetworkConfiguration:
         AwsvpcConfiguration:
