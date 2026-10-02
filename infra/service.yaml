@@ -237,7 +237,7 @@ Resources:
           Environment:
             # We assume secrets like DB_PASSWORD are in Parameter Store or Secrets Manager
             - Name: DB_URL
-              Value: !Sub jdbc:mysql://${RdsEndpoint}:3306/${ProjectName}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+              Value: !Sub jdbc:mysql://${RdsEndpoint}:3306/${ProjectName}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&zeroDateTimeBehavior=CONVERT_TO_NULL
             - Name: DB_USERNAME
               Value: universe
             - Name: TZ

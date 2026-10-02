@@ -904,3 +904,20 @@ footer{border-top:1px solid rgba(226,232,240,.6); margin-top:48px; background:va
 .load-more-btn svg{transform:rotate(90deg); color:var(--ink-faint); transition:transform .15s ease, color .15s ease;}
 .load-more-btn:hover{border-color:var(--border-accent); color:var(--accent); box-shadow:var(--shadow-md);}
 .load-more-btn:hover svg{color:var(--accent); transform:rotate(90deg) translateX(2px);}
+
+/* Community notices, replies and comment likes */
+.post-card.notice{border-color:color-mix(in srgb,var(--danger) 30%,var(--border-soft));background:linear-gradient(135deg,color-mix(in srgb,var(--danger-soft) 45%,var(--surface)),var(--surface) 62%);}
+.post-card.notice:hover{border-color:color-mix(in srgb,var(--danger) 55%,var(--border));}
+.post-notice-label{display:flex;align-items:center;gap:5px;margin-bottom:9px;color:var(--danger);font-size:11px;font-weight:800;letter-spacing:.02em;}
+.write-notice-hint{display:flex;align-items:center;gap:7px;color:var(--danger);font-size:12.5px;font-weight:700;}
+.comment-thread{display:flex;flex-direction:column;gap:8px;}
+.community-comment{padding:14px 18px;}
+.community-comment.reply{margin-left:32px;background:var(--surface-sunken);border-color:var(--border-soft);}
+.comment-actions{display:flex;align-items:center;gap:12px;margin-top:10px;}
+.comment-like,.comment-reply{display:inline-flex;align-items:center;gap:4px;padding:2px 0;border:0;background:none;color:var(--ink-soft);font-size:11.5px;font-weight:700;cursor:pointer;}
+.comment-like:hover,.comment-reply:hover,.comment-like.on{color:var(--accent);}
+.comment-like:disabled{opacity:.6;cursor:default;}
+.comment-composer{margin-top:16px;}
+.comment-reply-target{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:8px 11px;border-radius:10px;background:var(--accent-soft);color:var(--accent-soft-ink);font-size:12px;}
+.comment-reply-target button{display:flex;border:0;background:none;color:inherit;cursor:pointer;}
+@media (max-width:640px){.community-comment.reply{margin-left:18px;}}

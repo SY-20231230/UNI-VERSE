@@ -16,7 +16,8 @@ export default function PostCard({ post, compact }) {
   const commentsCount = post.comments ? post.comments.length : (post.commentCount || 0);
 
   return (
-    <Link className={'post-card' + (compact ? ' compact' : '')} to={`/community/${id}`}>
+    <Link className={'post-card' + (compact ? ' compact' : '') + (post.category === 'NOTICE' ? ' notice' : '')} to={`/community/${id}`}>
+      {post.category === 'NOTICE' && <div className="post-notice-label"><Icon name="bell" size={13} /> 학교 공지</div>}
       <div className="post-card-top">
         <div className="row g6">
           <span className={'chip ' + meta.variant}>
@@ -28,7 +29,7 @@ export default function PostCard({ post, compact }) {
         <span className="post-card-time">{timeAgo(time)}</span>
       </div>
       <div className="post-title">{post.title}</div>
-      {body && <div className="post-excerpt">{body}</div>}
+      {!compact && body && <div className="post-excerpt">{body}</div>}
       <div className="post-card-foot">
         <span className="post-card-author">작성자: {author}</span>
         <div className="row g12">

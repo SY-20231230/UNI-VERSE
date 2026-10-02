@@ -15,4 +15,6 @@ export const communityApi = {
   addComment: (id, data) => request(`/community/posts/${id}/comments`, { method: 'POST', body: data }),
   updateComment: (commentId, data) => request(`/community/comments/${commentId}`, { method: 'PATCH', body: data }),
   deleteComment: (commentId) => request(`/community/comments/${commentId}`, { method: 'DELETE' }),
+  likeComment: (commentId) => request(`/community/comments/${commentId}/likes`, { method: 'POST' }),
+  unlikeComment: (commentId) => request(`/community/comments/${commentId}/likes`, { method: 'DELETE' }),
 };
