@@ -131,7 +131,7 @@ export default function Home() {
             <span className="hero-profile-name">{me.name}</span>
             {me.dept && <span className="hero-profile-dept">{me.dept}</span>}
             <span className="hero-profile-score">
-              신뢰지수 {me.trustScore ?? 0}점
+              신뢰점수 {me.trustScore ?? 0}점
             </span>
           </Link>
         </div>

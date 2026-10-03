@@ -52,8 +52,10 @@ export default function UserProfile() {
   const reportCount = user.reportCount ?? (state.reportRecords || []).filter((r) => r.targetUserId === id).length;
   const suspended = user.suspendedPermanently || (user.suspendedUntil && user.suspendedUntil > Date.now());
   const fromAdmin = searchParams.get('from') === 'admin';
-  const backTo = fromAdmin ? '/admin' : '/market';
-  const backLabel = fromAdmin ? '관리자 페이지로 돌아가기' : '중고거래 목록으로 돌아가기';
+  // 들어온 화면이 돌아갈 곳을 넘겨주면 그쪽으로 돌아간다.
+  const back = location.state?.back;
+  const backTo = fromAdmin ? '/admin' : back?.to || '/market';
+  const backLabel = fromAdmin ? '관리자 페이지로 돌아가기' : back?.label || '중고거래 목록으로 돌아가기';
   const stats = [
     { label: '신뢰점수', value: `${user.trustScore ?? 0}점`, accent: true },
     { label: '거래완료', value: `${doneCount}건` },
