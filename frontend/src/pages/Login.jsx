@@ -143,26 +143,6 @@ export default function Login() {
         <div className="lh-inner">
           <div className="lh-brand">UNI:VERSE</div>
           <div className="lh-brand-sub">CAMPUS PLATFORM</div>
-          <div
-            role="status"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              width: 'fit-content',
-              marginTop: 18,
-              padding: '8px 13px',
-              border: '1px solid rgba(255,255,255,.38)',
-              borderRadius: 999,
-              background: 'rgba(16,185,129,.22)',
-              fontSize: 12,
-              fontWeight: 800,
-              letterSpacing: '.04em',
-            }}
-          >
-            <span aria-hidden="true">●</span>
-            CI/CD 자동 배포 테스트
-          </div>
           <h1 className="lh-title">
             우리 학교에서,
             <br />
