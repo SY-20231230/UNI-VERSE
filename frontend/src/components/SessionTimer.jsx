@@ -26,7 +26,7 @@ export default function SessionTimer() {
       return undefined;
     }
     expiredRef.current = false;
-    idleTracker.start(); // 페이지 이동으로는 시간을 채우지 않는다. 기록이 없을 때만 지금부터 센다.
+    idleTracker.touch(); // 라우팅(페이지 이동) 시 타이머를 자동으로 30분 리프레쉬
     setRemaining(idleTracker.remaining());
 
     async function tick() {
