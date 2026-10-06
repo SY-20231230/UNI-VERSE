@@ -29,7 +29,7 @@ export default function NoticeCard({ notice, pinned }) {
       <div className="post-title">{notice.title}</div>
       <div className="post-excerpt">{notice.body}</div>
       <div className="post-card-foot">
-        <span className="post-card-author">작성자: 운영자</span>
+        <span className="post-card-author">운영자</span>
       </div>
     </div>
   );

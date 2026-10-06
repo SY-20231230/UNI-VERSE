@@ -31,7 +31,7 @@ export default function PostCard({ post, compact }) {
       <div className="post-title">{post.title}</div>
       {!compact && body && <div className="post-excerpt">{body}</div>}
       <div className="post-card-foot">
-        <span className="post-card-author">작성자: {author}</span>
+        <span className="post-card-author">{author}</span>
         <div className="row g12">
           <span className="stat like">
             <Icon name="heart" size={14} />
