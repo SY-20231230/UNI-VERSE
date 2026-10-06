@@ -7,7 +7,7 @@ import PostCard from '../components/PostCard';
 import NoticeCard from '../components/NoticeCard';
 import { postCategoryToApi } from '../lib/category';
 import { communityApi } from '../lib/communityApi';
-import { CAMPUS_NOTICES } from '../lib/notices';
+import { CAMPUS_NOTICES, fetchCampusNotices, fetchPostsExceptNotices } from '../lib/notices';
 import useDebounce from '../hooks/useDebounce';
 
 const CATS = ['전체', '공지', '자유', '수업/학점', '학교생활', '시설/환경', '기숙사', '취업/진로', '기타'];
@@ -31,24 +31,30 @@ export default function Community() {
     setPage(0);
   }, [state.communityFilter, debouncedQ, sort]);
 
-  // 공지는 서버 카테고리가 없어 프론트 공지 목록을 그대로 보여준다.
+  // 공지 탭은 학교 관리자 공지 글과 기본 공지를 함께 보여준다.
   const isNotice = state.communityFilter === '공지';
-  // '전체' 첫 페이지에서는 최신 공지 1개를 맨 위에 고정한다.
-  const pinnedNotice = state.communityFilter === '전체' && !debouncedQ && page === 0 ? CAMPUS_NOTICES[0] : null;
-  const notices = isNotice ? CAMPUS_NOTICES.filter((n) => !debouncedQ || (n.title + n.body).includes(debouncedQ)) : [];
+  const isAll = state.communityFilter === '전체';
+  const [campusNotices, setCampusNotices] = useState(CAMPUS_NOTICES);
+  useEffect(() => {
+    let cancelled = false;
+    fetchCampusNotices({ size: 50 })
+      .then(({ notices }) => { if (!cancelled) setCampusNotices(notices); })
+      .catch((err) => console.error('Failed to fetch notices', err));
+    return () => { cancelled = true; };
+  }, []);
+  // '전체' 첫 페이지에서는 최신 공지 1개만 맨 위에 한 줄로 고정한다.
+  const pinnedNotice = isAll && !debouncedQ && page === 0 ? campusNotices[0] : null;
+  const notices = isNotice ? campusNotices.filter((n) => !debouncedQ || (n.title + n.body).includes(debouncedQ)) : [];
 
   useEffect(() => {
     if (isNotice) return;
     async function fetchPosts() {
       try {
-        const catParam = state.communityFilter === '전체' ? undefined : postCategoryToApi(state.communityFilter);
-        const res = await communityApi.getPosts({
-          category: catParam,
-          keyword: debouncedQ || undefined,
-          sort: sort,
-          page: page,
-          size: 7
-        });
+        const params = { keyword: debouncedQ || undefined, sort, page, size: 7 };
+        // '전체' 목록에서는 공지 글을 빼고 위의 고정 공지로만 보여준다.
+        const res = isAll
+          ? await fetchPostsExceptNotices(params)
+          : await communityApi.getPosts({ ...params, category: postCategoryToApi(state.communityFilter) });
         setList(res.content);
         setTotalElements(res.totalElements);
         setTotalPages(res.totalPages);
@@ -57,7 +63,7 @@ export default function Community() {
       }
     }
     fetchPosts();
-  }, [state.communityFilter, debouncedQ, sort, page, isNotice]);
+  }, [state.communityFilter, debouncedQ, sort, page, isNotice, isAll]);
 
   return (
     <div className="container fade-enter">
