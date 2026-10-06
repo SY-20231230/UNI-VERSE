@@ -6,7 +6,7 @@ import PostCard from '../components/PostCard';
 import ListingGridCard from '../components/ListingGridCard';
 import Avatar from '../components/Avatar';
 import { POST_CATEGORY_META, postCategoryToApi } from '../lib/category';
-import { CAMPUS_NOTICES } from '../lib/notices';
+import { CAMPUS_NOTICES, fetchCampusNotices, isNoticePost } from '../lib/notices';
 import { pickGreeting } from '../lib/greetings';
 import { communityApi } from '../lib/communityApi';
 import { marketApi } from '../lib/marketApi';
@@ -27,21 +27,27 @@ export default function Home() {
   const { suspension, release } = useSuspensionState();
   // 실제 로그인이면 서버의 인기글·새 매물·게시판별 글 수를, 데모 모드면 목업 데이터를 보여준다.
   const isServer = state.authMode === 'server';
-  const [server, setServer] = useState({ posts: [], listings: [], counts: {} });
+  const [server, setServer] = useState({ posts: [], listings: [], counts: {}, notices: null });
   useEffect(() => {
     if (!isServer) return undefined;
     let cancelled = false;
     const safe = (promise, fallback) => promise.catch((err) => { console.error(err); return fallback; });
+    // 학교 관리자 공지는 인기 게시글에서 빼고 오른쪽 캠퍼스 공지에만 보여준다.
+    // 서버는 공지를 항상 맨 앞에 두므로 공지 개수만큼 더 받아 와서 걸러낸다.
+    const noticesP = safe(fetchCampusNotices({ size: 3 }), { notices: CAMPUS_NOTICES, serverCount: 0 });
     Promise.all([
-      safe(communityApi.getPosts({ sort: 'popular', page: 0, size: 4 }), { content: [] }),
+      noticesP,
+      noticesP.then(({ serverCount }) =>
+        safe(communityApi.getPosts({ sort: 'popular', page: 0, size: serverCount + 4 }), { content: [] })),
       safe(marketApi.getItems({ sort: 'createdAt,desc', page: 0, size: 12 }), { content: [] }),
       Promise.all(HOME_BOARD_CATS.map((c) =>
         safe(communityApi.getPosts({ category: postCategoryToApi(c), page: 0, size: 1 }), { totalElements: 0 })
           .then((res) => [c, res.totalElements ?? 0]))),
-    ]).then(([posts, items, counts]) => {
+    ]).then(([notices, posts, items, counts]) => {
       if (cancelled) return;
       setServer({
-        posts: posts.content || [],
+        notices: notices.notices,
+        posts: (posts.content || []).filter((p) => !isNoticePost(p)).slice(0, 4),
         // 거래가 끝나지 않은 상품(판매중·거래 요청중·거래중)을 새로 올라온 순으로 보여준다.
         listings: (items.content || [])
           .filter((l) => !['COMPLETED', 'CANCELLED'].includes(l.tradeStatus))
@@ -54,6 +60,7 @@ export default function Home() {
   }, [isServer]);
 
   const topPosts = isServer ? server.posts : [...state.posts].sort((a, b) => b.likes - a.likes).slice(0, 4);
+  const campusNotices = ((isServer && server.notices) || CAMPUS_NOTICES).slice(0, 3);
   const freshListings = isServer ? server.listings : state.listings.filter((l) => l.status === '판매중').slice(0, 4);
   const boardCount = (c) => (isServer ? server.counts[c] ?? 0 : state.posts.filter((p) => p.category === c).length);
   const [noticeTipOpen, setNoticeTipOpen] = useState(false);
@@ -188,12 +195,17 @@ export default function Home() {
                 <span className="faint" style={{ fontSize: 11, fontWeight: 700 }}>{todayLabel}</span>
               </div>
               <div className="stack g10" style={{ marginTop: 12 }}>
-                {CAMPUS_NOTICES.map((n) => (
-                  <div className="row g10" key={n.id}>
-                    <span className="chip accent" style={{ flex: 'none' }}>공지</span>
-                    <span style={{ fontSize: 12.5 }}>{n.title}</span>
-                  </div>
-                ))}
+                {campusNotices.map((n) => {
+                  const inner = (
+                    <>
+                      <span className="chip accent" style={{ flex: 'none' }}>공지</span>
+                      <span style={{ fontSize: 12.5 }}>{n.title}</span>
+                    </>
+                  );
+                  return n.postId
+                    ? <Link className="row g10" key={n.id} to={`/community/${n.postId}`}>{inner}</Link>
+                    : <div className="row g10" key={n.id}>{inner}</div>;
+                })}
               </div>
             </div>
             <div className="card side-card">

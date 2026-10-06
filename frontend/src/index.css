@@ -644,6 +644,8 @@ span.comment-more{display:inline-block; flex:none;}
 .home-layout .side-card:first-child{background:linear-gradient(180deg, rgba(239,234,252,.7) 0%, #FFFFFF 100%); border-color:#E2DAF8;}
 .home-layout .side-card:first-child .stack > .row{padding:12px; background:var(--surface); border:1px solid var(--border-soft); border-radius:12px; align-items:flex-start;}
 .home-layout .side-card:first-child .stack > .row > span:last-child{color:#334155; font-weight:600; line-height:1.4;}
+.home-layout .side-card:first-child .stack > a.row{text-decoration:none; transition:border-color .15s;}
+.home-layout .side-card:first-child .stack > a.row:hover{border-color:var(--accent);}
 .checklist li{display:flex; gap:9px; font-size:13px; line-height:1.6; padding:6px 0; list-style:none; color:var(--ink-soft);}
 .checklist svg{flex:none; color:var(--success); width:16px; height:16px; margin-top:1px;}
 .cat-quicklist{display:flex; flex-direction:column; gap:1px;}
