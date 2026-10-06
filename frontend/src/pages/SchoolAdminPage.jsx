@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useUI } from '../context/UIContext';
 import { session } from '../lib/session';
 import Icon from '../lib/icons';
 import { API_BASE_URL } from '../lib/api';
+import { communityApi } from '../lib/communityApi';
+import { timeAgo } from '../lib/format';
 
 export default function SchoolAdminPage() {
   const { state } = useApp();
   const { toast } = useUI();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [notices, setNotices] = useState([]);
+  const [noticeLoading, setNoticeLoading] = useState(true);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/admin/school/dashboard`, {
@@ -28,6 +33,21 @@ export default function SchoolAdminPage() {
       .finally(() => setLoading(false));
   }, [toast]);
 
+  useEffect(() => {
+    let active = true;
+    communityApi.getPosts({ category: 'NOTICE', page: 0, size: 50, sort: 'latest' })
+      .then((response) => {
+        if (active) setNotices(response.content || []);
+      })
+      .catch((error) => {
+        if (active) toast(error.message || '공지 목록을 불러오지 못했습니다.');
+      })
+      .finally(() => {
+        if (active) setNoticeLoading(false);
+      });
+    return () => { active = false; };
+  }, [toast]);
+
   if (loading) return <div className="container" style={{ padding: 40, textAlign: 'center' }}>로딩 중...</div>;
   if (!data) return <div className="container" style={{ padding: 40, textAlign: 'center' }}>데이터가 없습니다.</div>;
 
@@ -40,7 +60,56 @@ export default function SchoolAdminPage() {
 
   return (
     <div className="container fade-enter">
-      <h1 className="h1">우리 학교 대시보드</h1>
+      <div className="row between g12 wrap">
+        <div>
+          <h1 className="h1">우리 학교 대시보드</h1>
+          <p className="page-sub" style={{ marginTop: 6 }}>교내 현황을 확인하고 학교 공지를 관리하세요.</p>
+        </div>
+        <Link className="btn btn-primary" to="/community/write?category=NOTICE&from=admin">
+          <Icon name="edit" size={15} />
+          공지 작성
+        </Link>
+      </div>
+
+      <section className="card" style={{ marginTop: 20, padding: 24 }} aria-labelledby="school-notice-title">
+        <div className="row between g12 wrap" style={{ marginBottom: 16 }}>
+          <div>
+            <h2 id="school-notice-title" className="h3">교내 공지 관리</h2>
+            <div className="faint" style={{ fontSize: 13, marginTop: 5 }}>공지 내용을 확인하고 작성한 공지를 수정할 수 있습니다.</div>
+          </div>
+          <Link className="btn btn-outline btn-sm" to="/community">전체 공지 보기</Link>
+        </div>
+
+        {noticeLoading ? (
+          <div className="faint" style={{ padding: '18px 0' }}>공지 목록을 불러오는 중...</div>
+        ) : notices.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {notices.map((notice) => {
+              const editable = notice.authorId === state.me?.userId;
+              return (
+                <div key={notice.postId} className="row between g12 wrap" style={{ padding: '13px 0', borderBottom: '1px solid var(--line)' }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <Link to={`/community/${notice.postId}`} style={{ fontWeight: 750 }}>{notice.title}</Link>
+                    <div className="row g8 faint" style={{ fontSize: 12, marginTop: 5 }}>
+                      <span>{notice.authorName}</span>
+                      <span>조회 {notice.viewCount}</span>
+                      <span>{timeAgo(notice.createdAt)}</span>
+                    </div>
+                  </div>
+                  <div className="row g8">
+                    <Link className="btn btn-outline btn-sm" to={`/community/${notice.postId}`}>보기</Link>
+                    {editable && (
+                      <Link className="btn btn-primary btn-sm" to={`/community/${notice.postId}/edit?from=admin`}>수정</Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="empty" style={{ padding: '24px 0' }}>작성된 교내 공지가 없습니다.</div>
+        )}
+      </section>
       
       <div className="admin-layout" style={{ marginTop: 20 }}>
         

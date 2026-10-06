@@ -1,4 +1,4 @@
-import { useNavigate, Link, useParams } from 'react-router-dom';
+import { useNavigate, Link, useParams, useSearchParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Icon from '../lib/icons';
 import { useUI } from '../context/UIContext';
@@ -15,14 +15,17 @@ export default function CommunityWrite() {
   const { toast } = useUI();
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const isEdit = !!id;
-  const canWriteNotice = state.me?.role === 'SCHOOL_ADMIN';
+  const fromAdmin = searchParams.get('from') === 'admin' && state.isSchoolAdmin;
+  const noticeRequested = searchParams.get('category') === 'NOTICE';
+  const canWriteNotice = state.me?.role === 'SCHOOL_ADMIN' || state.isSchoolAdmin;
   const categories = canWriteNotice ? ALL_CATS : STANDARD_CATS;
 
   const [loading, setLoading] = useState(isEdit);
   const [existing, setExisting] = useState(null);
   
-  const [cat, setCat] = useState('');
+  const [cat, setCat] = useState(() => (noticeRequested && state.isSchoolAdmin ? '공지' : ''));
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [anon, setAnon] = useState(false);
@@ -53,7 +56,9 @@ export default function CommunityWrite() {
     }
   }, [id, isEdit]);
 
-  const canEdit = !isEdit || (existing && existing.authorId === (state.user ? state.users[state.user]?.id : null));
+
+  const currentUserId = state.me?.userId ?? state.users?.me?.serverId;
+  const canEdit = !isEdit || (existing && existing.authorId === currentUserId);
 
   function addTag(raw) {
     const t = raw.trim().replace(/^#/, '');
@@ -105,14 +110,14 @@ export default function CommunityWrite() {
     try {
       if (isEdit) {
         await communityApi.updatePost(id, payload);
-        navigate(`/community/${id}`);
+        navigate(fromAdmin ? '/admin' : `/community/${id}`);
         toast('게시글이 수정되었습니다');
       } else {
         const res = await communityApi.createPost(payload);
-        navigate(`/community/${res.postId}`);
+        navigate(fromAdmin ? '/admin' : `/community/${res.postId}`);
         toast('게시글이 등록되었습니다');
       }
-    } catch (e) {
+    } catch {
       toast('게시글 저장에 실패했습니다');
     }
   }
@@ -133,7 +138,15 @@ export default function CommunityWrite() {
     );
   }
 
-  const backTo = isEdit ? `/community/${id}` : '/community';
+  if (isEdit && !canEdit) {
+    return (
+      <div className="container narrow fade-enter">
+        <div className="empty">이 공지를 수정할 권한이 없습니다.</div>
+      </div>
+    );
+  }
+
+  const backTo = fromAdmin ? '/admin' : isEdit ? `/community/${id}` : '/community';
 
   return (
     <div className="container narrow fade-enter">
