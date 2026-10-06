@@ -420,7 +420,7 @@ export default function Chat() {
               </button>
               <div className="chat-room-partner"
                 style={{ cursor: activeChat.anonymous ? 'default' : 'pointer' }}
-                onClick={() => { if (!activeChat.anonymous && partner2?.id) navigate(`/users/${partner2.id}`, { state: { user: partner2 } }); }}
+                onClick={() => { if (!activeChat.anonymous && partner2?.id) navigate(`/users/${partner2.id}`, { state: { user: partner2, back: { to: `/chat/${activeId}`, label: '채팅으로 돌아가기' } } }); }}
               >
                 <Avatar user={partner2} size={40} />
                 <div style={{ flex: 1, minWidth: 0 }}>

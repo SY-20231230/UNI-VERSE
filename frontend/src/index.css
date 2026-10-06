@@ -912,7 +912,14 @@ footer{border-top:1px solid rgba(226,232,240,.6); margin-top:48px; background:va
 .write-notice-hint{display:flex;align-items:center;gap:7px;color:var(--danger);font-size:12.5px;font-weight:700;}
 .comment-thread{display:flex;flex-direction:column;gap:8px;}
 .community-comment{padding:14px 18px;}
-.community-comment.reply{margin-left:32px;background:var(--surface-sunken);border-color:var(--border-soft);}
+.community-comment.reply{margin-left:24px;padding:10px 14px;border-radius:12px;box-shadow:none;background:var(--surface-sunken);border-color:var(--border-soft);}
+.community-comment.reply .comment-actions{margin-top:6px;}
+.comment-edit{margin-top:6px;}
+.comment-edit .textarea{min-height:0;padding:8px 12px;font-size:13.5px;line-height:1.5;border-radius:10px;}
+.comment-edit-foot{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:6px;}
+.comment-edit-anon{display:inline-flex;align-items:center;gap:5px;margin-right:auto;color:var(--ink-soft);font-size:12px;font-weight:600;cursor:pointer;}
+.comment-edit-anon input{width:14px;height:14px;margin:0;}
+.comment-edit-foot .btn{padding:6px 12px;font-size:12.5px;border-radius:9px;}
 .comment-actions{display:flex;align-items:center;gap:12px;margin-top:10px;}
 .comment-like,.comment-reply{display:inline-flex;align-items:center;gap:4px;padding:2px 0;border:0;background:none;color:var(--ink-soft);font-size:11.5px;font-weight:700;cursor:pointer;}
 .comment-like:hover,.comment-reply:hover,.comment-like.on{color:var(--accent);}
@@ -920,4 +927,4 @@ footer{border-top:1px solid rgba(226,232,240,.6); margin-top:48px; background:va
 .comment-composer{margin-top:16px;}
 .comment-reply-target{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:8px 11px;border-radius:10px;background:var(--accent-soft);color:var(--accent-soft-ink);font-size:12px;}
 .comment-reply-target button{display:flex;border:0;background:none;color:inherit;cursor:pointer;}
-@media (max-width:640px){.community-comment.reply{margin-left:18px;}}
+@media (max-width:640px){.community-comment.reply{margin-left:14px;}}

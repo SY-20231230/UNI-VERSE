@@ -306,7 +306,8 @@ export default function MarketDetail() {
               </span>
             </div>
             <div className="market-detail-desc">{listing.description || listing.desc}</div>
-            <Link className="seller-card" to={fromAdmin ? `/users/${seller.id}?from=admin` : `/users/${seller.id}`} state={{ user: seller }}>
+            <Link className="seller-card" to={fromAdmin ? `/users/${seller.id}?from=admin` : `/users/${seller.id}`}
+              state={{ user: seller, back: { to: `/market/${id}${fromAdmin ? '?from=admin' : ''}`, label: '상품으로 돌아가기' } }}>
               <Avatar user={seller} size={44} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="row g6">

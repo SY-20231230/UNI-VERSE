@@ -192,22 +192,22 @@ export default function CommunityDetail() {
           </div>
         </div>
         {editingCommentId === comment.commentId ? (
-          <div style={{ marginTop: 8 }}>
-            <textarea className="textarea" style={{ minHeight: 64, fontSize: 13.5 }} value={editText}
+          <div className="comment-edit">
+            <textarea className="textarea" rows={2} value={editText}
               onChange={(event) => setEditText(event.target.value)} />
-            <label className="row g6" style={{ marginTop: 8, fontSize: 12 }}>
-              <input type="checkbox" checked={editAnonymous} onChange={(event) => setEditAnonymous(event.target.checked)} />
-              익명으로 표시
-            </label>
-            <div className="row g8" style={{ marginTop: 8, justifyContent: 'flex-end' }}>
-              <button className="btn btn-outline btn-sm" onClick={cancelEditComment}>취소</button>
-              <button className="btn btn-primary btn-sm" onClick={saveEditComment}>저장</button>
+            <div className="comment-edit-foot">
+              <label className="comment-edit-anon">
+                <input type="checkbox" checked={editAnonymous} onChange={(event) => setEditAnonymous(event.target.checked)} />
+                익명
+              </label>
+              <button className="btn btn-outline" onClick={cancelEditComment}>취소</button>
+              <button className="btn btn-primary" onClick={saveEditComment}>저장</button>
             </div>
           </div>
         ) : (
           <div style={{ fontSize: 13.5, marginTop: 5, lineHeight: 1.6 }}>{comment.content}</div>
         )}
-        <div className="comment-actions">
+        {editingCommentId !== comment.commentId && <div className="comment-actions">
           <button type="button" className={'comment-like' + (comment.likedByCurrentUser ? ' on' : '')}
             disabled={commentLikePending === comment.commentId} onClick={() => toggleCommentLike(comment)}
             aria-pressed={comment.likedByCurrentUser}>
@@ -218,7 +218,7 @@ export default function CommunityDetail() {
             onClick={() => setReplyTo({ commentId: comment.parentCommentId || comment.commentId, authorName: comment.authorName })}>
             답글
           </button>
-        </div>
+        </div>}
       </div>
     );
   }
@@ -295,7 +295,7 @@ export default function CommunityDetail() {
             <div className="post-detail-author">{inner}</div>
           ) : (
             <div className="post-detail-author">
-              <Link className="post-author-link" to={`/users/${post.authorId}`} state={{ user: author }} title="프로필 보기">
+              <Link className="post-author-link" to={`/users/${post.authorId}`} state={{ user: author, back: { to: `/community/${post.postId}`, label: '게시글로 돌아가기' } }} title="프로필 보기">
                 {inner}
               </Link>
             </div>
