@@ -1,4 +1,5 @@
 # UNI:VERSE
+팀 포트폴리오 = https://uni-verse-team-3tmnvzu33-uni-verse5.vercel.app/
 
 학교 인증 기반 익명 커뮤니티와 교내 중고거래를 결합한 캠퍼스 플랫폼입니다.
 
